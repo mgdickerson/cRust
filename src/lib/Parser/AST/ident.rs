@@ -8,9 +8,9 @@ pub struct Ident {
 
 impl Ident {
     pub fn new(token: Token) -> Self {
-        //Ident{ token: token,
-        //    value: token.get_contents(),
-        //    debugLine: String::from("test")}
+        Ident{ token: token.clone(),
+            value: token.get_contents(),
+            debugLine: String::from("test")}
     }
 
     pub fn get_value(self) -> String {
