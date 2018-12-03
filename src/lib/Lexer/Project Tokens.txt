@@ -1,0 +1,62 @@
+Encoded Operations:
+
+    neg x       - unary minus
+    add x y     - addition
+    sub x y     - subtraction
+    mul x y     - multiplication
+    div x y     - division
+    cmp x y     - comparison
+
+    adda x y    - add two addresses (for array only)
+    load y      - load from memory address y
+    store y x   - store y to address x
+    move y x    - assign x := y
+    phi x x1 x2...  - x := Phi(x1, x2, x3, ...)
+
+    end         - end of program
+    bra y       - branch to y
+    bne x y     - branch to y on x not equal
+    beq x y     - branch to y on x equal
+    ble x y     - branch to y on x less or equal
+    blt x y     - branch to y on x less
+    bge x y     - branch to y on x greater or equal
+    bgt x y     - branch to y on x greater
+
+    read        - read
+    write x     - write x
+    writeNL     - write New Line
+
+EBNF:
+
+    letter      = "a"|"b"|...|"z"
+    digit       = "0"|"1"|...|"9"
+    relOp       = "=="|"!="|"<"|"<="|">"|">="
+
+    ident       = letter {letter|digit}
+    number      = digit {digit}
+
+    designator  = ident { "[" expression "]" }
+    factor      = designator | number | "(" expression ")" | funcCall
+    term        = factor { ("*"|"/")factor }
+    expression  = term { ("+"|"-")term }
+    relation    = expression relOp expression
+
+    assignment  = "let" designator "<-" expression
+    funcCall    = "call" ident[ "(" [ expression { "," expression } ] ")" ]
+    ifStatement = "if" relation "then" statSequence [ "else" statSequence ] "fi"
+    whileStatement  = "while" relation "do" StatSequence "od"
+    returnStatment  = "return" [ expression ]
+
+    statement   = assignment | funcCall | ifStatement | whileStatement | returnStatment
+    statSequence    = statement { ";" statement }
+
+    typeDecl    = "var" | "array" "[" number "]" { "[" number "]" }
+    varDecl     = typeDecl indent { ";" ident } ";"
+    funcDecl    = (“function” | “procedure”) ident [formalParam] “;” funcBody “;” .
+    formalParam = “(“ [ident { “,” ident }] “)”
+    funcBody    = { varDecl } “{” [ statSequence ] “}”
+    computation = “main” { varDecl } { funcDecl } “{” statSequence “}” “.” 
+
+    InputNum()  = read a number from the standard input
+    OutputNum(x)    = write a number to the standard output
+    OutputNewLine() = write a carriage return to the standard output
