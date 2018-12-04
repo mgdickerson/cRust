@@ -6,6 +6,8 @@ pub struct Ident {
     debugLine: String,
 }
 
+//random test
+
 impl Ident {
     pub fn new(token: Token) -> Self {
         Ident{ token: token.clone(),
