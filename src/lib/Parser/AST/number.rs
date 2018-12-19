@@ -11,7 +11,11 @@ pub struct Number {
 impl Number {
     pub fn new(token: Token) -> Self {
         // TODO : How do i do this again?
+<<<<<<< HEAD
         Number{ value: token.get_contents().parse::<i64>().unwrap(),
+=======
+        Number{ value: token.clone().get_contents().parse::<i64>().unwrap(),
+>>>>>>> develop
                  token: token,
                  // this will be awesome later, promise
                  // probably want to do some cool combo
