@@ -1,6 +1,7 @@
 [package]
 name = "cRust"
 version = "0.1.0"
-authors = ["mitcheldickerson"]
+authors = ["Mitchel Dickerson"]
+edition = "2018"
 
 [dependencies]

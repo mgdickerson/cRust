@@ -1,5 +1,6 @@
 pub mod Lexer; 
 pub mod Parser;
+pub mod Utility;
 
 #[cfg(test)]
 mod tests {

@@ -1,6 +1,5 @@
 use std;
-
-pub fn ast_print()
+use dix;
 
 //|Main
 //  ^
