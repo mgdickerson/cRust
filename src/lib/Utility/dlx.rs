@@ -194,7 +194,7 @@ impl DLX {
                 RDI => {
                     println!("?:");
                     let mut input = String::new();
-                    io::stdin().read_line(&mut input)?;
+                    io::stdin().read_line(&mut input);
                     self.R[self.a as usize] = input.parse().unwrap();
                 }
                 WRD => {
@@ -212,7 +212,7 @@ impl DLX {
                 }
                 _ => {
                     println!("DLX.Execute: Unknown opcode encountered!");
-                    bug(1);
+                    self.bug(1);
                 }
             }
 
@@ -221,8 +221,8 @@ impl DLX {
     }
 
     pub fn disassem(&mut self, instructionWord: i32) {
-        op = instructionWord >> 26 as usize;    // without sign extension
-        match op {
+        self.op = instructionWord >> 26 as usize;    // without sign extension
+        match self.op {
             // F1 Format
             BSR | RDI | WRD | WRH | WRL | CHKI | BEQ |
             BNE | BLT | BGE | BLE | BGT | ADDI | SUBI |
