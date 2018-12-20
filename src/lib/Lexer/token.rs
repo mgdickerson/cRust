@@ -13,12 +13,12 @@ impl Token {
         Token{ token_type: TkTy, token_contents: TkCn }
     }
 
-    pub fn get_contents(self) -> String {
+    pub fn get_contents(&self) -> String {
         let copy = self.token_contents.clone();
         copy
     }
 
-    pub fn get_type(self) -> TokenType {
+    pub fn get_type(&self) -> TokenType {
         let copy = self.token_type.clone();
         copy
     }

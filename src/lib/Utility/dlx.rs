@@ -256,10 +256,134 @@ impl DLX {
         }
     }
 
+    pub fn disassemble(&mut self, instructionWord: i32) -> String {
+        self.disassem(instructionWord);
+        let mut line = String::new();
+        line += mnemo[self.op as usize];
+        line += "  ";
+
+        match self.op {
+            WRL => {
+                line += "\n";
+                return line
+            }
+            BSR | RET | JSR => {
+                line += &self.c.to_string();
+                line += "\n";
+                line
+            }
+            RDI => {
+                line += &self.a.to_string();
+                line += "\n";
+                line
+            }
+            WRD | WRH => {
+                line += &self.b.to_string();
+                line += "\n";
+                line
+            }
+            CHKI | BEQ | BNE | BLT |
+            BGE  | BLE | BGT | CHK => {
+                line += &self.a.to_string();
+                line += " ";
+                line += &self.c.to_string();
+                line += "\n";
+                line
+            }
+            ADDI | SUBI | MULI | DIVI |
+            MODI | CMPI | ORI  | ANDI |
+            BICI | XORI | LSHI | ASHI |
+            LDW  | POP  | STW  | PSH  |
+            ADD  | SUB  | MUL  | DIV  |
+            MOD  | CMP  | OR   | AND  |
+            BIC  | XOR  | LSH  | ASH  |
+            LDX  | STX => {
+                line += &self.a.to_string();
+                line += " ";
+                line += &self.b.to_string();
+                line += " ";
+                line += &self.c.to_string();
+                line += "\n";
+                line
+            }
+            _ => {
+                line += "\n";
+                line
+            }
+        }
+    }
+
+    pub fn assemble(op: i32, arg1: i32, arg2: i32, mut arg3: i32) -> i32 {
+        if (arg1 == 0) & (arg2 == 0) & (arg3 == 0) & (op != WRL) {
+            println!("DLX.assemble: the only instruction without arguments is WRL!");
+            return -1;
+        } else if( (arg1 == 0) & (arg2 == 0) & (arg3 == 0) & (op == WRL) ) {
+            return DLX::F1(op,0,0,0);
+        }
+        match op {
+            // F1 Format
+            BSR => DLX::F1(op,0,0,arg1),
+            RDI => DLX::F1(op,arg1,0,0),
+            WRD | WRH => DLX::F1(op,0,arg1,0),
+            CHKI | BEQ | BNE | BLT |
+            BGE  | BLE | BGT => DLX::F1(op,arg1,0,arg2),
+            ADDI | SUBI | MULI | DIVI |
+            MODI | CMPI | ORI  | ANDI |
+            BICI | XORI | LSHI | ASHI |
+            LDW  | POP  | STW  | PSH => DLX::F1(op,arg1,arg2,arg3),
+
+            // F2 Format
+            RET => DLX::F2(op,0,0,arg1),
+            CHK => DLX::F2(op,arg1,0,arg2),
+            ADD | SUB | MUL | DIV |
+            MOD | CMP | OR  | AND |
+            BIC | XOR | LSH | ASH |
+            LDX | STX => DLX::F2(op,arg1,arg2,arg3),
+
+            // F3 Format
+            JSR => DLX::F3(op,arg1),
+            _ => return -1,
+        }
+    }
+
+    pub fn F1(op: i32, a: i32, b: i32, mut c: i32) -> i32 {
+        if c < 0 {
+            c ^= 0xFFFF0000;
+        }
+        if ((a & !0x1F)|(b & !0x1F)|(c & !0xFFFF) != 0) {
+            println!("Illegal Operand(s) for F1 Format.");
+            return -1;
+        }
+        return op << 26 | a << 21 | b << 16 | c;
+    }
+
+    pub fn F2(op: i32, a: i32, b: i32, c: i32) -> i32 {
+        if ((a & !0x1F)|(b & !0x1F)|(c & !0x1F) != 0) {
+            println!("Illegal Operand(s) for F2 Format.");
+            return -1;
+        }
+        return op << 26 | a << 21 | b << 16 | c;
+    }
+
+    pub fn F3(op: i32, c: i32) -> i32 {
+        if (c < 0) || (c > MemSize) {
+            println!("Operand for F3 Format is referencing non-existent memory location.");
+            return -1;
+        }
+        return op << 26 | c;
+    }
+
     pub fn bug(&mut self, errNum: u32) {
         println!("Bug number: {}", errNum);
     }
 }
+
+const mnemo : [&str; 80] = [
+"ADD","SUB","MUL","DIV","MOD","CMP","ERR","ERR","OR","AND","BIC","XOR","LSH","ASH","CHK","ERR",
+"ADDI","SUBI","MULI","DIVI","MODI","CMPI","ERRI","ERRI","ORI","ANDI","BICI","XORI","LSHI","ASHI","CHKI","ERR",
+"LDW","LDX","POP","ERR","STW","STX","PSH","ERR","BEQ","BNE","BLT","BGE","BLE","BGT","BSR","ERR",
+"JSR","RET","RDI","WRD","WRH","WRL","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR",
+"ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR","ERR"];
 
 // Const Keywords
 const MemSize: i32 = 10000;

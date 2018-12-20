@@ -1,19 +1,24 @@
 use lib::Lexer::token::Token;
+use lib::Lexer::token::TokenType;
 
 pub struct Ident {
-    token: Token,
-    value: String,
+    ident_type: TokenType,
+    ident_value: String,
     debugLine: String,
 }
 impl Ident {
     pub fn new(token: Token) -> Self {
-        Ident{ token: token.clone(),
-            value: token.get_contents(),
+        Ident{ ident_type: token.get_type(),
+            ident_value: token.get_contents(),
             debugLine: String::from("test")}
     }
 
-    pub fn get_value(self) -> String {
-        self.value.clone()
+    pub fn get_value(&self) -> String {
+        self.ident_value.clone()
+    }
+
+    pub fn get_type(&self) -> TokenType {
+        self.ident_type.clone()
     }
 
     pub fn get_debug(self) -> String {
