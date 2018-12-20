@@ -1,6 +1,7 @@
 use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST::ident::Ident;
+use Parser::AST::expression::Expression;
 
 pub struct Designator {
     ident: Ident,
@@ -55,6 +56,6 @@ impl Designator {
                 panic!("Expected Ident Token in designator, found unexpected Token: {:?}", err);
             },
         }
-        Designator{ ident : Ident::new(tc.unwrap()), expressions : vec![Expression{}] }
+        Designator{ ident : Ident::new(tc.unwrap()), expressions : vec![] }
     }
 }

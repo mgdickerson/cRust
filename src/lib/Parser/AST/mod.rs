@@ -10,11 +10,8 @@ pub mod number;
 pub mod ident;
 pub mod var;
 pub mod array;
-<<<<<<< HEAD
-=======
-pub mod designator;
-pub mod expression;
->>>>>>> develop
+//pub mod designator;
+//pub mod expression;
 
 //  Start by doing a fully recursive parse through the code. Introduce AST later to make
 //some kind of storage structure. 

@@ -1,9 +1,6 @@
 pub mod Lexer; 
 pub mod Parser;
-<<<<<<< HEAD
 pub mod Utility;
-=======
->>>>>>> develop
 
 #[cfg(test)]
 mod tests {
