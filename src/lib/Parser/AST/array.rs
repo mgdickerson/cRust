@@ -3,6 +3,7 @@ use lib::Lexer::token::TokenType;
 use Parser::AST;
 
 pub struct Array {
+    node_type: TokenType,
     arrayDepthVec: Vec<AST::number::Number>,
     identList: Vec<AST::ident::Ident>,
     debugLine: String,
@@ -12,10 +13,12 @@ impl Array {
     pub fn new(tc: &mut TokenCollection) -> Self {
         let mut varList : Vec<AST::ident::Ident> = vec!();
         let mut numList : Vec<AST::number::Number> = vec!();
+        let mut tokenType = TokenType::None;
 
         match tc.get_next_token().expect("Array Error").get_type() {
             TokenType::Array => {
                 // proper action, all is well.
+                tokenType = TokenType::Array;
             },
             err => {
                 // Compiler Error : 
@@ -104,8 +107,21 @@ impl Array {
             }
         }
 
-        Array { arrayDepthVec: numList,
+        Array { node_type: tokenType,
+            arrayDepthVec: numList,
             identList: varList,
             debugLine: String::from("test") }
+    }
+
+    pub fn get_value(&self) -> (Vec<AST::number::Number>, Vec<AST::ident::Ident>)  {
+        return (self.arrayDepthVec.to_vec(), self.identList.to_vec())
+    }
+
+    pub fn get_type(&self) -> TokenType {
+        self.node_type.clone()
+    }
+
+    pub fn get_debug(self) -> String {
+        self.debugLine.clone()
     }
 }

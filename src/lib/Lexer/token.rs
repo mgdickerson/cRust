@@ -37,7 +37,6 @@ impl Token {
 #[derive(Debug)]
 pub struct TokenCollection {
     token_vector: std::iter::Peekable<std::vec::IntoIter<Token>>,
-    //token_iter: std::iter::Peekable<std::slice::Iter<'static, Token>>,
 }
 
 impl TokenCollection {
@@ -82,28 +81,32 @@ impl TokenCollection {
 //std::iter::Peekable<std::slice::Iter<Token<'_>>>
 #[derive(Debug,Copy,Clone)]
 pub enum TokenType {
+    // Debugging Type
     Test,
 
-    //basic building block tokens
+    // Null Type, used before type information gathered.
+    None,
+
+    // Basic building block tokens
     Letter,
     Digit,
     Comma,
     SemiTermination,
 
-    //Operations
+    // Operations
     RelOp,
     MathOp,
     MulOp,
 
-    //Variable Types
+    // Variable Types
     Var,
     Array,
 
-    //Braces
+    // Braces
     LeftBrace,
     RightBrace,
 
-    //combination tokens
+    // Combination tokens
     Ident,
     Number,
 

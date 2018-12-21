@@ -1,6 +1,7 @@
 use lib::Lexer::token::Token;
 use lib::Lexer::token::TokenType;
 
+#[derive(Debug,Clone)]
 pub struct Number {
     number_type: TokenType,
     number_value: i64,

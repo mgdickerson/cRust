@@ -4,28 +4,33 @@ use Parser::AST::ident::Ident;
 use Parser::AST::expression::Expression;
 
 pub struct Designator {
+    node_type: TokenType,
     ident: Ident,
     expressions: Vec<Expression>,
 }
 
 impl Designator {
     pub fn new(tc: &mut TokenCollection) -> Self {
+        let mut expList : Vec<Expression> = vec!();
+        let mut tokenType = TokenType::None;
+
         match tc.peek_next_token_type() {
             Some(TokenType::Ident) => {
-                let current_ident = Ident::new(tc.get_next_token().unwrap()));
+                let current_ident = Ident::new(tc.get_next_token().unwrap());
+                tokenType = TokenType::Designator;
 
                 while let Some(next_token) = tc.peek_next_token_type() {
                     match next_token {
                         TokenType::LeftBrace => {
-                            //consume left brace
+                            // consume left brace
                             tc.get_next_token();
 
-                            expression(tc);
+                            expList.push(Expression::new(tc));
 
-                            //consume next token if right brace
+                            // consume next token if right brace
                             match tc.peek_next_token_type() {
                                 Some(TokenType::RightBrace) => {
-                                    //consume right brace
+                                    // consume right brace
                                     tc.get_next_token();
                                 },
                                 None => {
@@ -39,9 +44,9 @@ impl Designator {
                             }
                         },
                         _ => {
-                            //ident already collected, bail. no need for error handling here.
-                            Designator{ ident : current_ident,
-                                expressions : current_expr }
+                            // ident already collected, bail. no need for error handling here.
+                             return Designator{ node_type: tokenType, ident : current_ident,
+                                expressions : expList };
                         },
                     }
                 }
@@ -56,6 +61,20 @@ impl Designator {
                 panic!("Expected Ident Token in designator, found unexpected Token: {:?}", err);
             },
         }
-        Designator{ ident : Ident::new(tc.unwrap()), expressions : vec![] }
+
+        // Compiler Error : Should not reach this stage.
+        Designator{ node_type: tokenType, ident : Ident::new(tc.get_next_token().unwrap()), expressions : vec![] }
+    }
+
+    pub fn get_value(&self) -> (Ident, Vec<Expression>)  {
+        return (self.ident.clone(), self.expressions.to_vec())
+    }
+
+    pub fn get_type(&self) -> TokenType {
+        self.node_type.clone()
+    }
+
+    pub fn get_debug(self) -> String {
+        self.debugLine.clone()
     }
 }

@@ -10,8 +10,9 @@ pub mod number;
 pub mod ident;
 pub mod var;
 pub mod array;
-//pub mod designator;
-//pub mod expression;
+pub mod designator;
+pub mod expression;
+pub mod factor;
 
 //  Start by doing a fully recursive parse through the code. Introduce AST later to make
 //some kind of storage structure. 
@@ -908,6 +909,7 @@ pub fn factor(tc: &mut TokenCollection) {
 
     return
 }
+//---------------------------------//
 
 pub fn designator(tc: &mut TokenCollection) {
     //ast_print
@@ -1057,7 +1059,6 @@ pub fn array(tc: &mut TokenCollection) {
 
 
 }
-//---------------------------------//
 
 pub fn var(tc: &mut TokenCollection) {
     //print_ast

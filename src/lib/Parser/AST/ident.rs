@@ -1,6 +1,7 @@
 use lib::Lexer::token::Token;
 use lib::Lexer::token::TokenType;
 
+#[derive(Debug,Clone)]
 pub struct Ident {
     ident_type: TokenType,
     ident_value: String,
