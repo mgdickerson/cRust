@@ -9,28 +9,32 @@ pub struct Factor {
     node_type: TokenType,
     design: Option<Designator>,
     number: Option<Number>,
-    //func_Call: Option<FuncCall>,
+    func_Call: Option<FuncCall>,
     expression: Option<Expression>,
 }
 
 impl Factor {
-    pub fn new(tc: &mut TokenCollection) {
-        let
+    pub fn new(tc: &mut TokenCollection) -> Self {
+        let mut node_type = TokenType::None;
+        let mut design = Option::None;
+        let mut number = Option::None;
+        let mut func_Call = Option::None;
+        let mut expression = Option::None;
 
         match tc.peek_next_token_type() {
             Some(TokenType::Ident) => {
-                designator(tc);
+                design = Option::Some(Designator::new(tc));
             },
             Some(TokenType::Number) => {
-                number(tc);
+                number = Option::Some(Number::new(tc));
             },
             Some(TokenType::FuncCall) => {
-                func_call(tc);
+                func_Call = Option::Some(FuncCall::new(tc))
             },
             Some(TokenType::LeftBrace) => {
                 //consume token, call self
                 tc.get_next_token();
-                expression(tc);
+                expression = Some(Expression::new(tc));
 
                 //handle closing brace in initial call of brace so all braces ar self contained.
                 match tc.peek_next_token_type() {
@@ -57,5 +61,7 @@ impl Factor {
                 panic!("Expected Designator, Number, Function Call, or '(' Token, found unexpected {:?}", err);
             },
         }
+
+        Factor{ node_type, design, number, func_Call, expression }
     }
 }

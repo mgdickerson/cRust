@@ -50,7 +50,7 @@ impl Array {
 
                     match tc.peek_next_token_type() {
                         Some(TokenType::Number) => {
-                            numList.push(AST::number::Number::new(tc.get_next_token().unwrap()));
+                            numList.push(AST::number::Number::new(tc));
                         },
                         None => {
                             // Compiler Error : 
@@ -90,7 +90,7 @@ impl Array {
         while let Some(next_token) = tc.peek_next_token_type() {
             match next_token {
                 TokenType::Ident => {
-                    varList.push(AST::ident::Ident::new(tc.get_next_token().unwrap()));
+                    varList.push(AST::ident::Ident::new(tc));
                 },
                 TokenType::Comma => {
                     tc.get_next_token();

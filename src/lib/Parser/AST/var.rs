@@ -27,7 +27,7 @@ impl Var {
         while let Some(next_token) = tc.peek_next_token_type() {
             match next_token {
                 TokenType::Ident => {
-                    varList.push(AST::ident::Ident::new(tc.get_next_token().unwrap()));
+                    varList.push(AST::ident::Ident::new(tc));
                 },
                 TokenType::Comma => {
                     //consume comma token

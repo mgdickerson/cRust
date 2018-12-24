@@ -1,4 +1,5 @@
 use lib::Lexer::token::Token;
+use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 
 #[derive(Debug,Clone)]
@@ -9,7 +10,8 @@ pub struct Number {
 }
 
 impl Number {
-    pub fn new(token: Token) -> Self {
+    pub fn new(tc: &mut TokenCollection) -> Self {
+        let token = tc.get_next_token().unwrap();
         Number{ number_type: token.get_type(),
             number_value: token.get_contents().parse::<i64>().unwrap(),
                  // this will be awesome later, promise

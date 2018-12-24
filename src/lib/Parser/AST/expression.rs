@@ -1,5 +1,8 @@
+use lib::Lexer::token::Token;
+use lib::Lexer::token::TokenType;
+use lib::Lexer::token::TokenCollection;
 
-
+#[derive(Debug,Clone)]
 pub struct Expression {
     terms: Vec<Terms>,
     math_ops: Vec<Token>,

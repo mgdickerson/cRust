@@ -16,7 +16,7 @@ impl Designator {
 
         match tc.peek_next_token_type() {
             Some(TokenType::Ident) => {
-                let current_ident = Ident::new(tc.get_next_token().unwrap());
+                let current_ident = Ident::new(tc);
                 tokenType = TokenType::Designator;
 
                 while let Some(next_token) = tc.peek_next_token_type() {
@@ -63,7 +63,7 @@ impl Designator {
         }
 
         // Compiler Error : Should not reach this stage.
-        Designator{ node_type: tokenType, ident : Ident::new(tc.get_next_token().unwrap()), expressions : vec![] }
+        Designator{ node_type: tokenType, ident : Ident::new(tc), expressions : vec![] }
     }
 
     pub fn get_value(&self) -> (Ident, Vec<Expression>)  {
@@ -72,9 +72,5 @@ impl Designator {
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
-    }
-
-    pub fn get_debug(self) -> String {
-        self.debugLine.clone()
     }
 }
