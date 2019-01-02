@@ -50,7 +50,7 @@ impl DLX {
             self.disassem(instructionWord); // initializes op, a, b, c
 
             let mut nextPC = self.PC + 1;
-            if(self.format == 2) {
+            if self.format == 2 {
                 origc = self.c;             // used for RET
                 self.c = self.R[self.c as usize];    // dirty trick
             }
@@ -317,7 +317,7 @@ impl DLX {
         if (arg1 == 0) & (arg2 == 0) & (arg3 == 0) & (op != WRL) {
             println!("DLX.assemble: the only instruction without arguments is WRL!");
             return -1;
-        } else if( (arg1 == 0) & (arg2 == 0) & (arg3 == 0) & (op == WRL) ) {
+        } else if (arg1 == 0) & (arg2 == 0) & (arg3 == 0) & (op == WRL)  {
             return DLX::F1(op,0,0,0);
         }
         match op {
@@ -350,7 +350,7 @@ impl DLX {
         if c < 0 {
             c ^= 0xFFFF0000;
         }
-        if ((a & !0x1F)|(b & !0x1F)|(c & !0xFFFF) != 0) {
+        if (a & !0x1F)|(b & !0x1F)|(c & !0xFFFF) != 0 {
             println!("Illegal Operand(s) for F1 Format.");
             return -1;
         }
@@ -358,7 +358,7 @@ impl DLX {
     }
 
     pub fn F2(op: i32, a: i32, b: i32, c: i32) -> i32 {
-        if ((a & !0x1F)|(b & !0x1F)|(c & !0x1F) != 0) {
+        if (a & !0x1F)|(b & !0x1F)|(c & !0x1F) != 0 {
             println!("Illegal Operand(s) for F2 Format.");
             return -1;
         }

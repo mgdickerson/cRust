@@ -2,9 +2,10 @@ use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST::designator::Designator;
 use Parser::AST::number::Number;
-//use Parser::AST::func_call::FuncCall;
+use Parser::AST::func_call::FuncCall;
 use Parser::AST::expression::Expression;
 
+#[derive(Debug,Clone)]
 pub struct Factor {
     node_type: TokenType,
     design: Option<Designator>,
@@ -63,5 +64,13 @@ impl Factor {
         }
 
         Factor{ node_type, design, number, func_Call, expression }
+    }
+
+    pub fn get_value(&self) -> (Option<Designator>, Option<Number>, Option<FuncCall>, Option<Expression> )  {
+        return (self.design.clone(), self.number.clone(), self.func_Call.clone(), self.expression.clone())
+    }
+
+    pub fn get_type(&self) -> TokenType {
+        self.node_type.clone()
     }
 }

@@ -13,6 +13,14 @@ pub mod array;
 pub mod designator;
 pub mod expression;
 pub mod factor;
+pub mod term;
+pub mod relation;
+pub mod return_stmt;
+pub mod func_call;
+pub mod while_stmt;
+pub mod if_stmt;
+pub mod assignment;
+pub mod func_body;
 
 //  Start by doing a fully recursive parse through the code. Introduce AST later to make
 //some kind of storage structure. 
@@ -385,6 +393,7 @@ pub fn func_param(tc: &mut TokenCollection) {
         }
     }
 }
+//---------------------------------//
 
 pub fn func_body(tc: &mut TokenCollection) {
     //ast_print
@@ -909,7 +918,6 @@ pub fn factor(tc: &mut TokenCollection) {
 
     return
 }
-//---------------------------------//
 
 pub fn designator(tc: &mut TokenCollection) {
     //ast_print

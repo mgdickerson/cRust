@@ -1,4 +1,3 @@
-use lib::Lexer::token::Token;
 use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 

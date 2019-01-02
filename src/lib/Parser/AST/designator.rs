@@ -3,6 +3,7 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::ident::Ident;
 use Parser::AST::expression::Expression;
 
+#[derive(Debug,Clone)]
 pub struct Designator {
     node_type: TokenType,
     ident: Ident,
