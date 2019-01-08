@@ -2,6 +2,7 @@ use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST;
 
+#[derive(Debug,Clone)]
 pub struct Var {
     var_type: TokenType,
     var_vec: Vec<AST::ident::Ident>,

@@ -119,6 +119,8 @@ pub enum TokenType {
     AssignmentOp,
     
     FuncCall,
+    FuncParam,
+    FuncIdent,
     
     IfStatement,
     ThenStatement,

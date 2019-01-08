@@ -79,4 +79,13 @@ impl FuncBody {
 
         FuncBody { node_type: TokenType::FuncBody, assignment, ifStmt, whileStmt, funcCall, returnStmt }
     }
+
+    pub fn get_value(&self) -> (Vec<Assignment>, Vec<IfStmt>, Vec<WhileStmt>, Vec<FuncCall>, Vec<ReturnStmt>)  {
+        return (self.assignment.to_vec(), self.ifStmt.to_vec(), self.whileStmt.to_vec(),
+                self.funcCall.to_vec(), self.returnStmt.to_vec())
+    }
+
+    pub fn get_type(&self) -> TokenType {
+        self.node_type.clone()
+    }
 }

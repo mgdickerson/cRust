@@ -57,6 +57,6 @@ fn main() {
         
         println!("\nTesting Token_Builder results: \n\n{:?}\n\n", tokens.get_vector());
 
-        Parser::AST::computation(&mut tc);
+        let comp = Parser::AST::computation::Comp::new(&mut tc);
     }
 }

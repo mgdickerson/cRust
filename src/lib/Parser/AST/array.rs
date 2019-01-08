@@ -2,6 +2,7 @@ use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST;
 
+#[derive(Debug,Clone)]
 pub struct Array {
     node_type: TokenType,
     arrayDepthVec: Vec<AST::number::Number>,

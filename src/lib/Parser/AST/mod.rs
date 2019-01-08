@@ -21,11 +21,16 @@ pub mod while_stmt;
 pub mod if_stmt;
 pub mod assignment;
 pub mod func_body;
+pub mod func_param;
+pub mod func_ident;
+pub mod func_decl;
+pub mod var_decl;
+pub mod computation;
 
 //  Start by doing a fully recursive parse through the code. Introduce AST later to make
 //some kind of storage structure. 
 
-
+/*
 pub fn computation(tc: &mut TokenCollection) {
     //current Token is used for pretty printing and for potential use with AST data structure later.
     //println!("|\t{}", current_token.get_contents());
@@ -143,6 +148,8 @@ pub fn computation(tc: &mut TokenCollection) {
         },
     }
 }
+//---------------------------------//
+
 
 pub fn var_declaration(tc: &mut TokenCollection) {
     //ast_print
@@ -393,7 +400,6 @@ pub fn func_param(tc: &mut TokenCollection) {
         }
     }
 }
-//---------------------------------//
 
 pub fn func_body(tc: &mut TokenCollection) {
     //ast_print
@@ -419,17 +425,17 @@ pub fn func_body(tc: &mut TokenCollection) {
                         tc.get_next_token();
                         continue;
                     },
-                    Some(TokenType::RightBrace) | Some(TokenType::FiStatement) | 
+                    Some(TokenType::RightBrace) | Some(TokenType::FiStatement) |
                     Some(TokenType::OdStatement) | Some(TokenType::ElseStatement) => {
                         //fall through
                         continue
                     },
                     None => {
-                        // Compiler Error : 
+                        // Compiler Error :
                         panic!("Expected some form of termination after function call in function body.");
                     },
                     err => {
-                        // Compiler Error : 
+                        // Compiler Error :
                         panic!("Expected termination sequence after FuncCall, found unexpected Token: {:?}");
                     },
                 }
@@ -437,15 +443,15 @@ pub fn func_body(tc: &mut TokenCollection) {
             TokenType::ReturnStatement => {
                 rtn_stat(tc);
             },
-            
+
             //end of function body sequences
-            TokenType::RightBrace | TokenType::FiStatement | 
+            TokenType::RightBrace | TokenType::FiStatement |
             TokenType::OdStatement | TokenType::ElseStatement => {
                 //consume token? or just return?
                 return
             },
 
-            // Compiler Error : 
+            // Compiler Error :
             err => {
                 panic!("Unable to parse {:?} within function body.", err);
             }
@@ -1119,3 +1125,5 @@ pub fn number(tc: &mut TokenCollection) {
     tc.get_next_token();
     //should return some AST data structure
 }
+
+*/
