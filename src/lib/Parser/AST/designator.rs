@@ -22,7 +22,7 @@ impl Designator {
 
                 while let Some(next_token) = tc.peek_next_token_type() {
                     match next_token {
-                        TokenType::LeftBrace => {
+                        TokenType::LeftBracket => {
                             // consume left brace
                             tc.get_next_token();
 
@@ -30,7 +30,7 @@ impl Designator {
 
                             // consume next token if right brace
                             match tc.peek_next_token_type() {
-                                Some(TokenType::RightBrace) => {
+                                Some(TokenType::RightBracket) => {
                                     // consume right brace
                                     tc.get_next_token();
                                 },

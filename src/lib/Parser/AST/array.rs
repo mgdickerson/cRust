@@ -28,7 +28,7 @@ impl Array {
         }
 
         match tc.peek_next_token_type() {
-            Some(TokenType::LeftBrace) => {
+            Some(TokenType::LeftBracket) => {
                 //all is well, proceed through
             },
             None => {
@@ -43,10 +43,7 @@ impl Array {
 
         while let Some(next_token) = tc.peek_next_token_type() {
             match next_token {
-                TokenType::LeftBrace => {
-                    //should this update depth of array? Or do these just get consumed?
-                    //for now, just consume. 
-                    // TODO : Confirm it is the right bracket type. '['
+                TokenType::LeftBracket => {
                     tc.get_next_token();
 
                     match tc.peek_next_token_type() {
@@ -64,7 +61,7 @@ impl Array {
                     }
 
                     match tc.peek_next_token_type() {
-                        Some(TokenType::RightBrace) => {
+                        Some(TokenType::RightBracket) => {
                             tc.get_next_token();
                         },
                         None => {

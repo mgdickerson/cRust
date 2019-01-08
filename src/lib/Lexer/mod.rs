@@ -79,9 +79,12 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<
                 },
 
                 //Braces and Brackets
-                '{' | '[' | '(' => { buffer.push(c); return Some(Token::new(TokenType::LeftBrace, buffer)) },
-                '}' | ']' | ')' => { buffer.push(c); return Some(Token::new(TokenType::RightBrace, buffer)) },
-                
+                '{' => { buffer.push(c); return Some(Token::new(TokenType::LeftBrace, buffer)) },
+                '[' => { buffer.push(c); return Some(Token::new(TokenType::LeftBracket, buffer)) },
+                '(' => { buffer.push(c); return Some(Token::new(TokenType::LeftPara, buffer)) },
+                '}' => { buffer.push(c); return Some(Token::new(TokenType::RightBrace, buffer)) },
+                ']' => { buffer.push(c); return Some(Token::new(TokenType::RightBracket, buffer)) },
+                ')' => { buffer.push(c); return Some(Token::new(TokenType::RightPara, buffer)) },
 
                 //relOp characters will need an explicit peeknext
                 '=' | '!' | '>' | '<' => {

@@ -36,7 +36,7 @@ impl FuncParam {
                         },
                     }
                 },
-                TokenType::RightBrace => {
+                TokenType::RightPara => {
                     //end of function, return to func_ident but do not consume token
                     break
                 },

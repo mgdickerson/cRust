@@ -104,6 +104,10 @@ pub enum TokenType {
     // Braces
     LeftBrace,
     RightBrace,
+    LeftPara,
+    RightPara,
+    LeftBracket,
+    RightBracket,
     // TODO : Need to differentiate
 
     // Combination tokens

@@ -53,7 +53,8 @@ impl Assignment {
             },
             // All Possible Ending Sequences where ';' may not be necessary.
             Some(TokenType::FiStatement) | Some(TokenType::OdStatement) |
-            Some(TokenType::RightBrace) | Some(TokenType::ElseStatement) => {
+            Some(TokenType::RightBrace) | Some(TokenType::ElseStatement) |
+            Some(TokenType::RightPara) => {
                 //';' not required, return without consuming token.
             },
             None => {

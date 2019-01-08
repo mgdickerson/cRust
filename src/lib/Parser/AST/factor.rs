@@ -32,14 +32,14 @@ impl Factor {
             Some(TokenType::FuncCall) => {
                 func_Call = Option::Some(FuncCall::new(tc))
             },
-            Some(TokenType::LeftBrace) => {
+            Some(TokenType::LeftPara) => {
                 //consume token, call self
                 tc.get_next_token();
                 expression = Some(Expression::new(tc));
 
                 //handle closing brace in initial call of brace so all braces ar self contained.
                 match tc.peek_next_token_type() {
-                    Some(TokenType::RightBrace) => {
+                    Some(TokenType::RightPara) => {
                         tc.get_next_token();
                         //fall through
                     },

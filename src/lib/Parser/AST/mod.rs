@@ -1006,7 +1006,7 @@ pub fn array(tc: &mut TokenCollection) {
 
     while let Some(next_token) = tc.peek_next_token_type() {
         match next_token {
-            TokenType::LeftBrace => {
+            TokenType::LeftBracket => {
                 //should this update depth of array? Or do these just get consumed?
                 //for now, just consume. 
                 // TODO : Confirm it is the right bracket type. '['
@@ -1027,7 +1027,7 @@ pub fn array(tc: &mut TokenCollection) {
                 }
 
                 match tc.peek_next_token_type() {
-                    Some(TokenType::RightBrace) => {
+                    Some(TokenType::RightBracket) => {
                         tc.get_next_token();
                     },
                     None => {
@@ -1125,5 +1125,4 @@ pub fn number(tc: &mut TokenCollection) {
     tc.get_next_token();
     //should return some AST data structure
 }
-
 */

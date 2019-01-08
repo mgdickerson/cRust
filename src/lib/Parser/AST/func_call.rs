@@ -25,13 +25,13 @@ impl FuncCall {
                         funcName = Ident::new(tc);   //this will grab function identity AND parameters.
 
                         match tc.peek_next_token_type() {
-                            Some(TokenType::LeftBrace) => {
+                            Some(TokenType::LeftPara) => {
                                 //function parameter start
                                 tc.get_next_token();
 
                                 while let Some(next_token) = tc.peek_next_token_type() {
                                     match next_token {
-                                        TokenType::RightBrace => {
+                                        TokenType::RightPara => {
                                             tc.get_next_token();
                                             break;
                                         },

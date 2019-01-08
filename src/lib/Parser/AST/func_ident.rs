@@ -31,14 +31,14 @@ impl FuncIdent {
         }
 
         match tc.peek_next_token_type() {
-            Some(TokenType::LeftBrace) => {
+            Some(TokenType::LeftPara) => {
                 //function parameter start
                 tc.get_next_token();
 
                 funcParam = Some(FuncParam::new(tc));
 
                 match tc.peek_next_token_type() {
-                    Some(TokenType::RightBrace) => {
+                    Some(TokenType::RightPara) => {
                         tc.get_next_token();
                     },
                     Some(TokenType::SemiTermination) => {
