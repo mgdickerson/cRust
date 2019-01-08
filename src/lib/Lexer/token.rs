@@ -104,6 +104,7 @@ pub enum TokenType {
     // Braces
     LeftBrace,
     RightBrace,
+    // TODO : Need to differentiate
 
     // Combination tokens
     Ident,
