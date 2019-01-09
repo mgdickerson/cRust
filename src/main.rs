@@ -9,6 +9,7 @@ mod lib;
 use lib::Lexer;
 use lib::Lexer::token::{Token,TokenCollection,TokenType};
 use lib::Parser;
+use lib::IR::ir;
 
 fn main() {
     println!("Hello, Lexer test!");
@@ -18,7 +19,6 @@ fn main() {
     //  -Separate File open into function that returns Result(file, Error)
     //  -separate character reading from interpreatation
     //  -Make this into a command line arguement type program, because how cool would that be?
-
 
     //Users/mitcheldickerson/Documents/Projects/Rust/Practice/tiger_compiler/src/Testing
     //once command line, this should not be an issue.
@@ -56,6 +56,14 @@ fn main() {
         let mut tc = Lexer::token::TokenCollection::collect(&mut char_iter);
         
         println!("\nTesting Token_Builder results: \n\n{:?}\n\n", tokens.get_vector());
+
+        let mut b:Vec<Box<dyn lib::IR::ir::Inst>> = vec!();
+        b.push(Box::new(ir::Add::new(1, 2)));
+        b.push(Box::new(ir::Neg::new(1)));
+
+        for y in b {
+            y.debugPrint();
+        }
 
         let comp = Parser::AST::computation::Comp::new(&mut tc);
     }
