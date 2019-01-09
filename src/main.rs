@@ -10,6 +10,7 @@ use lib::Lexer;
 use lib::Lexer::token::{Token,TokenCollection,TokenType};
 use lib::Parser;
 use lib::IR::ir;
+use lib::Graph::node::{Node, NodeId};
 
 fn main() {
     println!("Hello, Lexer test!");
@@ -67,4 +68,15 @@ fn main() {
 
         let comp = Parser::AST::computation::Comp::new(&mut tc);
     }
+
+    // TODO : Graph tests being done here!
+    let mut node = Node::new();
+    node.add_parent(NodeId::new(1));
+    node.add_parent(NodeId::new(2));
+    node.add_child(NodeId::new(1));
+    node.add_child(NodeId::new(3));
+    let parents = node.parents();
+    let children = node.children();
+    println!("{:?}", parents);
+    println!("{:?}", children);
 }
