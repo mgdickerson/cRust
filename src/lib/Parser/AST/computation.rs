@@ -3,7 +3,7 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::var_decl::VarDecl;
 use Parser::AST::func_decl::FuncDecl;
 use Parser::AST::func_body::FuncBody;
-use super::{Arena, Node, NodeId};
+use super::{Node, NodeId};
 
 #[derive(Debug,Clone)]
 pub struct Comp {
@@ -141,14 +141,7 @@ impl Comp {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self) -> Arena {
-        let mut arena = Arena::new();
-        let comp_node_id = arena.new_node();
-
-        //let mut comp_node = arena.get_mut_ref(comp_node_id);
-
-
-
-        arena
+    pub fn to_ir(self) {
+        // TODO : All of this.
     }
 }

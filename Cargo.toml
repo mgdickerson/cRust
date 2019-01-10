@@ -4,4 +4,4 @@ version = "0.1.0"
 authors = ["Mitchel Dickerson"]
 
 [dependencies]
-typed-arena = "1.4.1"
+petgraph = "0.4.13"

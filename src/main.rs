@@ -1,3 +1,15 @@
+#![allow(unused_imports,
+        non_camel_case_types,
+        non_upper_case_globals,
+        non_snake_case,
+        unused_must_use,
+        dead_code
+)]
+
+///
+/// Make build messages cleaner, will remove later as needed.
+///
+
 use std::io::prelude::*;
 use std::io::{BufRead, BufReader, Result};
 use std::fs::{self, DirEntry};
@@ -10,11 +22,12 @@ use lib::Lexer;
 use lib::Lexer::token::{Token,TokenCollection,TokenType};
 use lib::Parser;
 use lib::IR::ir;
-use lib::IR::ir::{Operand,OpType};
+use lib::IR::ir::{Value};
 use lib::Graph::node::{Node,NodeId};
 //use lib::Graph::arena::Arena;
 
-use typed_arena::Arena;
+extern crate petgraph;
+use petgraph::graph::Graph;
 
 fn main() {
     println!("Hello, Lexer test!");
@@ -66,9 +79,7 @@ fn main() {
     }
 
     // TODO : Graph tests being done here!
-
-    let monster = Arena::new();
-    let test = monster.alloc(Node::new(NodeId::new(0)));
+    // TODO : Using standard Graph because it does not require Impl Copy.
 
     /*
 

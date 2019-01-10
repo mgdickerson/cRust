@@ -1,31 +1,60 @@
 #[derive(Debug,Clone)]
-pub struct Operand {
-    value: String,
-    val_type: OpType,
+pub struct Value {
+    val: ValTy,
 }
 
-impl Operand {
-    pub fn new(value: String, val_type: OpType) -> Self {
-        Operand { value, val_type }
+impl Value {
+    pub fn new(val_ty: ValTy) -> Self {
+        Value { val: val_ty }
     }
 
-    pub fn get_value(&self) -> String {
-        self.value.clone()
-    }
-
-    pub fn get_type(&self) -> OpType {
-        self.val_type.clone()
+    // TODO : Clean up errors.
+    pub fn get_value(&self) -> i32 {
+        match &self.val {
+            ValTy::inst(inst) => { -1 },    // Currently just an error
+            ValTy::con(con) => { *con },
+            ValTy::var(var) => { -1 },      // Currently just an error
+            ValTy::reg(reg) => *reg,
+        }
     }
 }
 
 #[derive(Debug,Clone)]
-pub enum OpType {
-    constant,
-    variable,
-    destination,
+pub enum ValTy {
+    inst(Inst),
+    con(i32),
+    var(String),
+    reg(i32),
 }
 
-pub trait Inst {
+#[derive(Debug,Clone)]
+pub enum Inst {
+    neg(Neg),
+    add(Add),
+    adda(Adda),
+    sub(Sub),
+    mul(Mul),
+    div(Div),
+    cmp(Cmp),
+    load(Load),
+    store(Store),
+    mode(Move),
+    phi(Phi),
+    end(End),
+    bne(BNE),
+    beq(BEQ),
+    ble(BLE),
+    blt(BLT),
+    bge(BGE),
+    bgt(BGT),
+    read(Read),
+    write(Write),
+    writeNL(WriteNL),
+    call(Call),
+    ret(Ret),
+}
+
+pub trait Instruction {
     fn p_command(&self) -> &str;
 
     fn debugPrint(&self) {
@@ -35,18 +64,19 @@ pub trait Inst {
 
 /// neg ///
 
+#[derive(Debug,Clone)]
 pub struct Neg {
-    x_val: Operand,
+    x_val: Box<Value>,
     p_command: String,
 }
 
 impl Neg {
-    pub fn new(x_val: Operand) -> Self {
-       Neg { x_val: x_val.clone(), p_command: String::from("neg ") + &x_val.get_value() }
+    pub fn new(x_val: Value) -> Self {
+       Neg { x_val: Box::new(x_val.clone()), p_command: String::from("neg ") + &x_val.get_value().to_string() }
     }
 }
 
-impl Inst for Neg {
+impl Instruction for Neg {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -54,20 +84,21 @@ impl Inst for Neg {
 
 /// add ///
 
+#[derive(Debug,Clone)]
 pub struct Add {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl Add {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("add ") + &x_val.get_value() + " " + &y_val.get_value();
-        Add { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("add ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        Add { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for Add {
+impl Instruction for Add {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -75,20 +106,21 @@ impl Inst for Add {
 
 /// sub ///
 
+#[derive(Debug,Clone)]
 pub struct Sub {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl Sub {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("sub ") + &x_val.get_value() + " " + &y_val.get_value();
-        Sub { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("sub ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        Sub { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for Sub {
+impl Instruction for Sub {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -96,20 +128,21 @@ impl Inst for Sub {
 
 /// mul ///
 
+#[derive(Debug,Clone)]
 pub struct Mul {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl Mul {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("mul ") + &x_val.get_value() + " " + &y_val.get_value();
-        Mul { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("mul ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        Mul { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for Mul {
+impl Instruction for Mul {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -117,20 +150,21 @@ impl Inst for Mul {
 
 /// div ///
 
+#[derive(Debug,Clone)]
 pub struct Div {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl Div {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("div ") + &x_val.get_value() + " " + &y_val.get_value();
-        Div { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("div ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        Div { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for Div {
+impl Instruction for Div {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -138,20 +172,21 @@ impl Inst for Div {
 
 /// cmp ///
 
+#[derive(Debug,Clone)]
 pub struct Cmp {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl Cmp {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("cmp ") + &x_val.get_value() + " " + &y_val.get_value();
-        Cmp { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("cmp ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        Cmp { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for Cmp {
+impl Instruction for Cmp {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -159,20 +194,21 @@ impl Inst for Cmp {
 
 /// adda ///
 
+#[derive(Debug,Clone)]
 pub struct Adda {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl Adda {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("adda ") + &x_val.get_value() + " " + &y_val.get_value();
-        Adda { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("adda ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        Adda { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for Adda {
+impl Instruction for Adda {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -180,19 +216,20 @@ impl Inst for Adda {
 
 /// load ///
 
+#[derive(Debug,Clone)]
 pub struct Load {
-    y_val: Operand,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl Load {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("load ") + &y_val.get_value();
-        Load { y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("load ") + &y_val.get_value().to_string();
+        Load { y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for Load {
+impl Instruction for Load {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -200,20 +237,21 @@ impl Inst for Load {
 
 /// store ///
 
+#[derive(Debug,Clone)]
 pub struct Store {
-    y_val: Operand,
-    x_val: Operand,
+    y_val: Box<Value>,
+    x_val: Box<Value>,
     p_command: String,
 }
 
 impl Store {
-    pub fn new(y_val: Operand, x_val: Operand) -> Self {
-        let string = String::from("store ") + &y_val.get_value() + " " + &x_val.get_value();
-        Store { y_val, x_val, p_command: string }
+    pub fn new(y_val: Value, x_val: Value) -> Self {
+        let string = String::from("store ") + &y_val.get_value().to_string() + " " + &x_val.get_value().to_string();
+        Store { y_val: Box::new(y_val), x_val: Box::new(x_val), p_command: string }
     }
 }
 
-impl Inst for Store {
+impl Instruction for Store {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -221,20 +259,21 @@ impl Inst for Store {
 
 /// move ///
 
+#[derive(Debug,Clone)]
 pub struct Move {
-    y_val: Operand,
-    x_val: Operand,
+    y_val: Box<Value>,
+    x_val: Box<Value>,
     p_command: String,
 }
 
 impl Move {
-    pub fn new(y_val: Operand, x_val: Operand) -> Self {
-        let string = String::from("move ") + &y_val.get_value() + " " + &x_val.get_value();
-        Move { y_val, x_val, p_command: string }
+    pub fn new(y_val: Value, x_val: Value) -> Self {
+        let string = String::from("move ") + &y_val.get_value().to_string() + " " + &x_val.get_value().to_string();
+        Move { y_val: Box::new(y_val), x_val: Box::new(x_val), p_command: string }
     }
 }
 
-impl Inst for Move {
+impl Instruction for Move {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -242,25 +281,26 @@ impl Inst for Move {
 
 /// phi ///
 
+#[derive(Debug,Clone)]
 pub struct Phi {
-    x_val: Vec<Operand>,
+    x_val: Box<Vec<Value>>,
     p_command: String,
 }
 
 impl Phi {
-    pub fn new(x_val: Vec<Operand>) -> Self {
+    pub fn new(x_val: Vec<Value>) -> Self {
         let mut string = String::from("phi := (");
         let mut first = true;
         for val in x_val.clone() {
             if !first { string += ", "; first = false; }
-            string += &String::from(val.get_value());
+            string += &String::from(val.get_value().to_string());
         }
         string += ")";
-        Phi { x_val, p_command: string }
+        Phi { x_val: Box::new(x_val), p_command: string }
     }
 }
 
-impl Inst for Phi {
+impl Instruction for Phi {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -268,6 +308,7 @@ impl Inst for Phi {
 
 /// end ///
 
+#[derive(Debug,Clone)]
 pub struct End {
     p_command: String,
 }
@@ -279,7 +320,7 @@ impl End {
     }
 }
 
-impl Inst for End {
+impl Instruction for End {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -287,19 +328,20 @@ impl Inst for End {
 
 /// bra ///
 
+#[derive(Debug,Clone)]
 pub struct Bra {
-    y_val: Operand,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl Bra {
-    pub fn new(y_val: Operand) -> Self {
-        let string = String::from("bra ") + &y_val.get_value();
-        Bra { y_val, p_command: string }
+    pub fn new(y_val: Value) -> Self {
+        let string = String::from("bra ") + &y_val.get_value().to_string();
+        Bra { y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for Bra {
+impl Instruction for Bra {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -307,20 +349,21 @@ impl Inst for Bra {
 
 /// bne ///
 
+#[derive(Debug,Clone)]
 pub struct BNE {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl BNE {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("bne ") + &x_val.get_value() + " " + &y_val.get_value();
-        BNE { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("bne ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        BNE { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for BNE {
+impl Instruction for BNE {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -328,20 +371,21 @@ impl Inst for BNE {
 
 /// beq ///
 
+#[derive(Debug,Clone)]
 pub struct BEQ {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl BEQ {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("beq ") + &x_val.get_value() + " " + &y_val.get_value();
-        BEQ { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("beq ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        BEQ { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for BEQ {
+impl Instruction for BEQ {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -349,20 +393,21 @@ impl Inst for BEQ {
 
 /// ble ///
 
+#[derive(Debug,Clone)]
 pub struct BLE {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl BLE {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("ble ") + &x_val.get_value() + " " + &y_val.get_value();
-        BLE { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("ble ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        BLE { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for BLE {
+impl Instruction for BLE {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -370,20 +415,21 @@ impl Inst for BLE {
 
 /// blt ///
 
+#[derive(Debug,Clone)]
 pub struct BLT {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl BLT {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("blt ") + &x_val.get_value() + " " + &y_val.get_value();
-        BLT { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("blt ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        BLT { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for BLT {
+impl Instruction for BLT {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -391,20 +437,21 @@ impl Inst for BLT {
 
 /// bge ///
 
+#[derive(Debug,Clone)]
 pub struct BGE {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl BGE {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("bge ") + &x_val.get_value() + " " + &y_val.get_value();
-        BGE { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("bge ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        BGE { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for BGE {
+impl Instruction for BGE {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -412,20 +459,21 @@ impl Inst for BGE {
 
 /// bgt ///
 
+#[derive(Debug,Clone)]
 pub struct BGT {
-    x_val: Operand,
-    y_val: Operand,
+    x_val: Box<Value>,
+    y_val: Box<Value>,
     p_command: String,
 }
 
 impl BGT {
-    pub fn new(x_val: Operand, y_val: Operand) -> Self {
-        let string = String::from("bgt ") + &x_val.get_value() + " " + &y_val.get_value();
-        BGT { x_val, y_val, p_command: string }
+    pub fn new(x_val: Value, y_val: Value) -> Self {
+        let string = String::from("bgt ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
+        BGT { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
     }
 }
 
-impl Inst for BGT {
+impl Instruction for BGT {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -433,6 +481,7 @@ impl Inst for BGT {
 
 /// read ///
 
+#[derive(Debug,Clone)]
 pub struct Read {
     p_command: String,
 }
@@ -444,7 +493,7 @@ impl Read {
     }
 }
 
-impl Inst for Read {
+impl Instruction for Read {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -452,19 +501,20 @@ impl Inst for Read {
 
 /// write ///
 
+#[derive(Debug,Clone)]
 pub struct Write {
-    x_val: Operand,
+    x_val: Box<Value>,
     p_command: String,
 }
 
 impl Write {
-    pub fn new(x_val: Operand) -> Self {
-        let string = String::from("write ") + &x_val.get_value();
-        Write { x_val, p_command: string }
+    pub fn new(x_val: Value) -> Self {
+        let string = String::from("write ") + &x_val.get_value().to_string();
+        Write { x_val: Box::new(x_val), p_command: string }
     }
 }
 
-impl Inst for Write {
+impl Instruction for Write {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -472,6 +522,7 @@ impl Inst for Write {
 
 /// writenl ///
 
+#[derive(Debug,Clone)]
 pub struct WriteNL {
     p_command: String,
 }
@@ -483,7 +534,7 @@ impl WriteNL {
     }
 }
 
-impl Inst for WriteNL {
+impl Instruction for WriteNL {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -491,6 +542,7 @@ impl Inst for WriteNL {
 
 /// call ///
 
+#[derive(Debug,Clone)]
 pub struct Call {
     p_command: String,
 }
@@ -502,7 +554,7 @@ impl Call {
     }
 }
 
-impl Inst for Call {
+impl Instruction for Call {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
@@ -510,19 +562,20 @@ impl Inst for Call {
 
 /// return ///
 
-pub struct Return {
-    x_val: Operand,
+#[derive(Debug,Clone)]
+pub struct Ret {
+    x_val: Box<Value>,
     p_command: String,
 }
 
-impl Return {
-    pub fn new(x_val: Operand) -> Self {
-        let string = String::from("return ") + &x_val.get_value();
-        Return { x_val, p_command: string }
+impl Ret {
+    pub fn new(x_val: Value) -> Self {
+        let string = String::from("return ") + &x_val.get_value().to_string();
+        Ret { x_val: Box::new(x_val), p_command: string }
     }
 }
 
-impl Inst for Return {
+impl Instruction for Ret {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
     }
