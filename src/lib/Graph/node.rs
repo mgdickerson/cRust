@@ -5,13 +5,14 @@ use lib::Graph::arena::Arena;
 pub struct Node {
     parents: Option<Vec<NodeId>>,
     children: Option<Vec<NodeId>>,
+    node_id: NodeId,
 
     instructions: Vec<Box<dyn Inst>>
 }
 
 impl Node {
-    pub fn new() -> Self {
-        Node { parents: None, children: None, instructions: vec!() }
+    pub fn new(node_id: NodeId) -> Self {
+        Node { parents: None, children: None, node_id, instructions: vec!() }
     }
 
     pub fn parents(&self) -> &Option<Vec<NodeId>> {
@@ -58,6 +59,14 @@ impl Node {
     pub fn instructions(&self) -> &Vec<Box<Inst>> {
         &self.instructions
     }
+
+    pub fn add_instr(&mut self, new_inst: Box<Inst>) {
+        self.instructions.push(new_inst)
+    }
+
+    pub fn node_id(&self) -> NodeId {
+        self.node_id.clone()
+    }
 }
 
 #[derive(Debug,Clone)]
@@ -68,5 +77,9 @@ pub struct NodeId {
 impl NodeId {
     pub fn new(index: usize) -> Self {
         Self { index }
+    }
+
+    pub fn get(&self) -> usize {
+        self.index.clone()
     }
 }

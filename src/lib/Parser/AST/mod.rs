@@ -5,6 +5,8 @@ pub mod assignment;
 use std;
 use Lexer::get_token;
 use Lexer::token::{Token, TokenType, TokenCollection};
+use lib::Graph::arena::Arena;
+use lib::Graph::node::{Node, NodeId};
 
 pub mod number;
 pub mod ident;

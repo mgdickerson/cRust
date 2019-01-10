@@ -1,3 +1,30 @@
+#[derive(Debug,Clone)]
+pub struct Operand {
+    value: String,
+    val_type: OpType,
+}
+
+impl Operand {
+    pub fn new(value: String, val_type: OpType) -> Self {
+        Operand { value, val_type }
+    }
+
+    pub fn get_value(&self) -> String {
+        self.value.clone()
+    }
+
+    pub fn get_type(&self) -> OpType {
+        self.val_type.clone()
+    }
+}
+
+#[derive(Debug,Clone)]
+pub enum OpType {
+    constant,
+    variable,
+    destination,
+}
+
 pub trait Inst {
     fn p_command(&self) -> &str;
 
@@ -9,13 +36,13 @@ pub trait Inst {
 /// neg ///
 
 pub struct Neg {
-    x_val: i32,
+    x_val: Operand,
     p_command: String,
 }
 
 impl Neg {
-    pub fn new(x_val: i32) -> Self {
-       Neg { x_val, p_command: String::from("neg ") + &x_val.to_string() }
+    pub fn new(x_val: Operand) -> Self {
+       Neg { x_val: x_val.clone(), p_command: String::from("neg ") + &x_val.get_value() }
     }
 }
 
@@ -28,14 +55,14 @@ impl Inst for Neg {
 /// add ///
 
 pub struct Add {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl Add {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("add ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("add ") + &x_val.get_value() + " " + &y_val.get_value();
         Add { x_val, y_val, p_command: string }
     }
 }
@@ -49,14 +76,14 @@ impl Inst for Add {
 /// sub ///
 
 pub struct Sub {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl Sub {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("sub ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("sub ") + &x_val.get_value() + " " + &y_val.get_value();
         Sub { x_val, y_val, p_command: string }
     }
 }
@@ -70,14 +97,14 @@ impl Inst for Sub {
 /// mul ///
 
 pub struct Mul {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl Mul {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("mul ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("mul ") + &x_val.get_value() + " " + &y_val.get_value();
         Mul { x_val, y_val, p_command: string }
     }
 }
@@ -91,14 +118,14 @@ impl Inst for Mul {
 /// div ///
 
 pub struct Div {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl Div {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("div ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("div ") + &x_val.get_value() + " " + &y_val.get_value();
         Div { x_val, y_val, p_command: string }
     }
 }
@@ -112,14 +139,14 @@ impl Inst for Div {
 /// cmp ///
 
 pub struct Cmp {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl Cmp {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("cmp ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("cmp ") + &x_val.get_value() + " " + &y_val.get_value();
         Cmp { x_val, y_val, p_command: string }
     }
 }
@@ -133,14 +160,14 @@ impl Inst for Cmp {
 /// adda ///
 
 pub struct Adda {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl Adda {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("adda ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("adda ") + &x_val.get_value() + " " + &y_val.get_value();
         Adda { x_val, y_val, p_command: string }
     }
 }
@@ -154,13 +181,13 @@ impl Inst for Adda {
 /// load ///
 
 pub struct Load {
-    y_val: i32,
+    y_val: Operand,
     p_command: String,
 }
 
 impl Load {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("load ") + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("load ") + &y_val.get_value();
         Load { y_val, p_command: string }
     }
 }
@@ -174,14 +201,14 @@ impl Inst for Load {
 /// store ///
 
 pub struct Store {
-    y_val: i32,
-    x_val: i32,
+    y_val: Operand,
+    x_val: Operand,
     p_command: String,
 }
 
 impl Store {
-    pub fn new(y_val: i32, x_val: i32) -> Self {
-        let string = String::from("store ") + &y_val.to_string() + " " + &x_val.to_string();
+    pub fn new(y_val: Operand, x_val: Operand) -> Self {
+        let string = String::from("store ") + &y_val.get_value() + " " + &x_val.get_value();
         Store { y_val, x_val, p_command: string }
     }
 }
@@ -195,14 +222,14 @@ impl Inst for Store {
 /// move ///
 
 pub struct Move {
-    y_val: i32,
-    x_val: i32,
+    y_val: Operand,
+    x_val: Operand,
     p_command: String,
 }
 
 impl Move {
-    pub fn new(y_val: i32, x_val: i32) -> Self {
-        let string = String::from("move ") + &y_val.to_string() + " " + &x_val.to_string();
+    pub fn new(y_val: Operand, x_val: Operand) -> Self {
+        let string = String::from("move ") + &y_val.get_value() + " " + &x_val.get_value();
         Move { y_val, x_val, p_command: string }
     }
 }
@@ -216,17 +243,17 @@ impl Inst for Move {
 /// phi ///
 
 pub struct Phi {
-    x_val: Vec<i32>,
+    x_val: Vec<Operand>,
     p_command: String,
 }
 
 impl Phi {
-    pub fn new(x_val: Vec<i32>) -> Self {
+    pub fn new(x_val: Vec<Operand>) -> Self {
         let mut string = String::from("phi := (");
         let mut first = true;
         for val in x_val.clone() {
             if !first { string += ", "; first = false; }
-            string += &String::from(val.to_string());
+            string += &String::from(val.get_value());
         }
         string += ")";
         Phi { x_val, p_command: string }
@@ -261,13 +288,13 @@ impl Inst for End {
 /// bra ///
 
 pub struct Bra {
-    y_val: i32,
+    y_val: Operand,
     p_command: String,
 }
 
 impl Bra {
-    pub fn new(y_val: i32) -> Self {
-        let string = String::from("bra ") + &y_val.to_string();
+    pub fn new(y_val: Operand) -> Self {
+        let string = String::from("bra ") + &y_val.get_value();
         Bra { y_val, p_command: string }
     }
 }
@@ -281,14 +308,14 @@ impl Inst for Bra {
 /// bne ///
 
 pub struct BNE {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl BNE {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("bne ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("bne ") + &x_val.get_value() + " " + &y_val.get_value();
         BNE { x_val, y_val, p_command: string }
     }
 }
@@ -302,14 +329,14 @@ impl Inst for BNE {
 /// beq ///
 
 pub struct BEQ {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl BEQ {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("beq ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("beq ") + &x_val.get_value() + " " + &y_val.get_value();
         BEQ { x_val, y_val, p_command: string }
     }
 }
@@ -323,14 +350,14 @@ impl Inst for BEQ {
 /// ble ///
 
 pub struct BLE {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl BLE {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("ble ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("ble ") + &x_val.get_value() + " " + &y_val.get_value();
         BLE { x_val, y_val, p_command: string }
     }
 }
@@ -344,14 +371,14 @@ impl Inst for BLE {
 /// blt ///
 
 pub struct BLT {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl BLT {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("blt ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("blt ") + &x_val.get_value() + " " + &y_val.get_value();
         BLT { x_val, y_val, p_command: string }
     }
 }
@@ -365,14 +392,14 @@ impl Inst for BLT {
 /// bge ///
 
 pub struct BGE {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl BGE {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("bge ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("bge ") + &x_val.get_value() + " " + &y_val.get_value();
         BGE { x_val, y_val, p_command: string }
     }
 }
@@ -386,14 +413,14 @@ impl Inst for BGE {
 /// bgt ///
 
 pub struct BGT {
-    x_val: i32,
-    y_val: i32,
+    x_val: Operand,
+    y_val: Operand,
     p_command: String,
 }
 
 impl BGT {
-    pub fn new(x_val: i32, y_val: i32) -> Self {
-        let string = String::from("bgt ") + &x_val.to_string() + " " + &y_val.to_string();
+    pub fn new(x_val: Operand, y_val: Operand) -> Self {
+        let string = String::from("bgt ") + &x_val.get_value() + " " + &y_val.get_value();
         BGT { x_val, y_val, p_command: string }
     }
 }
@@ -426,13 +453,13 @@ impl Inst for Read {
 /// write ///
 
 pub struct Write {
-    x_val: i32,
+    x_val: Operand,
     p_command: String,
 }
 
 impl Write {
-    pub fn new(x_val: i32) -> Self {
-        let string = String::from("write ") + &x_val.to_string();
+    pub fn new(x_val: Operand) -> Self {
+        let string = String::from("write ") + &x_val.get_value();
         Write { x_val, p_command: string }
     }
 }
@@ -484,13 +511,13 @@ impl Inst for Call {
 /// return ///
 
 pub struct Return {
-    x_val: i32,
+    x_val: Operand,
     p_command: String,
 }
 
 impl Return {
-    pub fn new(x_val: i32) -> Self {
-        let string = String::from("return ") + &x_val.to_string();
+    pub fn new(x_val: Operand) -> Self {
+        let string = String::from("return ") + &x_val.get_value();
         Return { x_val, p_command: string }
     }
 }

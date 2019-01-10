@@ -10,7 +10,11 @@ use lib::Lexer;
 use lib::Lexer::token::{Token,TokenCollection,TokenType};
 use lib::Parser;
 use lib::IR::ir;
-use lib::Graph::node::{Node, NodeId};
+use lib::IR::ir::{Operand,OpType};
+use lib::Graph::node::{Node,NodeId};
+//use lib::Graph::arena::Arena;
+
+use typed_arena::Arena;
 
 fn main() {
     println!("Hello, Lexer test!");
@@ -58,6 +62,17 @@ fn main() {
         
         println!("\nTesting Token_Builder results: \n\n{:?}\n\n", tokens.get_vector());
 
+        let comp = Parser::AST::computation::Comp::new(&mut tc);
+    }
+
+    // TODO : Graph tests being done here!
+
+    let monster = Arena::new();
+    let test = monster.alloc(Node::new(NodeId::new(0)));
+
+    /*
+
+
         let mut b:Vec<Box<dyn lib::IR::ir::Inst>> = vec!();
         b.push(Box::new(ir::Add::new(1, 2)));
         b.push(Box::new(ir::Neg::new(1)));
@@ -66,11 +81,24 @@ fn main() {
             y.debugPrint();
         }
 
-        let comp = Parser::AST::computation::Comp::new(&mut tc);
+
+    let mut arena = Arena::new();
+
+    for x in 0..10 {
+        let nodeId = arena.new_node();
+        arena.get_mut_ref(nodeId.clone()).unwrap().add_instr(Box::new(ir::Add::new(x, x + 1)));
+        arena.get_mut_ref(nodeId.clone()).unwrap().add_instr(Box::new(ir::Neg::new(x)));
+        arena.get_mut_ref(nodeId).unwrap().add_instr(Box::new(ir::Sub::new(x, x + 1)));
     }
 
-    // TODO : Graph tests being done here!
-    let mut node = Node::new();
+    let mut iter = arena.iter();
+    for some in iter {
+        for inst in some.instructions() {
+            inst.debugPrint();
+        }
+    }
+
+    let mut node = Node::new(NodeId::new(0));
     node.add_parent(NodeId::new(1));
     node.add_parent(NodeId::new(2));
     node.add_child(NodeId::new(1));
@@ -79,4 +107,5 @@ fn main() {
     let children = node.children();
     println!("{:?}", parents);
     println!("{:?}", children);
+    */
 }
