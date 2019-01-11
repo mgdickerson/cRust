@@ -11,6 +11,14 @@ impl Node {
     pub fn new(node_id: NodeId) -> Self {
         Node { node_id, node_data: NodeData::new() }
     }
+
+    pub fn get_mut_data_ref(&mut self) -> &mut BasicBlock {
+        self.node_data.get_mut_ref()
+    }
+
+    pub fn get_data(self) -> BasicBlock {
+        self.node_data.get()
+    }
 }
 
 #[derive(Debug,Clone)]
@@ -36,5 +44,13 @@ pub struct NodeData {
 impl NodeData {
     pub fn new() -> Self {
         NodeData { data: BasicBlock::new() }
+    }
+
+    pub fn get_mut_ref(&mut self) -> &mut BasicBlock {
+        &mut self.data
+    }
+
+    pub fn get(self) -> BasicBlock {
+        self.data
     }
 }

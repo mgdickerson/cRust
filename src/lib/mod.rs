@@ -1,4 +1,7 @@
-pub mod Lexer; 
+extern crate petgraph;
+use petgraph::graph;
+
+pub mod Lexer;
 pub mod Parser;
 pub mod Utility;
 pub mod IR;

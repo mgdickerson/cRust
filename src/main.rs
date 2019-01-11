@@ -6,9 +6,7 @@
         dead_code
 )]
 
-///
-/// Make build messages cleaner, will remove later as needed.
-///
+/// Std Lib
 
 use std::io::prelude::*;
 use std::io::{BufRead, BufReader, Result};
@@ -17,17 +15,22 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::env;
 
+/// Internal Lib
+
 mod lib;
 use lib::Lexer;
 use lib::Lexer::token::{Token,TokenCollection,TokenType};
 use lib::Parser;
 use lib::IR::ir;
-use lib::IR::ir::{Value};
+use lib::IR::ir::{Value,ValTy,Inst};
 use lib::Graph::node::{Node,NodeId};
 //use lib::Graph::arena::Arena;
 
+/// External Lib
+
 extern crate petgraph;
 use petgraph::graph::Graph;
+use petgraph::dot::{Dot,Config};
 
 fn main() {
     println!("Hello, Lexer test!");
@@ -81,6 +84,39 @@ fn main() {
     // TODO : Graph tests being done here!
     // TODO : Using standard Graph because it does not require Impl Copy.
 
+    let mut vec = Node::new(NodeId::new(0));
+    vec.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(0)))));;
+    vec.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(1)))));
+    vec.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(32)))));
+
+    let mut vec1 = Node::new(NodeId::new(0));
+    vec1.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(42)))));;
+    vec1.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(123)))));
+    vec1.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(38)))));
+
+    let mut vec2 = Node::new(NodeId::new(0));
+    vec2.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(23)))));;
+    vec2.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(1145)))));
+    vec2.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(12312)))));
+
+    let mut vec3 = Node::new(NodeId::new(0));
+    vec3.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(12)))));;
+    vec3.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(100)))));
+    vec3.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(320)))));
+
+    let mut og = Graph::new();
+    let node1 = og.add_node(vec);
+    let node2 = og.add_node(vec1);
+    let node3 = og.add_node(vec2);
+    let node4 = og.add_node(vec3);
+
+    og.add_edge(node1,node2,1);
+    og.add_edge(node1,node3,1);
+    og.add_edge(node2,node4,1);
+    og.add_edge(node3,node4,1);
+    og.add_edge(node4,node1,1);
+
+    println!("{:?}", Dot::with_config(&og, &[Config::EdgeNoLabel]));
     /*
 
 

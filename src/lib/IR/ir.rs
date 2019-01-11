@@ -38,9 +38,10 @@ pub enum Inst {
     cmp(Cmp),
     load(Load),
     store(Store),
-    mode(Move),
+    mov(Move),
     phi(Phi),
     end(End),
+    bra(Bra),
     bne(BNE),
     beq(BEQ),
     ble(BLE),
@@ -53,6 +54,40 @@ pub enum Inst {
     call(Call),
     ret(Ret),
 }
+
+// TODO : works with self, instead of &mut self
+impl Inst {
+    pub fn get_inst(self) -> Option<Box<Instruction>> {
+        match self {
+            Inst::neg(val) => { Some(Box::new(val)) },
+            Inst::add(val) => { Some(Box::new(val)) },
+            Inst::adda(val) => { Some(Box::new(val)) },
+            Inst::sub(val) => { Some(Box::new(val)) },
+            Inst::mul(val) => { Some(Box::new(val)) },
+            Inst::div(val) => { Some(Box::new(val)) },
+            Inst::cmp(val) => { Some(Box::new(val)) },
+            Inst::load(val) => { Some(Box::new(val)) },
+            Inst::store(val) => { Some(Box::new(val)) },
+            Inst::mov(val) => { Some(Box::new(val)) },
+            Inst::phi(val) => { Some(Box::new(val)) },
+            Inst::end(val) => { Some(Box::new(val)) },
+            Inst::bra(val) => { Some(Box::new(val)) },
+            Inst::bne(val) => { Some(Box::new(val)) },
+            Inst::beq(val) => { Some(Box::new(val)) },
+            Inst::ble(val) => { Some(Box::new(val)) },
+            Inst::blt(val) => { Some(Box::new(val)) },
+            Inst::bge(val) => { Some(Box::new(val)) },
+            Inst::bgt(val) => { Some(Box::new(val)) },
+            Inst::read(val) => { Some(Box::new(val)) },
+            Inst::write(val) => { Some(Box::new(val)) },
+            Inst::writeNL(val) => { Some(Box::new(val)) },
+            Inst::call(val) => { Some(Box::new(val)) },
+            Inst::ret(val) => { Some(Box::new(val)) },
+            _ => None,
+        }
+    }
+}
+
 
 pub trait Instruction {
     fn p_command(&self) -> &str;
