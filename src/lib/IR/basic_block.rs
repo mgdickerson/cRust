@@ -1,6 +1,6 @@
 use lib::IR::ir::Inst;
 
-#[derive(Debug,Clone)]
+#[derive(Clone)]
 pub struct BasicBlock {
     inst: Vec<Inst>,
 }
@@ -24,5 +24,15 @@ impl BasicBlock {
 
     pub fn update(&mut self, instruction_set: Vec<Inst>) {
         self.inst = instruction_set;
+    }
+}
+
+impl std::fmt::Debug for BasicBlock {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        for inst in self.inst.clone() {
+            write!(f, "{:?}", inst.get_inst().unwrap());
+        }
+
+        write!(f, "")
     }
 }

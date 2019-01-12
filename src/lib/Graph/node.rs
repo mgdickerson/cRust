@@ -1,7 +1,7 @@
 use std;
 use lib::IR::basic_block::BasicBlock;
 
-#[derive(Debug,Clone)]
+#[derive(Clone)]
 pub struct Node {
     node_id: NodeId,
     node_data: NodeData,
@@ -18,6 +18,12 @@ impl Node {
 
     pub fn get_data(self) -> BasicBlock {
         self.node_data.get()
+    }
+}
+
+impl std::fmt::Debug for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Node: [{}] ( \\l {:?}) \\l", self.node_id.get(), self.node_data.get_ref())
     }
 }
 
@@ -46,11 +52,15 @@ impl NodeData {
         NodeData { data: BasicBlock::new() }
     }
 
-    pub fn get_mut_ref(&mut self) -> &mut BasicBlock {
-        &mut self.data
-    }
-
     pub fn get(self) -> BasicBlock {
         self.data
+    }
+
+    pub fn get_ref(& self) -> &BasicBlock {
+        & self.data
+    }
+
+    pub fn get_mut_ref(&mut self) -> &mut BasicBlock {
+        &mut self.data
     }
 }

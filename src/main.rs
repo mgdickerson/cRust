@@ -25,6 +25,7 @@ use lib::IR::ir;
 use lib::IR::ir::{Value,ValTy,Inst};
 use lib::Graph::node::{Node,NodeId};
 //use lib::Graph::arena::Arena;
+use lib::Utility::display;
 
 /// External Lib
 
@@ -85,24 +86,24 @@ fn main() {
     // TODO : Using standard Graph because it does not require Impl Copy.
 
     let mut vec = Node::new(NodeId::new(0));
-    vec.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(0)))));;
-    vec.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(1)))));
-    vec.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(32)))));
+    vec.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(0)), 0)));;
+    vec.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(1)), 1)));
+    vec.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(32)), 2)));
 
-    let mut vec1 = Node::new(NodeId::new(0));
-    vec1.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(42)))));;
-    vec1.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(123)))));
-    vec1.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(38)))));
+    let mut vec1 = Node::new(NodeId::new(1));
+    vec1.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(42)), 3)));;
+    vec1.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(123)), 4)));
+    vec1.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(38)), 5)));
 
-    let mut vec2 = Node::new(NodeId::new(0));
-    vec2.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(23)))));;
-    vec2.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(1145)))));
-    vec2.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(12312)))));
+    let mut vec2 = Node::new(NodeId::new(2));
+    vec2.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(23)), 6)));;
+    vec2.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(1145)), 7)));
+    vec2.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(12312)), 8)));
 
-    let mut vec3 = Node::new(NodeId::new(0));
-    vec3.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(12)))));;
-    vec3.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(100)))));
-    vec3.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(320)))));
+    let mut vec3 = Node::new(NodeId::new(3));
+    vec3.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(12)), 9)));;
+    vec3.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(100)), 10)));
+    vec3.get_mut_data_ref().add_instruction(Inst::neg(ir::Neg::new(Value::new(ValTy::con(320)), 11)));
 
     let mut og = Graph::new();
     let node1 = og.add_node(vec);
@@ -116,7 +117,7 @@ fn main() {
     og.add_edge(node3,node4,1);
     og.add_edge(node4,node1,1);
 
-    println!("{:?}", Dot::with_config(&og, &[Config::EdgeNoLabel]));
+    println!("{:?}", display::Dot::with_config(&og, &[display::Config::EdgeNoLabel]));
     /*
 
 

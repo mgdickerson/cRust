@@ -27,6 +27,26 @@ pub enum ValTy {
     reg(i32),
 }
 
+///
+/// Possible method of making things easier for myself
+///
+/// pub struct Op {
+/// x_val: Option<Value>,
+/// y_val: Option<Value>,
+/// p_command: String,
+/// inst_number: usize,
+/// inst_type: Inst,
+/// }
+///
+/// impl Op {
+/// BUNCH OF FUNCTIONS HERE
+/// }
+///
+/// pub enum InstTy{
+/// ALL ENUM TYPES HERE
+/// }
+///
+
 #[derive(Debug,Clone)]
 pub enum Inst {
     neg(Neg),
@@ -92,8 +112,20 @@ impl Inst {
 pub trait Instruction {
     fn p_command(&self) -> &str;
 
-    fn debugPrint(&self) {
+    fn inst_number(&self) -> &usize;
+
+    fn print_command(&self) {
         println!("{}", self.p_command());
+    }
+
+    fn debug_print(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}; \\l", self.p_command())
+    }
+}
+
+impl std::fmt::Debug for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "({}): {}; \\l ", self.inst_number(), self.p_command())
     }
 }
 
@@ -103,17 +135,22 @@ pub trait Instruction {
 pub struct Neg {
     x_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Neg {
-    pub fn new(x_val: Value) -> Self {
-       Neg { x_val: Box::new(x_val.clone()), p_command: String::from("neg ") + &x_val.get_value().to_string() }
+    pub fn new(x_val: Value, inst_number: usize) -> Self {
+       Neg { x_val: Box::new(x_val.clone()), p_command: String::from("neg ") + &x_val.get_value().to_string(), inst_number }
     }
 }
 
 impl Instruction for Neg {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -124,18 +161,23 @@ pub struct Add {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Add {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("add ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        Add { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        Add { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Add {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -146,18 +188,23 @@ pub struct Sub {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Sub {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("sub ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        Sub { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        Sub { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Sub {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -168,18 +215,23 @@ pub struct Mul {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Mul {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("mul ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        Mul { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        Mul { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Mul {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -190,18 +242,23 @@ pub struct Div {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Div {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("div ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        Div { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        Div { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Div {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -212,18 +269,23 @@ pub struct Cmp {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Cmp {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("cmp ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        Cmp { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        Cmp { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Cmp {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -234,18 +296,23 @@ pub struct Adda {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Adda {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("adda ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        Adda { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        Adda { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Adda {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -255,18 +322,23 @@ impl Instruction for Adda {
 pub struct Load {
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Load {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("load ") + &y_val.get_value().to_string();
-        Load { y_val: Box::new(y_val), p_command: string }
+        Load { y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Load {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -277,18 +349,23 @@ pub struct Store {
     y_val: Box<Value>,
     x_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Store {
-    pub fn new(y_val: Value, x_val: Value) -> Self {
+    pub fn new(y_val: Value, x_val: Value, inst_number: usize) -> Self {
         let string = String::from("store ") + &y_val.get_value().to_string() + " " + &x_val.get_value().to_string();
-        Store { y_val: Box::new(y_val), x_val: Box::new(x_val), p_command: string }
+        Store { y_val: Box::new(y_val), x_val: Box::new(x_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Store {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -299,18 +376,23 @@ pub struct Move {
     y_val: Box<Value>,
     x_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Move {
-    pub fn new(y_val: Value, x_val: Value) -> Self {
+    pub fn new(y_val: Value, x_val: Value, inst_number: usize) -> Self {
         let string = String::from("move ") + &y_val.get_value().to_string() + " " + &x_val.get_value().to_string();
-        Move { y_val: Box::new(y_val), x_val: Box::new(x_val), p_command: string }
+        Move { y_val: Box::new(y_val), x_val: Box::new(x_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Move {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -320,10 +402,11 @@ impl Instruction for Move {
 pub struct Phi {
     x_val: Box<Vec<Value>>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Phi {
-    pub fn new(x_val: Vec<Value>) -> Self {
+    pub fn new(x_val: Vec<Value>, inst_number: usize) -> Self {
         let mut string = String::from("phi := (");
         let mut first = true;
         for val in x_val.clone() {
@@ -331,13 +414,17 @@ impl Phi {
             string += &String::from(val.get_value().to_string());
         }
         string += ")";
-        Phi { x_val: Box::new(x_val), p_command: string }
+        Phi { x_val: Box::new(x_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Phi {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -346,18 +433,23 @@ impl Instruction for Phi {
 #[derive(Debug,Clone)]
 pub struct End {
     p_command: String,
+    inst_number: usize,
 }
 
 impl End {
-    pub fn new() -> Self {
+    pub fn new(inst_number: usize) -> Self {
         let string = String::from("end ");
-        End { p_command: string }
+        End { p_command: string, inst_number }
     }
 }
 
 impl Instruction for End {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -367,18 +459,23 @@ impl Instruction for End {
 pub struct Bra {
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize
 }
 
 impl Bra {
-    pub fn new(y_val: Value) -> Self {
+    pub fn new(y_val: Value, inst_number: usize) -> Self {
         let string = String::from("bra ") + &y_val.get_value().to_string();
-        Bra { y_val: Box::new(y_val), p_command: string }
+        Bra { y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Bra {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -389,18 +486,23 @@ pub struct BNE {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl BNE {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("bne ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        BNE { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        BNE { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for BNE {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -411,18 +513,23 @@ pub struct BEQ {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl BEQ {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("beq ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        BEQ { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        BEQ { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for BEQ {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -433,18 +540,23 @@ pub struct BLE {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl BLE {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("ble ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        BLE { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        BLE { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for BLE {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -455,18 +567,23 @@ pub struct BLT {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl BLT {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("blt ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        BLT { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        BLT { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for BLT {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -477,18 +594,23 @@ pub struct BGE {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl BGE {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("bge ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        BGE { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        BGE { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for BGE {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -499,18 +621,23 @@ pub struct BGT {
     x_val: Box<Value>,
     y_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl BGT {
-    pub fn new(x_val: Value, y_val: Value) -> Self {
+    pub fn new(x_val: Value, y_val: Value, inst_number: usize) -> Self {
         let string = String::from("bgt ") + &x_val.get_value().to_string() + " " + &y_val.get_value().to_string();
-        BGT { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string }
+        BGT { x_val: Box::new(x_val), y_val: Box::new(y_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for BGT {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -519,18 +646,23 @@ impl Instruction for BGT {
 #[derive(Debug,Clone)]
 pub struct Read {
     p_command: String,
+    inst_number: usize,
 }
 
 impl Read {
-    pub fn new() -> Self {
+    pub fn new(inst_number: usize) -> Self {
         let string = String::from("read ");
-        Read { p_command: string }
+        Read { p_command: string, inst_number }
     }
 }
 
 impl Instruction for Read {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -540,18 +672,23 @@ impl Instruction for Read {
 pub struct Write {
     x_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Write {
-    pub fn new(x_val: Value) -> Self {
+    pub fn new(x_val: Value, inst_number: usize) -> Self {
         let string = String::from("write ") + &x_val.get_value().to_string();
-        Write { x_val: Box::new(x_val), p_command: string }
+        Write { x_val: Box::new(x_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Write {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -560,18 +697,23 @@ impl Instruction for Write {
 #[derive(Debug,Clone)]
 pub struct WriteNL {
     p_command: String,
+    inst_number: usize,
 }
 
 impl WriteNL {
-    pub fn new() -> Self {
+    pub fn new(inst_number: usize) -> Self {
         let string = String::from("writenl ");
-        WriteNL { p_command: string }
+        WriteNL { p_command: string, inst_number }
     }
 }
 
 impl Instruction for WriteNL {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -580,18 +722,23 @@ impl Instruction for WriteNL {
 #[derive(Debug,Clone)]
 pub struct Call {
     p_command: String,
+    inst_number: usize,
 }
 
 impl Call {
-    pub fn new() -> Self {
+    pub fn new(inst_number: usize) -> Self {
         let string = String::from("call ");
-        Call { p_command: string }
+        Call { p_command: string, inst_number }
     }
 }
 
 impl Instruction for Call {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
 
@@ -601,17 +748,22 @@ impl Instruction for Call {
 pub struct Ret {
     x_val: Box<Value>,
     p_command: String,
+    inst_number: usize,
 }
 
 impl Ret {
-    pub fn new(x_val: Value) -> Self {
+    pub fn new(x_val: Value, inst_number: usize) -> Self {
         let string = String::from("return ") + &x_val.get_value().to_string();
-        Ret { x_val: Box::new(x_val), p_command: string }
+        Ret { x_val: Box::new(x_val), p_command: string, inst_number }
     }
 }
 
 impl Instruction for Ret {
     fn p_command(&self) -> &str {
         self.p_command.as_str()
+    }
+
+    fn inst_number(&self) -> &usize {
+        &self.inst_number
     }
 }
