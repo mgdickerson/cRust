@@ -46,6 +46,152 @@ pub enum ValTy {
 /// ALL ENUM TYPES HERE
 /// }
 ///
+///
+
+#[derive(Clone)]
+pub struct Op {
+    // Value Operands
+    x_val: Option<Box<Value>>,
+    y_val: Option<Box<Value>>,
+    special_val: Option<Vec<Box<Value>>>,
+
+    // General Information about self
+    inst_number: usize,
+    block_number: usize,
+    inst_type: InstTy,
+
+    // Useful for debugging or printing
+    p_command: String,
+}
+
+impl Op {
+    pub fn new(x_val: Option<Box<Value>>,
+               y_val: Option<Box<Value>>,
+               special_val: Option<Vec<Box<Value>>>,
+               inst_number: usize,
+               block_number: usize,
+               inst_type: InstTy) -> Self
+    {
+        match inst_type.clone() {
+            // Op //
+            InstTy::read | InstTy::end | InstTy::writeNL => {
+
+            }
+            // Op x //
+            InstTy::neg | InstTy::write | InstTy::ret => {
+
+            }
+            // Op x y //
+            InstTy::add | InstTy::sub | InstTy::mul |
+            InstTy::div | InstTy::cmp | InstTy::adda |
+            InstTy::bne | InstTy::beq | InstTy::ble |
+            InstTy::blt | InstTy::bge | InstTy::bgt => {
+
+            }
+            // Op y //
+            InstTy::load | InstTy::bra => {
+
+            }
+            // Op y x //
+            InstTy::store | InstTy::mov => {
+
+            }
+            // Op [x] //
+            InstTy::phi | InstTy::call => {
+
+            }
+
+            _ => { panic!("Error in Op construction, unexpected inst_type found."); }
+        }
+
+        Op {}
+    }
+}
+
+#[derive(Clone)]
+pub enum InstTy {
+    /// Op ///
+    read,
+    end,
+    writeNL,
+
+    /// Op x ///
+    neg,
+    write,
+    ret,
+
+    /// Op x y ///
+    add,
+    sub,
+    mul,
+    div,
+    cmp,
+    adda,
+
+    bne,
+    beq,
+    ble,
+    blt,
+    bge,
+    bgt,
+
+    /// Op y ///
+    load,
+    bra,
+
+    /// Op y x ///
+    store,
+    mov,
+
+    /// Op [x] ///
+    phi,
+    call,
+}
+
+impl InstTy {
+    pub fn to_string(&self) -> String {
+        match self {
+            /// Op ///
+            InstTy::read => { String::from("read") },
+            InstTy::end => { String::from("end") },
+            InstTy::writeNL => { String::from("writeNL") },
+
+            /// Op x ///
+            InstTy::neg => { String::from("neg") },
+            InstTy::write => { String::from("write") },
+            InstTy::ret => { String::from("ret") },
+
+            /// Op x y ///
+            InstTy::add => { String::from("add") },
+            InstTy::sub => { String::from("sub") },
+            InstTy::mul => { String::from("mul") },
+            InstTy::div => { String::from("div") },
+            InstTy::cmp => { String::from("cmp") },
+            InstTy::adda => { String::from("adda") },
+
+            InstTy::bne => { String::from("bne") },
+            InstTy::beq => { String::from("beq") },
+            InstTy::ble => { String::from("ble") },
+            InstTy::blt => { String::from("blt") },
+            InstTy::bge => { String::from("bge") },
+            InstTy::bgt => { String::from("bgt") },
+
+            /// Op y ///
+            InstTy::load => { String::from("load") },
+            InstTy::bra => { String::from("bra") },
+
+            /// Op y x ///
+            InstTy::store => { String::from("store") },
+            InstTy::mov => { String::from("move") },
+
+            /// Op [x] ///
+            InstTy::phi => { String::from("phi") },
+            InstTy::call => { String::from("call") },
+
+            _ => { panic!("Error occurred, was not a default type."); }
+        }
+    }
+}
 
 #[derive(Debug,Clone)]
 pub enum Inst {
