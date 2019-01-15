@@ -9,44 +9,29 @@ impl Value {
     }
 
     // TODO : Clean up errors.
-    pub fn get_value(&self) -> i32 {
-        match &self.val {
-            ValTy::inst(inst) => { -1 },    // Currently just an error
-            ValTy::con(con) => { *con },
-            ValTy::var(var) => { -1 },      // Currently just an error
-            ValTy::reg(reg) => *reg,
-        }
+    pub fn get_value(&self) -> &ValTy {
+        &self.val
     }
 }
 
 #[derive(Debug,Clone)]
 pub enum ValTy {
-    inst(Inst),
+    op(Op),
     con(i32),
     var(String),
     reg(i32),
 }
 
-///
-/// Possible method of making things easier for myself
-///
-/// pub struct Op {
-/// x_val: Option<Value>,
-/// y_val: Option<Value>,
-/// p_command: String,
-/// inst_number: usize,
-/// inst_type: Inst,
-/// }
-///
-/// impl Op {
-/// BUNCH OF FUNCTIONS HERE
-/// }
-///
-/// pub enum InstTy{
-/// ALL ENUM TYPES HERE
-/// }
-///
-///
+impl ValTy {
+    pub fn to_string(&self) -> String {
+        match &self {
+            ValTy::op(op) => op.to_string(),
+            ValTy::con(con) => con.to_string(),
+            ValTy::var(var) => var.clone(),
+            ValTy::reg(reg) => reg.to_string(),
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct Op {
@@ -72,39 +57,87 @@ impl Op {
                block_number: usize,
                inst_type: InstTy) -> Self
     {
+        let mut p_command = String::new();
+        let x_val_string = x_val.clone();
+        let y_val_string = y_val.clone();
+        let special_val_string = special_val.clone();
+
         match inst_type.clone() {
             // Op //
             InstTy::read | InstTy::end | InstTy::writeNL => {
-
+                p_command = inst_type.to_string();
             }
             // Op x //
             InstTy::neg | InstTy::write | InstTy::ret => {
-
+                p_command = inst_type.to_string() + " " + &x_val_string.unwrap().get_value().to_string();
             }
             // Op x y //
             InstTy::add | InstTy::sub | InstTy::mul |
             InstTy::div | InstTy::cmp | InstTy::adda |
             InstTy::bne | InstTy::beq | InstTy::ble |
             InstTy::blt | InstTy::bge | InstTy::bgt => {
-
+                p_command = inst_type.to_string() + " " + &x_val_string.unwrap().get_value().to_string()
+                    + " " + &y_val_string.unwrap().get_value().to_string();
             }
             // Op y //
             InstTy::load | InstTy::bra => {
-
+                p_command = inst_type.to_string() + " " + &y_val_string.unwrap().get_value().to_string();
             }
             // Op y x //
             InstTy::store | InstTy::mov => {
-
+                p_command = inst_type.to_string() + " " + &y_val_string.unwrap().get_value().to_string() +
+                    " " + &x_val_string.unwrap().get_value().to_string();
             }
             // Op [x] //
             InstTy::phi | InstTy::call => {
-
+                p_command = String::from("phi := (");
+                let mut first = true;
+                for val in special_val_string.unwrap().clone() {
+                    if !first { p_command += ", "; first = false; }
+                    p_command += &String::from(val.get_value().to_string());
+                }
+                p_command += ")";
             }
 
             _ => { panic!("Error in Op construction, unexpected inst_type found."); }
         }
 
-        Op {}
+        Op { x_val, y_val, special_val, inst_number, block_number, inst_type, p_command }
+    }
+
+    pub fn build_op(inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
+        Op::new(None,None,None,inst_number,block_number,inst_type)
+    }
+
+    pub fn build_op_x(x_val: Value, inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
+        Op::new(Some(Box::new(x_val)),None,None,inst_number,block_number,inst_type)
+    }
+
+    pub fn build_op_x_y(x_val: Value, y_val: Value, inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
+        Op::new(Some(Box::new(x_val)),
+                Some(Box::new(y_val)),
+                None,
+                inst_number,
+                block_number,
+                inst_type)
+    }
+
+    pub fn build_op_y(y_val: Value, inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
+        Op::new(None, Some(Box::new(y_val)), None, inst_number, block_number, inst_type)
+    }
+
+    pub fn build_spec_op(special_val: Vec<Box<Value>>, inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
+        Op::new(None,None,Some(special_val),inst_number,block_number,inst_type)
+    }
+
+    pub fn to_string(&self) -> String {
+        self.p_command.clone()
+    }
+}
+
+impl std::fmt::Debug for Op {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "({}): {}; \\l ", self.inst_number, self.p_command)
     }
 }
 
@@ -193,6 +226,25 @@ impl InstTy {
     }
 }
 
+pub struct InstTracker {
+    inst_number: usize,
+}
+
+impl InstTracker {
+    pub fn new() -> InstTracker {
+        InstTracker { inst_number: 0 }
+    }
+
+    pub fn increment(&mut self) {
+        self.inst_number += 1;
+    }
+
+    pub fn get(&self) -> usize {
+        self.inst_number.clone()
+    }
+}
+
+/*
 #[derive(Debug,Clone)]
 pub enum Inst {
     neg(Neg),
@@ -913,3 +965,4 @@ impl Instruction for Ret {
         &self.inst_number
     }
 }
+*/

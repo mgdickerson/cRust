@@ -1,5 +1,6 @@
 use std;
 use lib::IR::basic_block::BasicBlock;
+use lib::IR::ir_manager::IRManager;
 
 #[derive(Clone)]
 pub struct Node {
@@ -8,8 +9,8 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(node_id: NodeId) -> Self {
-        Node { node_id, node_data: NodeData::new() }
+    pub fn new(irm: &mut IRManager) -> Self {
+        Node { node_id: NodeId::new(irm.get_block_num()), node_data: NodeData::new(irm) }
     }
 
     pub fn get_mut_data_ref(&mut self) -> &mut BasicBlock {
@@ -48,8 +49,8 @@ pub struct NodeData {
 }
 
 impl NodeData {
-    pub fn new() -> Self {
-        NodeData { data: BasicBlock::new() }
+    pub fn new(irm: &mut IRManager) -> Self {
+        NodeData { data: BasicBlock::new(irm) }
     }
 
     pub fn get(self) -> BasicBlock {

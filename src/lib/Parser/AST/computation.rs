@@ -1,9 +1,12 @@
 use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
+
 use Parser::AST::var_decl::VarDecl;
 use Parser::AST::func_decl::FuncDecl;
 use Parser::AST::func_body::FuncBody;
-use super::{Node, NodeId};
+
+use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::Graph;
 
 #[derive(Debug,Clone)]
 pub struct Comp {
@@ -143,5 +146,15 @@ impl Comp {
 
     pub fn to_ir(self) {
         // TODO : All of this.
+        let mut graph : Graph<Node, i32> = Graph::new();
+        let mut irManager = IRManager::new();
+
+        let initial_node = Node::new(&mut irManager);
+
+        for var in self.varDecl {
+            // These are the global variable declarations.
+            // Build the variable tracker here, and give unique tags.
+            var.to_ir(graph, initial_node, irManager);
+        }
     }
 }

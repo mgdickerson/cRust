@@ -1,28 +1,30 @@
-use lib::IR::ir::Inst;
+use lib::IR::ir_manager::IRManager;
+use lib::IR::ir::{Op, InstTy};
 
 #[derive(Clone)]
 pub struct BasicBlock {
-    inst: Vec<Inst>,
+    inst: Vec<Op>,
 }
 
 impl BasicBlock {
-    pub fn new() -> Self {
+    pub fn new(irm: &mut IRManager) -> Self {
+        irm.inc_block_tracker();
         BasicBlock{ inst: Vec::new() }
     }
 
-    pub fn add_instruction(&mut self, inst: Inst) {
-        self.inst.push(inst);
+    pub fn add_instruction(&mut self, op: Op) {
+        self.inst.push(op);
     }
 
-    pub fn to_iter(self) -> std::vec::IntoIter<Inst> {
+    pub fn to_iter(self) -> std::vec::IntoIter<Op> {
         self.inst.into_iter()
     }
 
-    pub fn get(self) -> Vec<Inst> {
+    pub fn get(self) -> Vec<Op> {
         self.inst
     }
 
-    pub fn update(&mut self, instruction_set: Vec<Inst>) {
+    pub fn update(&mut self, instruction_set: Vec<Op>) {
         self.inst = instruction_set;
     }
 }
@@ -30,9 +32,28 @@ impl BasicBlock {
 impl std::fmt::Debug for BasicBlock {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         for inst in self.inst.clone() {
-            write!(f, "{:?}", inst.get_inst().unwrap());
+            write!(f, "{:?}", inst);
         }
 
         write!(f, "")
+    }
+}
+
+#[derive(Clone)]
+pub struct BlockTracker {
+    block_number: usize,
+}
+
+impl BlockTracker {
+    pub fn new() -> BlockTracker {
+        BlockTracker { block_number: 0 }
+    }
+
+    pub fn increment(&mut self) {
+        self.block_number += 1;
+    }
+
+    pub fn get(&self) -> usize {
+        self.block_number.clone()
     }
 }

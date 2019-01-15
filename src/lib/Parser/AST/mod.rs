@@ -1,7 +1,14 @@
 use std;
 use Lexer::get_token;
 use Lexer::token::{Token, TokenType, TokenCollection};
-use lib::Graph::node::{Node, NodeId};
+
+use lib::Graph::node::{Node, NodeId, NodeData};
+
+extern crate petgraph;
+use petgraph::graph::Graph;
+
+use lib::IR::ir_manager::IRManager;
+use lib::IR::ir::{Value,ValTy,Op,InstTy};
 
 pub mod number;
 pub mod ident;

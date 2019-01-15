@@ -3,6 +3,9 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::var::Var;
 use Parser::AST::array::Array;
 
+use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::Graph;
+
 #[derive(Debug,Clone)]
 pub struct VarDecl {
     node_type: TokenType,
@@ -41,5 +44,9 @@ impl VarDecl {
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
+    }
+
+    pub fn to_ir(self, graph: Graph<Node, i32>, current_node: Node, irm: IRManager) {
+
     }
 }
