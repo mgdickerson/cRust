@@ -70,11 +70,12 @@ impl FuncIdent {
         FuncIdent { node_type: TokenType::FuncIdent, funcName, funcParam }
     }
 
-    pub fn get_value(&self) -> (Ident, Option<FuncParam>)  {
+    pub fn get_value(&self) -> (Ident, Option<FuncParam>) {
         return (self.funcName.clone(), self.funcParam.clone())
     }
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
     }
+
 }

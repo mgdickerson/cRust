@@ -2,6 +2,9 @@ use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST;
 
+use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::Graph;
+
 #[derive(Debug,Clone)]
 pub struct Array {
     node_type: TokenType,
@@ -12,8 +15,8 @@ pub struct Array {
 
 impl Array {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut varList : Vec<AST::ident::Ident> = vec!();
-        let mut numList : Vec<AST::number::Number> = vec!();
+        let mut varList: Vec<AST::ident::Ident> = vec!();
+        let mut numList: Vec<AST::number::Number> = vec!();
         let mut tokenType = TokenType::None;
 
         match tc.get_next_token().expect("Array Error").get_type() {
@@ -105,13 +108,15 @@ impl Array {
             }
         }
 
-        Array { node_type: tokenType,
+        Array {
+            node_type: tokenType,
             arrayDepthVec: numList,
             identList: varList,
-            debugLine: String::from("test") }
+            debugLine: String::from("test")
+        }
     }
 
-    pub fn get_value(&self) -> (Vec<AST::number::Number>, Vec<AST::ident::Ident>)  {
+    pub fn get_value(&self) -> (Vec<AST::number::Number>, Vec<AST::ident::Ident>) {
         return (self.arrayDepthVec.to_vec(), self.identList.to_vec())
     }
 
@@ -121,5 +126,23 @@ impl Array {
 
     pub fn get_debug(self) -> String {
         self.debugLine.clone()
+    }
+
+    // TODO : Currently the vector depth information is tossed, will need to handle this in var handler
+    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager, is_global: bool, func_name: Option<String>) {
+        for ident in self.identList {
+            let mut var_name = ident.get_value();
+
+            if !is_global {
+                if irm.get_var_manager_mut_ref().is_valid_variable(var_name.clone()) {
+                    // this variable is already a global variable, send error.
+                    panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
+                }
+
+                var_name = func_name.clone().unwrap() + "_" + &var_name;
+            }
+
+            irm.get_var_manager_mut_ref().add_variable(var_name);
+        }
     }
 }

@@ -2,6 +2,9 @@ use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST;
 
+use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::Graph;
+
 #[derive(Debug,Clone)]
 pub struct Var {
     var_type: TokenType,
@@ -59,5 +62,22 @@ impl Var {
 
     pub fn get_debug(self) -> String {
         self.debugLine.clone()
+    }
+
+    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager, is_global: bool, func_name: Option<String>) {
+        for ident in self.var_vec {
+            let mut var_name = ident.get_value();
+
+            if !is_global {
+                if irm.get_var_manager_mut_ref().is_valid_variable(var_name.clone()) {
+                    // this variable is already a global variable, send error.
+                    panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
+                }
+
+                var_name = func_name.clone().unwrap() + "_" + &var_name;
+            }
+
+            irm.get_var_manager_mut_ref().add_variable(var_name);
+        }
     }
 }

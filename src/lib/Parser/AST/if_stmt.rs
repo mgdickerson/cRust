@@ -3,6 +3,9 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::relation::Relation;
 use Parser::AST::func_body::FuncBody;
 
+use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::Graph;
+
 #[derive(Debug,Clone)]
 pub struct IfStmt {
     node_type: TokenType,

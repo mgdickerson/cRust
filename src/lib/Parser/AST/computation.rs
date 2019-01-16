@@ -129,7 +129,7 @@ impl Comp {
             },
             err => {
                 // Compiler Error :
-                panic!("Expected end of main body Token '.', found unexpected Token: {:?}", err);
+                panic!("Expected end of// fall through, as I cant access var_counter main body Token '.', found unexpected Token: {:?}", err);
             },
         }
 
@@ -149,12 +149,18 @@ impl Comp {
         let mut graph : Graph<Node, i32> = Graph::new();
         let mut irManager = IRManager::new();
 
-        let initial_node = Node::new(&mut irManager);
+        let mut initial_node = Node::new(&mut irManager);
 
         for var in self.varDecl {
             // These are the global variable declarations.
             // Build the variable tracker here, and give unique tags.
-            var.to_ir(graph, initial_node, irManager);
+            var.to_ir(&mut graph, &mut initial_node, &mut irManager, true, None);
         }
+
+        for func in self.funcDecl {
+            func.to_ir(&mut graph, &mut initial_node, &mut irManager);
+        }
+
+        println!("{:?}", irManager.get_var_manager_mut_ref());
     }
 }

@@ -62,6 +62,7 @@ fn main() {
     for entry in fs::read_dir(path).unwrap()
     {
         println!("{:?}", entry);
+        println!();
 
         let mut file = fs::File::open(entry.unwrap().path()).expect("Error Opening File.");
         let mut token_builder: Vec<lib::Lexer::token::Token> = Vec::new();
@@ -78,15 +79,22 @@ fn main() {
         //This currently goes way past end of file, but doesn't error, so that is interesting.
         let mut tokens = Lexer::token::TokenCollection::collect(&mut read_iter);
         let mut tc = Lexer::token::TokenCollection::collect(&mut char_iter);
-        
-        println!("\nTesting Token_Builder results: \n\n{:?}\n\n", tokens.get_vector());
+
+        // Temp remove output to remove clutter.
+        //println!("\nTesting Token_Builder results: \n\n{:?}\n\n", tokens.get_vector());
 
         let comp = Parser::AST::computation::Comp::new(&mut tc);
+        comp.to_ir();
+        println!();
+        println!();
+        println!();
+
     }
 
     // TODO : Graph tests being done here!
     // TODO : Using standard Graph because it does not require Impl Copy.
 
+    /*
     let mut irm = IRManager::new();
 
     let mut vec = Node::new(&mut irm);
@@ -122,6 +130,7 @@ fn main() {
     og.add_edge(node4,node1,1);
 
     println!("{:?}", display::Dot::with_config(&og, &[display::Config::EdgeNoLabel]));
+    */
 
     /*
 

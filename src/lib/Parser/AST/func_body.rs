@@ -6,37 +6,41 @@ use Parser::AST::while_stmt::WhileStmt;
 use Parser::AST::func_call::FuncCall;
 use Parser::AST::return_stmt::ReturnStmt;
 
+use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::Graph;
+
+#[derive(Debug,Clone)]
+enum Stmt {
+    assignment(Assignment),
+    if_stmt(IfStmt),
+    while_stmt(WhileStmt),
+    funcCall(FuncCall),
+    return_stmt(ReturnStmt),
+}
+
 #[derive(Debug,Clone)]
 pub struct FuncBody {
     node_type: TokenType,
-    assignment: Vec<Assignment>,
-    ifStmt: Vec<IfStmt>,
-    whileStmt: Vec<WhileStmt>,
-    funcCall: Vec<FuncCall>,
-    returnStmt: Vec<ReturnStmt>,
+    stmt_vec: Vec<Stmt>,
 }
 
 impl FuncBody {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut assignment = vec!();
-        let mut ifStmt = vec!();
-        let mut whileStmt = vec!();
-        let mut funcCall = vec!();
-        let mut returnStmt = vec!();
+        let mut stmt_vec = Vec::new();
 
         while let Some(next_token) = tc.peek_next_token_type() {
             match next_token {
                 TokenType::Assignment => {
-                    assignment.push(Assignment::new(tc));
+                    stmt_vec.push(Stmt::assignment(Assignment::new(tc)));
                 },
                 TokenType::IfStatement => {
-                    ifStmt.push(IfStmt::new(tc));
+                    stmt_vec.push(Stmt::if_stmt(IfStmt::new(tc)));
                 },
                 TokenType::WhileStatement => {
-                    whileStmt.push(WhileStmt::new(tc));
+                    stmt_vec.push(Stmt::while_stmt(WhileStmt::new(tc)));
                 },
                 TokenType::FuncCall => {
-                    funcCall.push(FuncCall::new(tc));
+                    stmt_vec.push(Stmt::funcCall(FuncCall::new(tc)));
 
                     match tc.peek_next_token_type() {
                         Some(TokenType::SemiTermination) => {
@@ -60,7 +64,7 @@ impl FuncBody {
                     }
                 },
                 TokenType::ReturnStatement => {
-                    returnStmt.push(ReturnStmt::new(tc));
+                    stmt_vec.push(Stmt::return_stmt(ReturnStmt::new(tc)));
                 },
 
                 //end of function body sequences
@@ -77,15 +81,37 @@ impl FuncBody {
             }
         }
 
-        FuncBody { node_type: TokenType::FuncBody, assignment, ifStmt, whileStmt, funcCall, returnStmt }
+        FuncBody { node_type: TokenType::FuncBody, stmt_vec }
     }
 
-    pub fn get_value(&self) -> (Vec<Assignment>, Vec<IfStmt>, Vec<WhileStmt>, Vec<FuncCall>, Vec<ReturnStmt>)  {
-        return (self.assignment.to_vec(), self.ifStmt.to_vec(), self.whileStmt.to_vec(),
-                self.funcCall.to_vec(), self.returnStmt.to_vec())
+    pub fn get_value(&self) -> Vec<Stmt>  {
+        return self.stmt_vec.to_vec()
     }
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
     }
+
+    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
+        for stmt in self.stmt_vec {
+            match stmt {
+                Stmt::assignment(assign) => {
+
+                },
+                Stmt::if_stmt(if_st) => {
+
+                },
+                Stmt::while_stmt(wh_st) => {
+
+                },
+                Stmt::funcCall(fn_cl) => {
+
+                },
+                Stmt::return_stmt(rt) => {
+
+                },
+            }
+        }
+    }
+
 }

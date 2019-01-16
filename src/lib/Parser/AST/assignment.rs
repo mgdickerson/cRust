@@ -3,6 +3,9 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::designator::Designator;
 use Parser::AST::expression::Expression;
 
+use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::Graph;
+
 #[derive(Debug,Clone)]
 pub struct Assignment {
     node_type: TokenType,
@@ -76,5 +79,9 @@ impl Assignment {
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
+    }
+
+    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
+
     }
 }

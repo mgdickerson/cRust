@@ -46,7 +46,23 @@ impl VarDecl {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph: Graph<Node, i32>, current_node: Node, irm: IRManager) {
+    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager, is_global: bool, func_name: Option<String>) {
+        match self.var {
+            Some(var) => {
+                var.to_ir(graph,current_node,irm,is_global.clone(),func_name.clone());
+            },
+            None => {
+                // None present, fall through
+            },
+        }
 
+        match self.array {
+            Some(array) => {
+                array.to_ir(graph,current_node,irm,is_global,func_name);
+            },
+            None => {
+                // None present, fall through
+            }
+        }
     }
 }
