@@ -6,36 +6,38 @@ use Parser::AST::func_call::FuncCall;
 use Parser::AST::expression::Expression;
 
 #[derive(Debug,Clone)]
+pub enum FactorType {
+    desig(Designator),
+    num(Number),
+    func_call(FuncCall),
+    expr(Expression),
+}
+
+#[derive(Debug,Clone)]
 pub struct Factor {
     node_type: TokenType,
-    design: Option<Designator>,
-    number: Option<Number>,
-    func_Call: Option<FuncCall>,
-    expression: Option<Expression>,
+    factor: Option<FactorType>,
 }
 
 impl Factor {
     pub fn new(tc: &mut TokenCollection) -> Self {
+        let mut factor = None;
         let mut node_type = TokenType::None;
-        let mut design = Option::None;
-        let mut number = Option::None;
-        let mut func_Call = Option::None;
-        let mut expression = Option::None;
 
         match tc.peek_next_token_type() {
             Some(TokenType::Ident) => {
-                design = Option::Some(Designator::new(tc));
+                factor = Some(FactorType::desig(Designator::new(tc)));
             },
             Some(TokenType::Number) => {
-                number = Option::Some(Number::new(tc));
+                factor = Some(FactorType::num(Number::new(tc)));
             },
             Some(TokenType::FuncCall) => {
-                func_Call = Option::Some(FuncCall::new(tc))
+                factor = Some(FactorType::func_call(FuncCall::new(tc)));
             },
             Some(TokenType::LeftPara) => {
                 //consume token, call self
                 tc.get_next_token();
-                expression = Some(Expression::new(tc));
+                factor = Some(FactorType::expr(Expression::new(tc)));
 
                 //handle closing brace in initial call of brace so all braces ar self contained.
                 match tc.peek_next_token_type() {
@@ -63,11 +65,11 @@ impl Factor {
             },
         }
 
-        Factor{ node_type, design, number, func_Call, expression }
+        Factor{ node_type, factor }
     }
 
-    pub fn get_value(&self) -> (Option<Designator>, Option<Number>, Option<FuncCall>, Option<Expression> )  {
-        return (self.design.clone(), self.number.clone(), self.func_Call.clone(), self.expression.clone())
+    pub fn get_value(&self) -> FactorType  {
+        return self.factor.clone().unwrap()
     }
 
     pub fn get_type(&self) -> TokenType {

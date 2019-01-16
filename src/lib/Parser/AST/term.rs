@@ -4,25 +4,33 @@ use lib::Lexer::token::Token;
 use Parser::AST::factor::Factor;
 
 #[derive(Debug,Clone)]
+enum TermList {
+    factor(Factor),
+    operation(Token),
+}
+
+#[derive(Debug,Clone)]
 pub struct Term {
     node_type: TokenType,
-    factors: Vec<Factor>,
-    operations: Vec<Token>,
+    term_list: Vec<TermList>,
 }
 
 impl Term {
     pub fn new(tc: &mut TokenCollection) -> Self {
+        let mut term_list = Vec::new();
+
         let mut factors : Vec<Factor> = vec!();
         let mut operations : Vec<Token> = vec!();
-        factors.push(Factor::new(tc));
+
+        term_list.push(TermList::factor(Factor::new(tc)));
 
         loop {
             //handle MulOp possibility
             match tc.peek_next_token_type() {
-                Some(TokenType::MulOp) => {
+                Some(TokenType::MulOp) | Some(TokenType::DivOp) => {
                     //MulOp found, consume then call factor again
-                    operations.push(tc.get_next_token().unwrap());
-                    factors.push(Factor::new(tc));
+                    term_list.push(TermList::operation(tc.get_next_token().unwrap()));
+                    term_list.push(TermList::factor(Factor::new(tc)));
                 },
                 None => {
                     // Compiler Error :
@@ -30,14 +38,14 @@ impl Term {
                 },
                 _ => {
                     //If no MulOp, return
-                    return Term { node_type: TokenType::Term, factors, operations }
+                    return Term { node_type: TokenType::Term, term_list }
                 },
             }
         }
     }
 
-    pub fn get_value(&self) -> (Vec<Factor>, Vec<Token>)  {
-        return (self.factors.to_vec(), self.operations.to_vec())
+    pub fn get_value(&self) -> Vec<TermList>  {
+        return self.term_list.clone()
     }
 
     pub fn get_type(&self) -> TokenType {

@@ -95,7 +95,10 @@ pub enum TokenType {
     // Operations
     RelOp,
     MathOp,
+    AddOp,
+    SubOp,
     MulOp,
+    DivOp,
 
     // Variable Types
     Var,

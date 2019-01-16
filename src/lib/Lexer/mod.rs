@@ -100,14 +100,14 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<
                 },
 
                 //Math Operators
-                '+' => { buffer.push(c); return Some(Token::new(TokenType::MathOp, buffer)) },
+                '+' => { buffer.push(c); return Some(Token::new(TokenType::AddOp, buffer)) },
                 '-' => {
                     buffer.push(c);
                     if buffer.as_str() == "<-" {
                         return Some(Token::new(TokenType::AssignmentOp, buffer))
                     }
                     else {
-                        return Some(Token::new(TokenType::MathOp, buffer))
+                        return Some(Token::new(TokenType::SubOp, buffer))
                     }
                 },
 
@@ -123,7 +123,7 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<
                     if *iter.peek().unwrap() == '/' {
                         is_comment = true;
                     }
-                    else { return Some(Token::new(TokenType::MulOp, buffer)) }
+                    else { return Some(Token::new(TokenType::DivOp, buffer)) }
                 },
                 '*' => { buffer.push(c); return Some(Token::new(TokenType::MulOp, buffer)) },
 

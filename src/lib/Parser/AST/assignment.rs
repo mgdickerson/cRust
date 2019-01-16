@@ -82,6 +82,11 @@ impl Assignment {
     }
 
     pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
+        let (ident, expr) = self.designator.get_value();
+
+        if expr.is_empty() {
+
+        }
 
     }
 }
