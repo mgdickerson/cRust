@@ -20,15 +20,17 @@ pub enum ValTy {
     con(i32),
     var(String),
     reg(i32),
+    arr(String),
 }
 
 impl ValTy {
     pub fn to_string(&self) -> String {
         match &self {
-            ValTy::op(op) => op.to_string(),
+            ValTy::op(op) => op.get_return_value(),
             ValTy::con(con) => con.to_string(),
             ValTy::var(var) => var.clone(),
             ValTy::reg(reg) => reg.to_string(),
+            ValTy::arr(arr) => arr.clone(),
         }
     }
 }
@@ -89,14 +91,24 @@ impl Op {
                     " " + &x_val_string.unwrap().get_value().to_string();
             }
             // Op [x] //
-            InstTy::phi | InstTy::call => {
+            // TODO : This will need to be changed, as Phi will likely not know its operands at start.
+            InstTy::phi => {
                 p_command = String::from("phi := (");
                 let mut first = true;
                 for val in special_val_string.unwrap().clone() {
-                    if !first { p_command += ", "; first = false; }
+                    if !first { p_command += ", "; }
                     p_command += &String::from(val.get_value().to_string());
+                    first = false;
                 }
                 p_command += ")";
+            }
+            InstTy::call => {
+                p_command = String::from("call ");
+                let mut first = true;
+                match special_val_string {
+                    Some(val_vec) => {},
+                    None => {},
+                }
             }
 
             _ => { panic!("Error in Op construction, unexpected inst_type found."); }
@@ -132,6 +144,11 @@ impl Op {
 
     pub fn to_string(&self) -> String {
         self.p_command.clone()
+    }
+
+    pub fn get_return_value(&self) -> String {
+        let string = String::from("(") + &self.inst_number.to_string() + ")";
+        string
     }
 }
 

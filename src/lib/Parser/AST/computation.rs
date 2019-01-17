@@ -7,6 +7,7 @@ use Parser::AST::func_body::FuncBody;
 
 use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Utility::display;
 
 #[derive(Debug,Clone)]
 pub struct Comp {
@@ -158,9 +159,14 @@ impl Comp {
         }
 
         for func in self.funcDecl {
-            func.to_ir(&mut graph, &mut initial_node, &mut irManager);
+            //func.to_ir(&mut graph, &mut initial_node, &mut irManager);
         }
 
-        println!("{:?}", irManager.get_var_manager_mut_ref());
+        self.funcBody.to_ir(&mut graph, &mut initial_node, &mut irManager);
+
+        //println!("{:?}", irManager.get_var_manager_mut_ref());
+        graph.add_node(initial_node);
+        println!("{:?}", display::Dot::with_config(&graph, &[display::Config::EdgeNoLabel]));
+
     }
 }

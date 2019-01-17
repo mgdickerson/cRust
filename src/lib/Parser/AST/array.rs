@@ -142,7 +142,15 @@ impl Array {
                 var_name = func_name.clone().unwrap() + "_" + &var_name;
             }
 
-            irm.get_var_manager_mut_ref().add_variable(var_name);
+            let unique = Array::get_unique(var_name, irm);
+
+            let inst = irm.build_op_x_y(Value::new(ValTy::var(unique)), Value::new(ValTy::con(0)), InstTy::mov);
+            current_node.get_mut_data_ref().add_instruction(inst);
         }
+    }
+
+    fn get_unique(var: String, irm: &mut IRManager) -> String {
+        let unique = irm.add_variable(var);
+        unique.get_ident()
     }
 }

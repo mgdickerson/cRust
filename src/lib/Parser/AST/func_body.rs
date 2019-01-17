@@ -96,7 +96,7 @@ impl FuncBody {
         for stmt in self.stmt_vec {
             match stmt {
                 Stmt::assignment(assign) => {
-
+                    assign.to_ir(graph,current_node,irm);
                 },
                 Stmt::if_stmt(if_st) => {
 

@@ -5,6 +5,9 @@ use Parser::AST::number::Number;
 use Parser::AST::func_call::FuncCall;
 use Parser::AST::expression::Expression;
 
+use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::Graph;
+
 #[derive(Debug,Clone)]
 pub enum FactorType {
     desig(Designator),
@@ -75,4 +78,55 @@ impl Factor {
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
     }
+
+    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) -> Option<Value> {
+        match self.factor {
+            Some(FactorType::desig(desig)) => {
+                // TODO : needs testing but there is SOMETHING in place for arrays
+                let (result, array) = desig.get_value();
+
+                if array.is_empty() {
+                    return Some(Value::new(ValTy::var(irm.get_unique_variable(result.get_value()).get_ident())));
+                }
+
+                let mut array_result = result.get_value() + "[";
+                let mut first = true;
+                for element in array {
+                    if !first {
+                        array_result += ", ";
+                    }
+                    array_result += &element.to_ir(graph,current_node,irm).expect("Expected valid Value").get_value().to_string();
+                    first = false;
+                }
+                array_result += "]";
+
+                let inst = irm.build_op_y(Value::new(ValTy::arr(array_result)), InstTy::load);
+                current_node.get_mut_data_ref().add_instruction(inst.clone());
+
+                return Some(Value::new(ValTy::op(inst)));
+            },
+            Some(FactorType::num(num)) => {
+                let result = num.get_value();
+                return Some(Value::new(ValTy::con(result)));
+            },
+            Some(FactorType::func_call(func)) => {
+                // TODO : This is a rough impl, just to get the "call" to print out.
+                // TODO : Still needs to be implemented.
+                let inst = irm.build_spec_op(Vec::new(), InstTy::call);
+                current_node.get_mut_data_ref().add_instruction(inst.clone());
+                return Some(Value::new(ValTy::op(inst)));
+            },
+            Some(FactorType::expr(expr)) => {
+                return expr.to_ir(graph,current_node,irm);
+            },
+            None => {
+                panic!()
+            }
+        }
+
+        // This should be an error as it should never reach this point.
+        // Though currently func_call will fall through to this.
+        None
+    }
+
 }

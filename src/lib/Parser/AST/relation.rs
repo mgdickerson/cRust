@@ -3,6 +3,9 @@ use lib::Lexer::token::TokenType;
 use lib::Lexer::token::Token;
 use Parser::AST::expression::Expression;
 
+use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::Graph;
+
 #[derive(Debug,Clone)]
 pub struct Relation {
     node_type: TokenType,
@@ -43,5 +46,9 @@ impl Relation {
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
+    }
+
+    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
+
     }
 }

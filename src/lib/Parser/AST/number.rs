@@ -4,7 +4,7 @@ use lib::Lexer::token::TokenType;
 #[derive(Debug,Clone)]
 pub struct Number {
     number_type: TokenType,
-    number_value: i64,
+    number_value: i32,
     debugLine: String,
 }
 
@@ -12,7 +12,7 @@ impl Number {
     pub fn new(tc: &mut TokenCollection) -> Self {
         let token = tc.get_next_token().unwrap();
         Number{ number_type: token.get_type(),
-            number_value: token.get_contents().parse::<i64>().unwrap(),
+            number_value: token.get_contents().parse::<i32>().unwrap(),
                  // this will be awesome later, promise
                  // probably want to do some cool combo
                  // where i include both line, line #,
@@ -20,7 +20,7 @@ impl Number {
                  debugLine: String::from("test") }
     }
 
-    pub fn get_value(&self) -> i64 {
+    pub fn get_value(&self) -> i32 {
         self.number_value.clone()
     }
 

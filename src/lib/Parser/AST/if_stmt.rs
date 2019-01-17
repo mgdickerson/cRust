@@ -99,11 +99,17 @@ impl IfStmt {
         IfStmt { node_type: TokenType::IfStatement, relation, funcIfBody, funcElseBody }
     }
 
-    pub fn get_value(&self) -> (Relation, FuncBody, Option<FuncBody>)  {
+    pub fn get_value(&self) -> (Relation, FuncBody, Option<FuncBody>) {
         return (self.relation.clone(), self.funcIfBody.clone(), self.funcElseBody.clone())
     }
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
+    }
+
+    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
+        self.relation.to_ir(graph,current_node,irm);
+
+        current_node = Node::new(irm);
     }
 }

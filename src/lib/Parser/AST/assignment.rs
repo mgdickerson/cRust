@@ -82,11 +82,33 @@ impl Assignment {
     }
 
     pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
-        let (ident, expr) = self.designator.get_value();
+        let (result, array) = self.designator.get_value();
+        let ident;
+        let inst;
 
-        if expr.is_empty() {
+        let expr_value = self.expression.to_ir(graph,current_node,irm).expect("Expected some expression with related Assignment Operation");
 
+        if array.is_empty() {
+            ident = Value::new(ValTy::var(irm.make_unique_variable(result.get_value()).get_ident()));
+        } else {
+            let mut array_result = result.get_value() + "[";
+            let mut first = true;
+            for element in array {
+                if !first {
+                    array_result += ", ";
+                }
+                array_result += &element.to_ir(graph,current_node,irm).expect("Expected valid Value").get_value().to_string();
+                first = false;
+            }
+            array_result += "]";
+
+            inst = irm.build_op_y(Value::new(ValTy::arr(array_result)), InstTy::load);
+            current_node.get_mut_data_ref().add_instruction(inst.clone());
+
+            ident = Value::new(ValTy::op(inst));
         }
 
+        let new_inst = irm.build_op_x_y(ident,expr_value,InstTy::mov);
+        current_node.get_mut_data_ref().add_instruction(new_inst);
     }
 }

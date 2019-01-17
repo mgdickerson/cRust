@@ -19,15 +19,18 @@ impl IRManager {
         }
     }
 
-    pub fn build_op(&self, inst_type: InstTy) -> Op {
+    pub fn build_op(&mut self, inst_type: InstTy) -> Op {
+        self.inc_inst_tracker();
         Op::build_op(self.get_inst_num(), self.get_block_num(), inst_type)
     }
 
-    pub fn build_op_x(&self, x_val: Value, inst_type: InstTy) -> Op {
+    pub fn build_op_x(&mut self, x_val: Value, inst_type: InstTy) -> Op {
+        self.inc_inst_tracker();
         Op::build_op_x(x_val,self.get_inst_num(),self.get_block_num(),inst_type)
     }
 
-    pub fn build_op_x_y(&self, x_val: Value, y_val: Value, inst_type: InstTy) -> Op {
+    pub fn build_op_x_y(&mut self, x_val: Value, y_val: Value, inst_type: InstTy) -> Op {
+        self.inc_inst_tracker();
         Op::build_op_x_y(x_val,
                 y_val,
                 self.get_inst_num(),
@@ -35,11 +38,13 @@ impl IRManager {
                 inst_type)
     }
 
-    pub fn build_op_y(&self, y_val: Value, inst_type: InstTy) -> Op {
+    pub fn build_op_y(&mut self, y_val: Value, inst_type: InstTy) -> Op {
+        self.inc_inst_tracker();
         Op::build_op_y(y_val, self.get_inst_num(), self.get_block_num(), inst_type)
     }
 
-    pub fn build_spec_op(&self, special_val: Vec<Box<Value>>, inst_type: InstTy) -> Op {
+    pub fn build_spec_op(&mut self, special_val: Vec<Box<Value>>, inst_type: InstTy) -> Op {
+        self.inc_inst_tracker();
         Op::build_spec_op(special_val,self.get_inst_num(),self.get_block_num(),inst_type)
     }
 
@@ -61,6 +66,19 @@ impl IRManager {
 
     pub fn get_var_manager_mut_ref(&mut self) -> &mut VariableManager {
         &mut self.var_manager
+    }
+
+    pub fn add_variable(&mut self, ident: String) -> &UniqueVariable {
+        self.var_manager.add_variable(ident.clone());
+        self.make_unique_variable(ident)
+    }
+
+    pub fn make_unique_variable(&mut self, ident: String) -> &UniqueVariable {
+        self.var_manager.make_unique_variable(ident, self.it.get())
+    }
+
+    pub fn get_unique_variable(&mut self, ident: String) -> &UniqueVariable {
+        self.var_manager.get_unique_variable(ident, self.it.get())
     }
 
     pub fn get_op_dom_manager_mut_ref(&mut self) -> &mut OpDomHandler {
@@ -98,7 +116,11 @@ impl VariableManager {
     }
 
     pub fn get_unique_variable(&mut self, ident: String, use_site: usize) -> &UniqueVariable {
-        match self.var_manager.get_mut(&ident) {
+        let current_uniq = UniqueVariable::new(ident.clone(),
+                                               (*self.var_counter.get(&ident).expect("No Previous Uses of Variable") - 1),
+                                               0);
+
+        match self.var_manager.get_mut(&current_uniq.unique_ident) {
             Some(uniq) => {
                 uniq.add_use(use_site);
                 uniq
