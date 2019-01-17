@@ -110,6 +110,6 @@ impl IfStmt {
     pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
         self.relation.to_ir(graph,current_node,irm);
 
-        current_node = Node::new(irm);
+        //current_node = Node::new(irm);
     }
 }

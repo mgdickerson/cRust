@@ -8,6 +8,7 @@ use Parser::AST::return_stmt::ReturnStmt;
 
 use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 enum Stmt {
@@ -92,11 +93,11 @@ impl FuncBody {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
+    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) {
         for stmt in self.stmt_vec {
             match stmt {
                 Stmt::assignment(assign) => {
-                    assign.to_ir(graph,current_node,irm);
+                    assign.to_ir(graph_manager,irm);
                 },
                 Stmt::if_stmt(if_st) => {
 

@@ -27,7 +27,9 @@ impl ValTy {
     pub fn to_string(&self) -> String {
         match &self {
             ValTy::op(op) => op.get_return_value(),
-            ValTy::con(con) => con.to_string(),
+            ValTy::con(con) => {
+                String::from("#") + &con.to_string()
+            },
             ValTy::var(var) => var.clone(),
             ValTy::reg(reg) => reg.to_string(),
             ValTy::arr(arr) => arr.clone(),

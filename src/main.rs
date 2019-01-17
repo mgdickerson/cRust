@@ -59,12 +59,18 @@ fn main() {
 
     println!("Proof of concept, read each character and print for Tokenization.");
 
-    for entry in fs::read_dir(path).unwrap()
+    // Sorts entries based on key
+    let mut paths : Vec<_> = fs::read_dir(path).unwrap()
+        .map(|r| r.unwrap())
+        .collect();
+    paths.sort_by_key(|dir| dir.path());
+
+    for entry in paths
     {
         println!("{:?}", entry);
         println!();
 
-        let mut file = fs::File::open(entry.unwrap().path()).expect("Error Opening File.");
+        let mut file = fs::File::open(entry.path()).expect("Error Opening File.");
         let mut token_builder: Vec<lib::Lexer::token::Token> = Vec::new();
         
         let mut buffer = String::new();

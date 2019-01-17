@@ -5,6 +5,7 @@ use Parser::AST::factor::{Factor,FactorType};
 
 use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 enum TermList {
@@ -55,7 +56,7 @@ impl Term {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) -> Option<Value> {
+    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) -> Option<Value> {
         let mut previous_term = None;
         let mut current_math_op = None;
 
@@ -64,21 +65,21 @@ impl Term {
                 TermList::factor(factor) => {
                     match current_math_op {
                         Some(TokenType::MulOp) => {
-                            let current_term = factor.to_ir(graph,current_node,irm).expect("Expected Valid Value, found None.");
+                            let current_term = factor.to_ir(graph_manager,irm).expect("Expected Valid Value, found None.");
                             let inst = irm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::mul);
 
-                            current_node.get_mut_data_ref().add_instruction(inst.clone());
+                            graph_manager.get_mut_ref_current_node().get_mut_data_ref().add_instruction(inst.clone());
                             previous_term = Some(Value::new(ValTy::op(inst)));
                         },
                         Some(TokenType::DivOp) => {
-                            let current_term = factor.to_ir(graph,current_node,irm).expect("Expected Valid Value, found None.");
+                            let current_term = factor.to_ir(graph_manager,irm).expect("Expected Valid Value, found None.");
                             let inst = irm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::div);
 
-                            current_node.get_mut_data_ref().add_instruction(inst.clone());
+                            graph_manager.get_mut_ref_current_node().get_mut_data_ref().add_instruction(inst.clone());
                             previous_term = Some(Value::new(ValTy::op(inst)));
                         },
                         None => {
-                            previous_term = factor.to_ir(graph,current_node,irm);
+                            previous_term = factor.to_ir(graph_manager,irm);
                         },
                         _ => { panic!("Found math_op in term that was not * or /"); }
                     }

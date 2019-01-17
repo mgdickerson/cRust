@@ -1,5 +1,5 @@
 use lib::IR::basic_block::BlockTracker;
-use lib::IR::ir::{Value,Op,InstTy,InstTracker};
+use lib::IR::ir::{Value,ValTy,Op,InstTy,InstTracker};
 use std::collections::HashMap;
 use super::Graph;
 
@@ -68,13 +68,13 @@ impl IRManager {
         &mut self.var_manager
     }
 
-    pub fn add_variable(&mut self, ident: String) -> &UniqueVariable {
+    pub fn add_variable(&mut self, ident: String, value: Value) -> &UniqueVariable {
         self.var_manager.add_variable(ident.clone());
-        self.make_unique_variable(ident)
+        self.make_unique_variable(ident, value)
     }
 
-    pub fn make_unique_variable(&mut self, ident: String) -> &UniqueVariable {
-        self.var_manager.make_unique_variable(ident, self.it.get())
+    pub fn make_unique_variable(&mut self, ident: String, value: Value) -> &UniqueVariable {
+        self.var_manager.make_unique_variable(ident, value, self.it.get())
     }
 
     pub fn get_unique_variable(&mut self, ident: String) -> &UniqueVariable {
@@ -97,12 +97,12 @@ impl VariableManager {
         VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new() }
     }
 
-    pub fn make_unique_variable(&mut self, ident: String, def: usize) -> &UniqueVariable {
+    pub fn make_unique_variable(&mut self, ident: String, value: Value, def: usize) -> &UniqueVariable {
         match self.var_counter.get_mut(&ident) {
             Some(ref mut count) => {
                 let current_count = count.clone();
                 **count += 1;
-                let uniq = UniqueVariable::new(ident.clone(),current_count,def);
+                let uniq = UniqueVariable::new(ident.clone(),value,current_count,def);
                 let uniq_key = uniq.get_ident();
                 self.var_manager.insert(uniq_key.clone(), uniq);
 
@@ -117,6 +117,7 @@ impl VariableManager {
 
     pub fn get_unique_variable(&mut self, ident: String, use_site: usize) -> &UniqueVariable {
         let current_uniq = UniqueVariable::new(ident.clone(),
+                                               Value::new(ValTy::con(0)),
                                                (*self.var_counter.get(&ident).expect("No Previous Uses of Variable") - 1),
                                                0);
 
@@ -147,19 +148,22 @@ impl VariableManager {
 #[derive(Debug)]
 pub struct UniqueVariable {
     unique_ident: String,
+    value: Value,
     def: usize,
     used: Option<Vec<usize>>,
 }
 
 impl UniqueVariable {
-    pub fn new(ident: String, count: usize, def: usize) -> Self {
+    pub fn new(ident: String, value: Value, count: usize, def: usize) -> Self {
         let unique_ident = String::from("%") + &ident + "_" + &count.to_string();
-        UniqueVariable { unique_ident, def, used: None }
+        UniqueVariable { unique_ident, value, def, used: None }
     }
 
     pub fn get_ident(&self) -> String {
         self.unique_ident.clone()
     }
+
+    pub fn get_value(&self) -> Value { self.value.clone() }
 
     pub fn add_use(&mut self, var_use: usize) {
         match &mut self.used {

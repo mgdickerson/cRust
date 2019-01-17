@@ -6,6 +6,7 @@ use Parser::AST::var_decl::VarDecl;
 
 use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 pub struct FuncDecl {
@@ -134,7 +135,7 @@ impl FuncDecl {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
+    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) {
         let (func_name, func_param) = self.funcName.get_value();
         let func_name_string = String::from("f_") + &func_name.get_value();
 
@@ -158,7 +159,7 @@ impl FuncDecl {
         }
 
         for var in self.varDecl {
-            var.to_ir(graph, current_node,irm,false,Some(func_name_string.clone()));
+            var.to_ir(graph_manager,irm,false,Some(func_name_string.clone()));
         }
 
 
