@@ -148,27 +148,26 @@ impl Comp {
 
     pub fn to_ir(self) {
         // TODO : All of this.
-        let mut irManager = IRManager::new();
+        let mut irm = IRManager::new();
 
         let mut graph : Graph<Node, i32> = Graph::new();
-        let mut initial_node = Node::new(&mut irManager);
 
-        let mut graph_manager = GraphManager::new(graph, initial_node);
+        let mut graph_manager = GraphManager::new(graph, &mut irm);
 
         for var in self.varDecl {
             // These are the global variable declarations.
             // Build the variable tracker here, and give unique tags.
-            var.to_ir(&mut graph_manager, &mut irManager, true, None);
+            var.to_ir(&mut graph_manager, &mut irm, true, None);
         }
 
         for func in self.funcDecl {
             //func.to_ir(&mut graph, &mut initial_node, &mut irManager);
         }
 
-        self.funcBody.to_ir(&mut graph_manager, &mut irManager);
+        self.funcBody.to_ir(&mut graph_manager, &mut irm);
 
         //println!("{:?}", irManager.get_var_manager_mut_ref());
-        graph_manager.add_current_node_to_graph();
+        //graph_manager.add_current_node_to_graph();
         println!("{:?}", display::Dot::with_config(&graph_manager.get_graph(), &[display::Config::EdgeNoLabel]));
 
     }

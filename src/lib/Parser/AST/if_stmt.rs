@@ -5,6 +5,7 @@ use Parser::AST::func_body::FuncBody;
 
 use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 pub struct IfStmt {
@@ -107,9 +108,51 @@ impl IfStmt {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
-        self.relation.to_ir(graph,current_node,irm);
+    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) {
+        // TODO : Order is currently messed up, relation needs to go first then be edited for jump
+        // location later.
 
-        //current_node = Node::new(irm);
+        let mut else_node = None;
+        let main_node = graph_manager.clone_node_index();
+
+        graph_manager.new_node(irm);
+        self.funcIfBody.to_ir(graph_manager, irm);
+        let if_node = graph_manager.clone_node_index();
+
+        match self.funcElseBody {
+            Some(funcElseBody) => {
+                graph_manager.new_node(irm);
+                funcElseBody.to_ir(graph_manager, irm);
+                else_node = Some(graph_manager.clone_node_index());
+            },
+            None => {
+                // Nothing to do here, fall through.
+            }
+        }
+
+        // TODO : How will i get the instruction for the if to branch to?
+        // TODO : Will i need a clean up cycle to determine branch locations?
+        // Go back through nodes and add them.
+        graph_manager.switch_current_node_index(main_node);
+        self.relation.to_ir(graph_manager,irm, Value::new(ValTy::var(String::from("test"))));
+
+        // Main branch node after if/else (phi node)
+        graph_manager.new_node(irm);
+        let phi_node = graph_manager.clone_node_index();
+
+        // Add if node and connect dots
+        graph_manager.add_edge(main_node, if_node);
+        graph_manager.add_edge(if_node, phi_node);
+
+        // Add else node
+        match else_node {
+            Some(node) => {
+                graph_manager.add_edge(main_node, node);
+                graph_manager.add_edge(node, phi_node);
+            },
+            None => {
+                graph_manager.add_edge(main_node, phi_node);
+            },
+        }
     }
 }

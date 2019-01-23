@@ -66,14 +66,14 @@ impl Expression {
                             let current_expr = term.to_ir(graph_manager,irm).expect("Expected Valid Value, found None.");
                             let inst = irm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::add);
 
-                            graph_manager.get_mut_ref_current_node().get_mut_data_ref().add_instruction(inst.clone());
+                            graph_manager.add_instruction(inst.clone());
                             previous_expr = Some(Value::new(ValTy::op(inst)));
                         },
                         Some(TokenType::SubOp) => {
                             let current_expr = term.to_ir(graph_manager,irm).expect("Expected Valid Value, found None.");
                             let inst = irm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::sub);
 
-                            graph_manager.get_mut_ref_current_node().get_mut_data_ref().add_instruction(inst.clone());
+                            graph_manager.add_instruction(inst.clone());
                             previous_expr = Some(Value::new(ValTy::op(inst)));
                         },
                         None => {

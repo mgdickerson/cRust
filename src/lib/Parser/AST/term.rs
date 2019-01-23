@@ -68,14 +68,14 @@ impl Term {
                             let current_term = factor.to_ir(graph_manager,irm).expect("Expected Valid Value, found None.");
                             let inst = irm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::mul);
 
-                            graph_manager.get_mut_ref_current_node().get_mut_data_ref().add_instruction(inst.clone());
+                            graph_manager.add_instruction(inst.clone());
                             previous_term = Some(Value::new(ValTy::op(inst)));
                         },
                         Some(TokenType::DivOp) => {
                             let current_term = factor.to_ir(graph_manager,irm).expect("Expected Valid Value, found None.");
                             let inst = irm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::div);
 
-                            graph_manager.get_mut_ref_current_node().get_mut_data_ref().add_instruction(inst.clone());
+                            graph_manager.add_instruction(inst.clone());
                             previous_term = Some(Value::new(ValTy::op(inst)));
                         },
                         None => {

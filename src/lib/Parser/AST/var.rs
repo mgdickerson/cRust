@@ -4,6 +4,7 @@ use Parser::AST;
 
 use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 pub struct Var {
@@ -64,7 +65,7 @@ impl Var {
         self.debugLine.clone()
     }
 
-    pub fn to_ir(self, current_node: &mut Node, irm: &mut IRManager, is_global: bool, func_name: Option<String>) {
+    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager, is_global: bool, func_name: Option<String>) {
         for ident in self.var_vec {
             let mut var_name = ident.get_value();
 

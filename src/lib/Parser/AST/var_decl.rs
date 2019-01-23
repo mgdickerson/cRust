@@ -50,7 +50,7 @@ impl VarDecl {
     pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager, is_global: bool, func_name: Option<String>) {
         match self.var {
             Some(var) => {
-                var.to_ir(graph_manager.get_mut_ref_current_node(),irm,is_global.clone(),func_name.clone());
+                var.to_ir(graph_manager,irm,is_global.clone(),func_name.clone());
             },
             None => {
                 // None present, fall through
@@ -59,7 +59,7 @@ impl VarDecl {
 
         match self.array {
             Some(array) => {
-                array.to_ir(graph_manager.get_mut_ref_current_node(),irm,is_global,func_name);
+                array.to_ir(graph_manager,irm,is_global,func_name);
             },
             None => {
                 // None present, fall through

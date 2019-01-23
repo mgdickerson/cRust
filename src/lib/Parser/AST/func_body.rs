@@ -100,7 +100,7 @@ impl FuncBody {
                     assign.to_ir(graph_manager,irm);
                 },
                 Stmt::if_stmt(if_st) => {
-
+                    if_st.to_ir(graph_manager,irm);
                 },
                 Stmt::while_stmt(wh_st) => {
 

@@ -104,7 +104,7 @@ impl Assignment {
             array_result += "]";
 
             inst = irm.build_op_y(Value::new(ValTy::arr(array_result)), InstTy::load);
-            graph_manager.get_mut_ref_current_node().get_mut_data_ref().add_instruction(inst.clone());
+            graph_manager.add_instruction(inst.clone());
 
             ident = Value::new(ValTy::op(inst));
         }
