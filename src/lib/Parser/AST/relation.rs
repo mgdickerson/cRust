@@ -49,7 +49,7 @@ impl Relation {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager, branch_location: Value) {
+    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager, branch_location: Value) -> Value {
         let leftCompVal = self.leftExp.to_ir(graph_manager,irm).
             expect("Expected Left Comp Op, none found");
         let rightCompVal = self.rightExp.to_ir(graph_manager,irm).
@@ -57,36 +57,38 @@ impl Relation {
 
         let inst = irm.build_op_x_y(leftCompVal,rightCompVal,InstTy::cmp);
         let inst_val = Value::new(ValTy::op(inst.clone()));
-        graph_manager.add_instruction(inst);
+        graph_manager.add_instruction(inst.clone());
 
         match self.relOp.get_contents().as_ref() {
             "==" => {
-                let rel_inst = irm.build_op_x_y(inst_val,branch_location,InstTy::bne);
+                let rel_inst = irm.build_op_x_y(inst_val.clone(),branch_location,InstTy::bne);
                 graph_manager.add_instruction(rel_inst);
             },
             "!=" => {
-                let rel_inst = irm.build_op_x_y(inst_val,branch_location,InstTy::beq);
+                let rel_inst = irm.build_op_x_y(inst_val.clone(),branch_location,InstTy::beq);
                 graph_manager.add_instruction(rel_inst);
             },
             "<" => {
-                let rel_inst = irm.build_op_x_y(inst_val,branch_location,InstTy::bge);
+                let rel_inst = irm.build_op_x_y(inst_val.clone(),branch_location,InstTy::bge);
                 graph_manager.add_instruction(rel_inst);
             },
             "<=" => {
-                let rel_inst = irm.build_op_x_y(inst_val,branch_location,InstTy::bgt);
+                let rel_inst = irm.build_op_x_y(inst_val.clone(),branch_location,InstTy::bgt);
                 graph_manager.add_instruction(rel_inst);
             },
             ">" => {
-                let rel_inst = irm.build_op_x_y(inst_val,branch_location,InstTy::ble);
+                let rel_inst = irm.build_op_x_y(inst_val.clone(),branch_location,InstTy::ble);
                 graph_manager.add_instruction(rel_inst);
             },
             ">=" => {
-                let rel_inst = irm.build_op_x_y(inst_val,branch_location,InstTy::blt);
+                let rel_inst = irm.build_op_x_y(inst_val.clone(),branch_location,InstTy::blt);
                 graph_manager.add_instruction(rel_inst);
             },
             _ => {
                 panic!("Error: Expected a relOp token, but was not found.");
             },
         }
+
+        inst_val
     }
 }

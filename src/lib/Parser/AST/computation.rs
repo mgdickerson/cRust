@@ -170,5 +170,14 @@ impl Comp {
         //graph_manager.add_current_node_to_graph();
         println!("{:?}", display::Dot::with_config(&graph_manager.get_graph(), &[display::Config::EdgeNoLabel]));
 
+        /*
+        println!("{:?}", irm.get_var_manager().get_var_map());
+        let (nodes, edges) = graph_manager.get_graph().into_nodes_edges();
+        for node in nodes {
+            for op in node.weight.get_data().get() {
+                println!("{}", op.get_inst_block());
+            }
+        }
+        */
     }
 }

@@ -103,7 +103,7 @@ impl FuncBody {
                     if_st.to_ir(graph_manager,irm);
                 },
                 Stmt::while_stmt(wh_st) => {
-
+                    wh_st.to_ir(graph_manager,irm);
                 },
                 Stmt::funcCall(fn_cl) => {
 

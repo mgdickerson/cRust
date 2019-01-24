@@ -109,21 +109,44 @@ impl IfStmt {
     }
 
     pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) {
-        // TODO : Order is currently messed up, relation needs to go first then be edited for jump
-        // location later.
+        /// General Order:
+        /// - enter node with "central node"
+        /// - create top of if-node, connect main to top
+        /// - go through if-body, generate if_bottom and connect to phi node
+        /// - create possible else-node, connect main to top of else
+        /// - go through else-body, generate else_bottom and connect to phi node
+        /// - phi node is new "central node"
+        /// - go through assigned values and figure out phi
 
-        let mut else_node = None;
+        // Clone Main Node Index + add relation statement
         let main_node = graph_manager.clone_node_index();
+        self.relation.to_ir(graph_manager,irm, Value::new(ValTy::var(String::from("blank"))));
 
+        // get current var chart.
+
+        // Variable holder for else_node_bottom
+        let mut else_node_bottom = None;
+
+        // Generate if-node-top
         graph_manager.new_node(irm);
+        let if_node_top = graph_manager.clone_node_index();
+        // Connect Main Node to If-Node-Top
+        graph_manager.add_edge(main_node,if_node_top);
+
+        // Go through if-body, generate if-bottom
         self.funcIfBody.to_ir(graph_manager, irm);
-        let if_node = graph_manager.clone_node_index();
+        let if_node_bottom = graph_manager.clone_node_index();
 
         match self.funcElseBody {
             Some(funcElseBody) => {
+                // Generate else-node-top
                 graph_manager.new_node(irm);
+                let else_node_top = graph_manager.clone_node_index();
+                graph_manager.add_edge(main_node,else_node_top);
+
+                // go through else-body, generate else-bottom
                 funcElseBody.to_ir(graph_manager, irm);
-                else_node = Some(graph_manager.clone_node_index());
+                else_node_bottom = Some(graph_manager.clone_node_index());
             },
             None => {
                 // Nothing to do here, fall through.
@@ -132,25 +155,24 @@ impl IfStmt {
 
         // TODO : How will i get the instruction for the if to branch to?
         // TODO : Will i need a clean up cycle to determine branch locations?
-        // Go back through nodes and add them.
-        graph_manager.switch_current_node_index(main_node);
-        self.relation.to_ir(graph_manager,irm, Value::new(ValTy::var(String::from("test"))));
 
         // Main branch node after if/else (phi node)
         graph_manager.new_node(irm);
         let phi_node = graph_manager.clone_node_index();
 
-        // Add if node and connect dots
-        graph_manager.add_edge(main_node, if_node);
-        graph_manager.add_edge(if_node, phi_node);
+        // Figure out possible phi
+
+        // Connect if-bottom to phi
+        graph_manager.add_edge(if_node_bottom, phi_node);
 
         // Add else node
-        match else_node {
+        match else_node_bottom {
             Some(node) => {
-                graph_manager.add_edge(main_node, node);
+                // Connect else-bottom to phi
                 graph_manager.add_edge(node, phi_node);
             },
             None => {
+                // no else body, connect main directly to phi
                 graph_manager.add_edge(main_node, phi_node);
             },
         }

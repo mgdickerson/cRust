@@ -10,7 +10,9 @@ pub struct Node {
 
 impl Node {
     pub fn new(irm: &mut IRManager) -> Self {
-        Node { node_id: NodeId::new(irm.get_block_num()), node_data: NodeData::new(irm) }
+        let node_data = NodeData::new(irm);
+        let node_id = NodeId::new(irm.get_block_num());
+        Node { node_id, node_data }
     }
 
     pub fn get_mut_data_ref(&mut self) -> &mut BasicBlock {

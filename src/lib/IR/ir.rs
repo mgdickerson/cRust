@@ -152,6 +152,10 @@ impl Op {
         let string = String::from("(") + &self.inst_number.to_string() + ")";
         string
     }
+
+    pub fn get_inst_block(&self) -> usize {
+        self.block_number.clone()
+    }
 }
 
 impl std::fmt::Debug for Op {

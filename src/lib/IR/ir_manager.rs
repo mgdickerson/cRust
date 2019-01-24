@@ -68,13 +68,15 @@ impl IRManager {
         &mut self.var_manager
     }
 
+    pub fn get_var_manager(self) -> VariableManager { self.var_manager }
+
     pub fn add_variable(&mut self, ident: String, value: Value) -> &UniqueVariable {
         self.var_manager.add_variable(ident.clone());
         self.make_unique_variable(ident, value)
     }
 
     pub fn make_unique_variable(&mut self, ident: String, value: Value) -> &UniqueVariable {
-        self.var_manager.make_unique_variable(ident, value, self.it.get())
+        self.var_manager.make_unique_variable(ident, value, self.bt.get(), self.it.get())
     }
 
     pub fn get_unique_variable(&mut self, ident: String) -> &UniqueVariable {
@@ -88,25 +90,48 @@ impl IRManager {
 
 #[derive(Debug)]
 pub struct VariableManager {
-    var_manager: HashMap<String, UniqueVariable>,
+    var_manager: HashMap<String, Vec<UniqueVariable>>,
     var_counter: HashMap<String, usize>,
+    block_var: HashMap<usize, Vec<String>>,
 }
 
 impl VariableManager {
     pub fn new() -> Self {
-        VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new() }
+        VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new(), block_var: HashMap::new() }
     }
 
-    pub fn make_unique_variable(&mut self, ident: String, value: Value, def: usize) -> &UniqueVariable {
+    pub fn get_var_map(self) -> HashMap<String, Vec<UniqueVariable>> {
+        self.var_manager
+    }
+
+    pub fn get_variables_by_block(&self, block_number: usize) -> Option<&Vec<String>> {
+        self.block_var.get(&block_number)
+    }
+
+    pub fn make_var_table(&self, vars: Option<&Vec<String>>) -> Vec<(String, UniqueVariable)> {
+        
+    }
+
+    pub fn make_unique_variable(&mut self, ident: String, value: Value, def_block: usize, def: usize) -> &UniqueVariable {
+        let contains_block = self.block_var.contains_key(&def_block);
+        if !contains_block {
+            self.block_var.insert(def_block.clone(), Vec::new());
+        }
+
         match self.var_counter.get_mut(&ident) {
             Some(ref mut count) => {
                 let current_count = count.clone();
                 **count += 1;
-                let uniq = UniqueVariable::new(ident.clone(),value,current_count,def);
-                let uniq_key = uniq.get_ident();
-                self.var_manager.insert(uniq_key.clone(), uniq);
+                let uniq = UniqueVariable::new(ident.clone(),value,current_count,def_block,def);
+                let key = ident;
+                self.var_manager.get_mut(&key).expect("Expected established key, found none.").push(uniq);
 
-                return self.var_manager.get(&uniq_key).unwrap();
+                let has_var = self.block_var.get_mut(&def_block).expect("Should already be added.").contains(&key);
+                if !has_var {
+                    self.block_var.get_mut(&def_block).unwrap().push(key.clone());
+                }
+
+                return self.var_manager.get(&key).unwrap().get(current_count).expect("Expected current count to work.");
             }
             None => {
                 // variable not found in list, throw error
@@ -116,12 +141,7 @@ impl VariableManager {
     }
 
     pub fn get_unique_variable(&mut self, ident: String, use_site: usize) -> &UniqueVariable {
-        let current_uniq = UniqueVariable::new(ident.clone(),
-                                               Value::new(ValTy::con(0)),
-                                               (*self.var_counter.get(&ident).expect("No Previous Uses of Variable") - 1),
-                                               0);
-
-        match self.var_manager.get_mut(&current_uniq.unique_ident) {
+        match self.var_manager.get_mut(&ident).expect("Expected variable, found none.").last_mut() {
             Some(uniq) => {
                 uniq.add_use(use_site);
                 uniq
@@ -136,8 +156,10 @@ impl VariableManager {
         let var_already_added = self.var_counter.insert(var.clone(), 0);
 
         if var_already_added != None {
-            panic!("Variable {} already used", var);
+            panic!("Variable {} already used", var.clone());
         }
+
+        self.var_manager.insert(var, Vec::new());
     }
 
     pub fn is_valid_variable(&self, var: String) -> bool {
@@ -145,25 +167,32 @@ impl VariableManager {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UniqueVariable {
     unique_ident: String,
+    base_ident: String,
     value: Value,
+    def_block: usize,
     def: usize,
     used: Option<Vec<usize>>,
 }
 
 impl UniqueVariable {
-    pub fn new(ident: String, value: Value, count: usize, def: usize) -> Self {
+    pub fn new(ident: String, value: Value, count: usize, def_block: usize, def: usize) -> Self {
+        let base_ident = ident.clone();
         let unique_ident = String::from("%") + &ident + "_" + &count.to_string();
-        UniqueVariable { unique_ident, value, def, used: None }
+        UniqueVariable { unique_ident, base_ident, value, def_block, def, used: None }
     }
 
     pub fn get_ident(&self) -> String {
         self.unique_ident.clone()
     }
 
+    pub fn get_base_ident(&self) -> String { self.base_ident.clone() }
+
     pub fn get_value(&self) -> Value { self.value.clone() }
+
+    pub fn get_block(&self) -> usize { self.def_block.clone() }
 
     pub fn add_use(&mut self, var_use: usize) {
         match &mut self.used {
