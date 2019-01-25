@@ -2,7 +2,7 @@ use std;
 use Lexer::get_token;
 use Lexer::token::{Token, TokenType, TokenCollection};
 
-use lib::Graph::node::{Node, NodeId, NodeData};
+use lib::Graph::node::{Node, NodeId, NodeType, NodeData};
 
 extern crate petgraph;
 use petgraph::graph::Graph;

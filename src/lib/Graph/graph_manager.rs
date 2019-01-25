@@ -1,5 +1,5 @@
 use lib::IR::ir::{Value,ValTy,Op,InstTy};
-use lib::Graph::node::{Node, NodeId, NodeData};
+use lib::Graph::node::{Node, NodeId, NodeType, NodeData};
 use lib::IR::ir_manager::IRManager;
 extern crate petgraph;
 use petgraph::graph::Graph;
@@ -12,15 +12,15 @@ pub struct GraphManager {
 
 impl GraphManager {
     pub fn new(mut graph: Graph<Node,i32>, irm: &mut IRManager) -> Self {
-        let current_node = Node::new(irm);
+        let current_node = Node::new(irm, NodeType::main_node);
         let current_node_index = graph.add_node(current_node);
         GraphManager { graph, current_node_index }
     }
 
     // -- Node Related Functions -- //
 
-    pub fn new_node(&mut self, irm: &mut IRManager) -> &mut NodeIndex {
-        let current_node = Node::new(irm);
+    pub fn new_node(&mut self, irm: &mut IRManager, node_type: NodeType) -> &mut NodeIndex {
+        let current_node = Node::new(irm, node_type);
         self.current_node_index = self.graph.add_node(current_node);
         self.get_mut_ref_current_node_index()
     }
@@ -37,6 +37,12 @@ impl GraphManager {
 
     pub fn switch_current_node_index(&mut self, new_node: NodeIndex) {
         self.current_node_index = new_node;
+    }
+
+    pub fn get_node_id(&self, node_index: NodeIndex) -> usize {
+        self.graph.node_weight(node_index)
+            .expect("Expected node weight for node_id")
+            .get_node_id()
     }
 
     /* Dont think i need this one.

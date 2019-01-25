@@ -83,6 +83,14 @@ impl IRManager {
         self.var_manager.get_unique_variable(ident, self.it.get())
     }
 
+    pub fn get_var_by_block(&self, block_number: usize) -> Option<Vec<String>> {
+        self.var_manager.get_variables_by_block(block_number)
+    }
+
+    pub fn make_var_table(&self, var: Option<Vec<String>>) -> Option<HashMap<String, UniqueVariable>> {
+        self.var_manager.make_var_table(var)
+    }
+
     pub fn get_op_dom_manager_mut_ref(&mut self) -> &mut OpDomHandler {
         &mut self.op_dom_handle
     }
@@ -104,12 +112,32 @@ impl VariableManager {
         self.var_manager
     }
 
-    pub fn get_variables_by_block(&self, block_number: usize) -> Option<&Vec<String>> {
-        self.block_var.get(&block_number)
+    pub fn get_variables_by_block(&self, block_number: usize) -> Option<Vec<String>> {
+        match self.block_var.get(&block_number) {
+            Some(vec) => {
+                Some(vec.clone())
+            }
+            None => { None }
+        }
     }
 
-    pub fn make_var_table(&self, vars: Option<&Vec<String>>) -> Vec<(String, UniqueVariable)> {
-        
+    pub fn make_var_table(&self, vars: Option<Vec<String>>) -> Option<HashMap<String, UniqueVariable>> {
+        match vars {
+            Some(vec) => {
+                Some(vec.iter().map(|var| {
+                        let uniq_var = self.var_manager
+                            .get(var)
+                            .expect("Expected Variable in var_manager.")
+                            .last()
+                            .expect("Expected Latest variable in Vec<Unique Variables>")
+                            .clone();
+                        (var.clone(), uniq_var)
+                    }).collect::<HashMap<_,_>>())
+            },
+            None => {
+                None
+            },
+        }
     }
 
     pub fn make_unique_variable(&mut self, ident: String, value: Value, def_block: usize, def: usize) -> &UniqueVariable {
@@ -171,7 +199,7 @@ impl VariableManager {
 pub struct UniqueVariable {
     unique_ident: String,
     base_ident: String,
-    value: Value,
+    value: Box<Value>,
     def_block: usize,
     def: usize,
     used: Option<Vec<usize>>,
@@ -181,7 +209,7 @@ impl UniqueVariable {
     pub fn new(ident: String, value: Value, count: usize, def_block: usize, def: usize) -> Self {
         let base_ident = ident.clone();
         let unique_ident = String::from("%") + &ident + "_" + &count.to_string();
-        UniqueVariable { unique_ident, base_ident, value, def_block, def, used: None }
+        UniqueVariable { unique_ident, base_ident, value: Box::new(value), def_block, def, used: None }
     }
 
     pub fn get_ident(&self) -> String {
@@ -190,7 +218,7 @@ impl UniqueVariable {
 
     pub fn get_base_ident(&self) -> String { self.base_ident.clone() }
 
-    pub fn get_value(&self) -> Value { self.value.clone() }
+    pub fn get_value(&self) -> Box<Value> { self.value.clone() }
 
     pub fn get_block(&self) -> usize { self.def_block.clone() }
 
@@ -211,6 +239,12 @@ impl UniqueVariable {
             Some(some) => some.push(var_use),
             None => { panic!("Unreachable Error.") },
         }
+    }
+}
+
+impl PartialEq for UniqueVariable {
+    fn eq(&self, other: &UniqueVariable) -> bool {
+        self.unique_ident == other.unique_ident
     }
 }
 

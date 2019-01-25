@@ -150,6 +150,7 @@ impl Comp {
         // TODO : All of this.
         let mut irm = IRManager::new();
 
+        // This graph is directed.
         let mut graph : Graph<Node, i32> = Graph::new();
 
         let mut graph_manager = GraphManager::new(graph, &mut irm);

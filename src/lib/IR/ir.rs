@@ -1,3 +1,5 @@
+use lib::IR::ir_manager::UniqueVariable;
+
 #[derive(Debug,Clone)]
 pub struct Value {
     val: ValTy,
@@ -18,7 +20,7 @@ impl Value {
 pub enum ValTy {
     op(Op),
     con(i32),
-    var(String),
+    var(UniqueVariable),
     reg(i32),
     arr(String),
 }
@@ -30,7 +32,10 @@ impl ValTy {
             ValTy::con(con) => {
                 String::from("#") + &con.to_string()
             },
-            ValTy::var(var) => var.clone(),
+            ValTy::var(var) => {
+                // Temporarily, I want it to output var name
+                var.get_ident()
+            },
             ValTy::reg(reg) => reg.to_string(),
             ValTy::arr(arr) => arr.clone(),
         }
@@ -79,7 +84,8 @@ impl Op {
             InstTy::add | InstTy::sub | InstTy::mul |
             InstTy::div | InstTy::cmp | InstTy::adda |
             InstTy::bne | InstTy::beq | InstTy::ble |
-            InstTy::blt | InstTy::bge | InstTy::bgt => {
+            InstTy::blt | InstTy::bge | InstTy::bgt |
+            InstTy::phi => {
                 p_command = inst_type.to_string() + " " + &x_val_string.unwrap().get_value().to_string()
                     + " " + &y_val_string.unwrap().get_value().to_string();
             }
@@ -93,17 +99,6 @@ impl Op {
                     " " + &x_val_string.unwrap().get_value().to_string();
             }
             // Op [x] //
-            // TODO : This will need to be changed, as Phi will likely not know its operands at start.
-            InstTy::phi => {
-                p_command = String::from("phi := (");
-                let mut first = true;
-                for val in special_val_string.unwrap().clone() {
-                    if !first { p_command += ", "; }
-                    p_command += &String::from(val.get_value().to_string());
-                    first = false;
-                }
-                p_command += ")";
-            }
             InstTy::call => {
                 p_command = String::from("call ");
                 let mut first = true;
@@ -191,6 +186,8 @@ pub enum InstTy {
     bge,
     bgt,
 
+    phi,
+
     /// Op y ///
     load,
     bra,
@@ -200,7 +197,6 @@ pub enum InstTy {
     mov,
 
     /// Op [x] ///
-    phi,
     call,
 }
 
@@ -232,6 +228,8 @@ impl InstTy {
             InstTy::bge => { String::from("bge") },
             InstTy::bgt => { String::from("bgt") },
 
+            InstTy::phi => { String::from("phi") },
+
             /// Op y ///
             InstTy::load => { String::from("load") },
             InstTy::bra => { String::from("bra") },
@@ -241,7 +239,6 @@ impl InstTy {
             InstTy::mov => { String::from("move") },
 
             /// Op [x] ///
-            InstTy::phi => { String::from("phi") },
             InstTy::call => { String::from("call") },
 
             _ => { panic!("Error occurred, was not a default type."); }

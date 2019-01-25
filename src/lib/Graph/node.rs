@@ -6,13 +6,14 @@ use lib::IR::ir_manager::IRManager;
 pub struct Node {
     node_id: NodeId,
     node_data: NodeData,
+    node_type: NodeType,
 }
 
 impl Node {
-    pub fn new(irm: &mut IRManager) -> Self {
+    pub fn new(irm: &mut IRManager, node_type: NodeType) -> Self {
         let node_data = NodeData::new(irm);
         let node_id = NodeId::new(irm.get_block_num());
-        Node { node_id, node_data }
+        Node { node_id, node_data, node_type }
     }
 
     pub fn get_mut_data_ref(&mut self) -> &mut BasicBlock {
@@ -22,12 +23,26 @@ impl Node {
     pub fn get_data(self) -> BasicBlock {
         self.node_data.get()
     }
+
+    pub fn get_node_id(&self) -> usize {
+        self.node_id.get()
+    }
 }
 
 impl std::fmt::Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "Node: [{}] ( \\l {:?}) \\l", self.node_id.get(), self.node_data.get_ref())
     }
+}
+
+#[derive(Debug,Clone)]
+pub enum NodeType {
+    main_node,
+    cond_node,
+    if_node,
+    else_node,
+    while_node,
+    phi_node,
 }
 
 #[derive(Debug,Clone)]

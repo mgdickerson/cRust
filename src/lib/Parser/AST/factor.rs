@@ -87,7 +87,7 @@ impl Factor {
                 let (result, array) = desig.get_value();
 
                 if array.is_empty() {
-                    return Some(irm.get_unique_variable(result.get_value()).get_value());
+                    return Some(Value::new(ValTy::var(irm.get_unique_variable(result.get_value()).clone())));
                 }
 
                 let mut array_result = result.get_value() + "[";

@@ -90,7 +90,7 @@ impl Assignment {
         let expr_value = self.expression.to_ir(graph_manager,irm).expect("Expected some expression with related Assignment Operation");
 
         if array.is_empty() {
-            ident = Value::new(ValTy::var(irm.make_unique_variable(result.get_value(), expr_value.clone()).get_ident()));
+            ident = Value::new(ValTy::var(irm.make_unique_variable(result.get_value(), expr_value.clone()).clone()));
         } else {
             let mut array_result = result.get_value() + "[";
             let mut first = true;

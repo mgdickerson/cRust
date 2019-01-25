@@ -1,5 +1,6 @@
 # Donated by Alex
-# Introduces copy propagation into the mix, but in my implementation, 
+
+# Introduces copy propagation into the mix, but in my implementation,
 # the q copy is killed by the while loop's phi function.
 main
 var q, foo, af, too;
