@@ -5,7 +5,7 @@ use Parser::AST::number::Number;
 use Parser::AST::func_call::FuncCall;
 use Parser::AST::expression::Expression;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 
@@ -80,14 +80,14 @@ impl Factor {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) -> Option<Value> {
+    pub fn to_ir(self, irgm : &mut IRGraphManager) -> Option<Value> {
         match self.factor {
             Some(FactorType::desig(desig)) => {
                 // TODO : needs testing but there is SOMETHING in place for arrays
                 let (result, array) = desig.get_value();
 
                 if array.is_empty() {
-                    return Some(Value::new(ValTy::var(irm.get_unique_variable(result.get_value()).clone())));
+                    return Some(Value::new(ValTy::var(irgm.get_unique_variable(result.get_value()).clone())));
                 }
 
                 let mut array_result = result.get_value() + "[";
@@ -96,16 +96,16 @@ impl Factor {
                     if !first {
                         array_result += ", ";
                     }
-                    array_result += &element.to_ir(graph_manager,irm).expect("Expected valid Value").get_value().to_string();
+                    array_result += &element.to_ir(irgm).expect("Expected valid Value").get_value().to_string();
                     first = false;
                 }
                 array_result += "]";
 
                 // TODO : Replace with in class implementation of these.
-                let inst = irm.build_op_y(Value::new(ValTy::arr(array_result)), InstTy::load);
-                graph_manager.add_instruction(inst.clone());
+                let inst = irgm.build_op_y(Value::new(ValTy::arr(array_result)), InstTy::load);
+                let val = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
 
-                return Some(Value::new(ValTy::op(inst)));
+                return val;
             },
             Some(FactorType::num(num)) => {
                 let result = num.get_value();
@@ -114,12 +114,12 @@ impl Factor {
             Some(FactorType::func_call(func)) => {
                 // TODO : This is a rough impl, just to get the "call" to print out.
                 // TODO : Still needs to be implemented.
-                let inst = irm.build_spec_op(Vec::new(), InstTy::call);
-                graph_manager.add_instruction(inst.clone());
+                let inst = irgm.build_spec_op(Vec::new(), InstTy::call);
+                irgm.add_inst(inst.clone());
                 return Some(Value::new(ValTy::op(inst)));
             },
             Some(FactorType::expr(expr)) => {
-                return expr.to_ir(graph_manager,irm);
+                return expr.to_ir(irgm);
             },
             None => {
                 panic!()

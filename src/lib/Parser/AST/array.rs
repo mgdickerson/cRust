@@ -2,7 +2,7 @@ use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 
@@ -130,12 +130,12 @@ impl Array {
     }
 
     // TODO : Currently the vector depth information is tossed, will need to handle this in var handler
-    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager, is_global: bool, func_name: Option<String>) {
+    pub fn to_ir(self,  irgm: &mut IRGraphManager, is_global: bool, func_name: Option<String>) {
         for ident in self.identList {
             let mut var_name = ident.get_value();
 
             if !is_global {
-                if irm.get_var_manager_mut_ref().is_valid_variable(var_name.clone()) {
+                if irgm.get_var_manager_mut_ref().is_valid_variable(var_name.clone()) {
                     // this variable is already a global variable, send error.
                     panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
                 }
@@ -143,15 +143,15 @@ impl Array {
                 var_name = func_name.clone().unwrap() + "_" + &var_name;
             }
 
-            let unique = Array::get_unique(var_name, irm);
+            let unique = Array::get_unique(var_name, irgm);
 
-            //let inst = irm.build_op_x_y(Value::new(ValTy::var(unique)), Value::new(ValTy::con(0)), InstTy::mov);
+            //let inst = irgm.build_op_x_y(Value::new(ValTy::var(unique)), Value::new(ValTy::con(0)), InstTy::mov);
             //current_node.get_mut_data_ref().add_instruction(inst);
         }
     }
 
-    fn get_unique(var: String, irm: &mut IRManager) -> String {
-        let unique = irm.add_variable(var, Value::new(ValTy::con(0)));
+    fn get_unique(var: String, irgm: &mut IRGraphManager) -> String {
+        let unique = irgm.add_variable(var, Value::new(ValTy::con(0)));
         unique.get_ident()
     }
 }

@@ -23,7 +23,7 @@ use lib::Lexer;
 use lib::Lexer::token::{Token,TokenCollection,TokenType};
 use lib::Parser;
 use lib::IR::ir;
-use lib::IR::ir_manager::IRManager;
+use lib::IR::ir_manager::IRGraphManager;
 use lib::IR::ir::{Value,ValTy,Op,InstTy};
 use lib::Graph::node::{Node,NodeId};
 //use lib::Graph::arena::Arena;

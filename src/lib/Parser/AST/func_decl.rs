@@ -4,7 +4,7 @@ use Parser::AST::func_ident::FuncIdent;
 use Parser::AST::func_body::FuncBody;
 use Parser::AST::var_decl::VarDecl;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 
@@ -135,22 +135,22 @@ impl FuncDecl {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) {
+    pub fn to_ir(self, irgm : &mut IRGraphManager) {
         let (func_name, func_param) = self.funcName.get_value();
         let func_name_string = String::from("f_") + &func_name.get_value();
 
-        irm.get_var_manager_mut_ref().add_variable(func_name_string.clone());
+        irgm.get_var_manager_mut_ref().add_variable(func_name_string.clone());
         match func_param {
             Some(param) => {
                 for p in param.get_value() {
                     let param_ident = String::from("param_") + &p.get_value();
-                    if irm.get_var_manager_mut_ref().is_valid_variable(param_ident.clone()) {
+                    if irgm.get_var_manager_mut_ref().is_valid_variable(param_ident.clone()) {
                         // this variable is already a global variable, send error.
                         panic!("{} local variable {} is already a global variable.", func_name_string.clone(), param_ident.clone());
                     }
 
                     let func_param_name = func_name_string.clone() + "_" + &param_ident;
-                    irm.get_var_manager_mut_ref().add_variable(func_param_name);
+                    irgm.get_var_manager_mut_ref().add_variable(func_param_name);
                 }
             },
             None => {
@@ -159,7 +159,7 @@ impl FuncDecl {
         }
 
         for var in self.varDecl {
-            var.to_ir(graph_manager,irm,false,Some(func_name_string.clone()));
+            var.to_ir(irgm,false,Some(func_name_string.clone()));
         }
 
 

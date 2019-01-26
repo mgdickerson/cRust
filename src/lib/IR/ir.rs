@@ -1,4 +1,4 @@
-use lib::IR::ir_manager::UniqueVariable;
+use lib::IR::variable_manager::UniqueVariable;
 
 #[derive(Debug,Clone,PartialEq)]
 pub struct Value {

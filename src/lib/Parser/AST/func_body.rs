@@ -6,7 +6,7 @@ use Parser::AST::while_stmt::WhileStmt;
 use Parser::AST::func_call::FuncCall;
 use Parser::AST::return_stmt::ReturnStmt;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 
@@ -93,17 +93,17 @@ impl FuncBody {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) {
+    pub fn to_ir(self, irgm : &mut IRGraphManager) {
         for stmt in self.stmt_vec {
             match stmt {
                 Stmt::assignment(assign) => {
-                    assign.to_ir(graph_manager,irm);
+                    assign.to_ir(irgm);
                 },
                 Stmt::if_stmt(if_st) => {
-                    if_st.to_ir(graph_manager,irm);
+                    if_st.to_ir(irgm);
                 },
                 Stmt::while_stmt(wh_st) => {
-                    wh_st.to_ir(graph_manager,irm);
+                    wh_st.to_ir(irgm);
                 },
                 Stmt::funcCall(fn_cl) => {
 

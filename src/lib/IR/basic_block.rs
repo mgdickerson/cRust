@@ -1,4 +1,4 @@
-use lib::IR::ir_manager::IRManager;
+use lib::IR::ir_manager::InstTracker;
 use lib::IR::ir::{Op, InstTy};
 
 #[derive(Clone)]
@@ -7,8 +7,8 @@ pub struct BasicBlock {
 }
 
 impl BasicBlock {
-    pub fn new(irm: &mut IRManager) -> Self {
-        irm.inc_block_tracker();
+    pub fn new(it: &mut InstTracker) -> Self {
+        it.increment();
         BasicBlock{ inst: Vec::new() }
     }
 

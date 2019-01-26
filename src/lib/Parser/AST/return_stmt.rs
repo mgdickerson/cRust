@@ -2,7 +2,7 @@ use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST::expression::Expression;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 
 #[derive(Debug,Clone)]

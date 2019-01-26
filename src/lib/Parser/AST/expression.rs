@@ -3,7 +3,7 @@ use lib::Lexer::token::TokenType;
 use lib::Lexer::token::TokenCollection;
 use Parser::AST::term::Term;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 
@@ -54,7 +54,7 @@ impl Expression {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) -> Option<Value> {
+    pub fn to_ir(self, irgm : &mut IRGraphManager) -> Option<Value> {
         let mut previous_expr = None;
         let mut current_math_op = None;
 
@@ -63,21 +63,19 @@ impl Expression {
                 ExpList::term(term) => {
                     match current_math_op {
                         Some(TokenType::AddOp) => {
-                            let current_expr = term.to_ir(graph_manager,irm).expect("Expected Valid Value, found None.");
-                            let inst = irm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::add);
+                            let current_expr = term.to_ir(irgm).expect("Expected Valid Value, found None.");
+                            let inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::add);
 
-                            graph_manager.add_instruction(inst.clone());
-                            previous_expr = Some(Value::new(ValTy::op(inst)));
+                            previous_expr = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
                         },
                         Some(TokenType::SubOp) => {
-                            let current_expr = term.to_ir(graph_manager,irm).expect("Expected Valid Value, found None.");
-                            let inst = irm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::sub);
+                            let current_expr = term.to_ir(irgm).expect("Expected Valid Value, found None.");
+                            let inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::sub);
 
-                            graph_manager.add_instruction(inst.clone());
-                            previous_expr = Some(Value::new(ValTy::op(inst)));
+                            previous_expr = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
                         },
                         None => {
-                            previous_expr = term.to_ir(graph_manager,irm);
+                            previous_expr = term.to_ir(irgm);
                         },
                         _ => { panic!("Expected Math Op + or - (or none) but some other was found."); }
                     }

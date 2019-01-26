@@ -1,6 +1,6 @@
 use lib::IR::ir::{Value,ValTy,Op,InstTy};
 use lib::Graph::node::{Node, NodeId, NodeType, NodeData};
-use lib::IR::ir_manager::IRManager;
+use lib::IR::ir_manager::{InstTracker, BlockTracker};
 extern crate petgraph;
 use petgraph::graph::Graph;
 use petgraph::prelude::NodeIndex;
@@ -11,16 +11,16 @@ pub struct GraphManager {
 }
 
 impl GraphManager {
-    pub fn new(mut graph: Graph<Node,i32>, irm: &mut IRManager) -> Self {
-        let current_node = Node::new(irm, NodeType::main_node);
+    pub fn new(mut graph: Graph<Node,i32>, it: &mut InstTracker, bt: &mut BlockTracker) -> Self {
+        let current_node = Node::new(it,bt, NodeType::main_node);
         let current_node_index = graph.add_node(current_node);
         GraphManager { graph, current_node_index }
     }
 
     // -- Node Related Functions -- //
 
-    pub fn new_node(&mut self, irm: &mut IRManager, node_type: NodeType) -> &mut NodeIndex {
-        let current_node = Node::new(irm, node_type);
+    pub fn new_node(&mut self, it: &mut InstTracker, bt: &mut BlockTracker, node_type: NodeType) -> &mut NodeIndex {
+        let current_node = Node::new(it, bt, node_type);
         self.current_node_index = self.graph.add_node(current_node);
         self.get_mut_ref_current_node_index()
     }

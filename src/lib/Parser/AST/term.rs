@@ -3,7 +3,7 @@ use lib::Lexer::token::TokenType;
 use lib::Lexer::token::Token;
 use Parser::AST::factor::{Factor,FactorType};
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 
@@ -56,7 +56,7 @@ impl Term {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) -> Option<Value> {
+    pub fn to_ir(self, irgm : &mut IRGraphManager) -> Option<Value> {
         let mut previous_term = None;
         let mut current_math_op = None;
 
@@ -65,21 +65,19 @@ impl Term {
                 TermList::factor(factor) => {
                     match current_math_op {
                         Some(TokenType::MulOp) => {
-                            let current_term = factor.to_ir(graph_manager,irm).expect("Expected Valid Value, found None.");
-                            let inst = irm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::mul);
+                            let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
+                            let inst = irgm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::mul);
 
-                            graph_manager.add_instruction(inst.clone());
-                            previous_term = Some(Value::new(ValTy::op(inst)));
+                            previous_term = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
                         },
                         Some(TokenType::DivOp) => {
-                            let current_term = factor.to_ir(graph_manager,irm).expect("Expected Valid Value, found None.");
-                            let inst = irm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::div);
+                            let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
+                            let inst = irgm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::div);
 
-                            graph_manager.add_instruction(inst.clone());
-                            previous_term = Some(Value::new(ValTy::op(inst)));
+                            previous_term = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
                         },
                         None => {
-                            previous_term = factor.to_ir(graph_manager,irm);
+                            previous_term = factor.to_ir(irgm);
                         },
                         _ => { panic!("Found math_op in term that was not * or /"); }
                     }

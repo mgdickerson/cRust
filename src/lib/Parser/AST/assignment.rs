@@ -3,7 +3,7 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::designator::Designator;
 use Parser::AST::expression::Expression;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 
@@ -82,15 +82,15 @@ impl Assignment {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) {
+    pub fn to_ir(self, irgm : &mut IRGraphManager) {
         let (result, array) = self.designator.get_value();
         let ident;
         let inst;
 
-        let expr_value = self.expression.to_ir(graph_manager,irm).expect("Expected some expression with related Assignment Operation");
+        let expr_value = self.expression.to_ir(irgm).expect("Expected some expression with related Assignment Operation");
 
         if array.is_empty() {
-            ident = Value::new(ValTy::var(irm.make_unique_variable(result.get_value(), expr_value.clone()).clone()));
+            ident = Value::new(ValTy::var(irgm.make_unique_variable(result.get_value(), expr_value.clone()).clone()));
         } else {
             let mut array_result = result.get_value() + "[";
             let mut first = true;
@@ -98,18 +98,18 @@ impl Assignment {
                 if !first {
                     array_result += ", ";
                 }
-                array_result += &element.to_ir(graph_manager,irm).expect("Expected valid Value").get_value().to_string();
+                array_result += &element.to_ir(irgm).expect("Expected valid Value").get_value().to_string();
                 first = false;
             }
             array_result += "]";
 
-            inst = irm.build_op_y(Value::new(ValTy::arr(array_result)), InstTy::load);
-            graph_manager.add_instruction(inst.clone());
+            inst = irgm.build_op_y(Value::new(ValTy::arr(array_result)), InstTy::load);
+            irgm.add_inst(inst.clone());
 
             ident = Value::new(ValTy::op(inst));
         }
 
-        //let new_inst = irm.build_op_x_y(ident,expr_value,InstTy::mov);
+        //let new_inst = irgm.build_op_x_y(ident,expr_value,InstTy::mov);
         //current_node.get_mut_data_ref().add_instruction(new_inst);
     }
 }

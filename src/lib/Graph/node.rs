@@ -1,6 +1,6 @@
 use std;
 use lib::IR::basic_block::BasicBlock;
-use lib::IR::ir_manager::IRManager;
+use lib::IR::ir_manager::{InstTracker, BlockTracker};
 
 #[derive(Clone)]
 pub struct Node {
@@ -10,9 +10,9 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(irm: &mut IRManager, node_type: NodeType) -> Self {
-        let node_data = NodeData::new(irm);
-        let node_id = NodeId::new(irm.get_block_num());
+    pub fn new(it: &mut InstTracker, bt: &mut BlockTracker, node_type: NodeType) -> Self {
+        let node_data = NodeData::new(it);
+        let node_id = NodeId::new(bt.get());
         Node { node_id, node_data, node_type }
     }
 
@@ -66,8 +66,8 @@ pub struct NodeData {
 }
 
 impl NodeData {
-    pub fn new(irm: &mut IRManager) -> Self {
-        NodeData { data: BasicBlock::new(irm) }
+    pub fn new(it: &mut InstTracker) -> Self {
+        NodeData { data: BasicBlock::new(it) }
     }
 
     pub fn get(self) -> BasicBlock {

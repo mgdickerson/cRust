@@ -3,7 +3,7 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::relation::Relation;
 use Parser::AST::func_body::FuncBody;
 
-use super::{Node, NodeId, NodeData, NodeType, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, NodeType, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 
@@ -108,7 +108,7 @@ impl IfStmt {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph_manager: &mut GraphManager, irm: &mut IRManager) {
+    pub fn to_ir(self, irgm : &mut IRGraphManager) {
         /// General Order:
         /// - enter node with "central node"
         /// - create top of if-node, connect main to top
@@ -119,32 +119,32 @@ impl IfStmt {
         /// - go through assigned values and figure out phi
 
         // Clone Main Node Index + add relation statement
-        let main_node = graph_manager.clone_node_index();
-        self.relation.to_ir(graph_manager,irm, Value::new(ValTy::con(-1)));
+        let main_node = irgm.clone_node_index();
+        self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
 
         // Variable holder for else_node_bottom
         let mut else_node_bottom = None;
 
         // Generate if-node-top
-        graph_manager.new_node(irm, NodeType::if_node);
-        let if_node_top = graph_manager.clone_node_index();
+        irgm.new_node(NodeType::if_node);
+        let if_node_top = irgm.clone_node_index();
         // Connect Main Node to If-Node-Top
-        graph_manager.add_edge(main_node,if_node_top);
+        irgm.add_edge(main_node,if_node_top);
 
         // Go through if-body, generate if-bottom
-        self.funcIfBody.to_ir(graph_manager, irm);
-        let if_node_bottom = graph_manager.clone_node_index();
+        self.funcIfBody.to_ir(irgm);
+        let if_node_bottom = irgm.clone_node_index();
 
         match self.funcElseBody {
             Some(funcElseBody) => {
                 // Generate else-node-top
-                graph_manager.new_node(irm, NodeType::else_node);
-                let else_node_top = graph_manager.clone_node_index();
-                graph_manager.add_edge(main_node,else_node_top);
+                irgm.new_node(NodeType::else_node);
+                let else_node_top = irgm.clone_node_index();
+                irgm.add_edge(main_node,else_node_top);
 
                 // go through else-body, generate else-bottom
-                funcElseBody.to_ir(graph_manager, irm);
-                else_node_bottom = Some(graph_manager.clone_node_index());
+                funcElseBody.to_ir(irgm);
+                else_node_bottom = Some(irgm.clone_node_index());
             },
             None => {
                 // Nothing to do here, fall through.
@@ -155,19 +155,19 @@ impl IfStmt {
         // TODO : Will i need a clean up cycle to determine branch locations?
 
         // Main branch node after if/else (phi node)
-        graph_manager.new_node(irm, NodeType::phi_node);
-        let phi_node = graph_manager.clone_node_index();
+        irgm.new_node(NodeType::phi_node);
+        let phi_node = irgm.clone_node_index();
 
         // Figure out possible phi
 
         // Connect if-bottom to phi
-        graph_manager.add_edge(if_node_bottom, phi_node);
+        irgm.add_edge(if_node_bottom, phi_node);
 
         // Add else node
         match else_node_bottom {
             Some(node) => {
                 // Connect else-bottom to phi
-                graph_manager.add_edge(node, phi_node);
+                irgm.add_edge(node, phi_node);
 
                 // Construct phi by checking first if and else
                 // If they differ, construct phi out of both.
@@ -175,7 +175,7 @@ impl IfStmt {
             },
             None => {
                 // no else body, connect main directly to phi
-                graph_manager.add_edge(main_node, phi_node);
+                irgm.add_edge(main_node, phi_node);
 
             },
         }

@@ -5,7 +5,7 @@ use Parser::AST::var_decl::VarDecl;
 use Parser::AST::func_decl::FuncDecl;
 use Parser::AST::func_body::FuncBody;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 use lib::Utility::display;
@@ -147,32 +147,27 @@ impl Comp {
     }
 
     pub fn to_ir(self) {
-        // TODO : All of this.
-        let mut irm = IRManager::new();
-
         // This graph is directed.
-        let mut graph : Graph<Node, i32> = Graph::new();
-
-        let mut graph_manager = GraphManager::new(graph, &mut irm);
+        let mut ir_graph_manager = IRGraphManager::new();
 
         for var in self.varDecl {
             // These are the global variable declarations.
             // Build the variable tracker here, and give unique tags.
-            var.to_ir(&mut graph_manager, &mut irm, true, None);
+            var.to_ir(&mut ir_graph_manager, true, None);
         }
 
         for func in self.funcDecl {
-            //func.to_ir(&mut graph, &mut initial_node, &mut irManager);
+            //func.to_ir(&mut graph, &mut initial_node, &mut irgmanager);
         }
 
-        self.funcBody.to_ir(&mut graph_manager, &mut irm);
+        self.funcBody.to_ir(&mut ir_graph_manager);
 
-        //println!("{:?}", irManager.get_var_manager_mut_ref());
+        //println!("{:?}", irgmanager.get_var_manager_mut_ref());
         //graph_manager.add_current_node_to_graph();
-        println!("{:?}", display::Dot::with_config(&graph_manager.get_graph(), &[display::Config::EdgeNoLabel]));
+        println!("{:?}", display::Dot::with_config(&ir_graph_manager.get_graph(), &[display::Config::EdgeNoLabel]));
 
         /*
-        println!("{:?}", irm.get_var_manager().get_var_map());
+        println!("{:?}", irgm.get_var_manager().get_var_map());
         let (nodes, edges) = graph_manager.get_graph().into_nodes_edges();
         for node in nodes {
             for op in node.weight.get_data().get() {
