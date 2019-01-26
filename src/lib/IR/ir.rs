@@ -1,6 +1,6 @@
 use lib::IR::ir_manager::UniqueVariable;
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub struct Value {
     val: ValTy,
 }
@@ -16,7 +16,7 @@ impl Value {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub enum ValTy {
     op(Op),
     con(i32),
@@ -151,6 +151,10 @@ impl Op {
     pub fn get_inst_block(&self) -> usize {
         self.block_number.clone()
     }
+
+    pub fn inst_type(&self) -> &InstTy {
+        &self.inst_type
+    }
 }
 
 impl std::fmt::Debug for Op {
@@ -159,7 +163,23 @@ impl std::fmt::Debug for Op {
     }
 }
 
-#[derive(Clone)]
+impl PartialEq for Op {
+    fn eq(&self, other: &Op) -> bool {
+        if self.inst_type == other.inst_type {
+            if self.x_val == other.x_val {
+                if self.y_val == other.y_val {
+                    if self.special_val == other.special_val {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum InstTy {
     /// Op ///
     read,
@@ -243,24 +263,6 @@ impl InstTy {
 
             _ => { panic!("Error occurred, was not a default type."); }
         }
-    }
-}
-
-pub struct InstTracker {
-    inst_number: usize,
-}
-
-impl InstTracker {
-    pub fn new() -> InstTracker {
-        InstTracker { inst_number: 0 }
-    }
-
-    pub fn increment(&mut self) {
-        self.inst_number += 1;
-    }
-
-    pub fn get(&self) -> usize {
-        self.inst_number.clone()
     }
 }
 

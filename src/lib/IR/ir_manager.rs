@@ -1,7 +1,70 @@
-use lib::IR::basic_block::BlockTracker;
-use lib::IR::ir::{Value,ValTy,Op,InstTy,InstTracker};
+use lib::IR::ir::{Value,ValTy,Op,InstTy};
 use std::collections::HashMap;
+
+use lib::Graph::graph_manager::GraphManager;
+use lib::Graph::node::{Node,NodeId,NodeData,NodeType};
+
 use super::Graph;
+use petgraph::graph::NodeIndex;
+
+/// Rough Draft of IR_Manager Rewrite
+
+pub struct IRGraphManager {
+    // Tracker for BlockId, which should match NodeId
+    bt: BlockTracker,
+
+    // Tacker for Instruction Id,
+    // could also contain the OpDomHandler.
+    // Combining the two would allow assignment
+    // and possibly assign temp variables for outputs.
+    it: InstTracker,
+    op_dom_handler: OpDomHandler,
+
+    // User made Variable Tracker
+    var_manager: VariableManager,
+
+    // Manages all things graph related.
+    graph_manager: GraphManager,
+}
+
+// TODO : Add Function for IRGraphManager that either straight adds an Op to the list or Checks (branches not checked, but most others are)
+
+pub struct InstTracker {
+    inst_number: usize,
+}
+
+impl InstTracker {
+    pub fn new() -> InstTracker {
+        InstTracker { inst_number: 0 }
+    }
+
+    pub fn increment(&mut self) {
+        self.inst_number += 1;
+    }
+
+    pub fn get(&self) -> usize {
+        self.inst_number.clone()
+    }
+}
+
+#[derive(Clone)]
+pub struct BlockTracker {
+    block_number: usize,
+}
+
+impl BlockTracker {
+    pub fn new() -> BlockTracker {
+        BlockTracker { block_number: 0 }
+    }
+
+    pub fn increment(&mut self) {
+        self.block_number += 1;
+    }
+
+    pub fn get(&self) -> usize {
+        self.block_number.clone()
+    }
+}
 
 pub struct IRManager {
     bt: BlockTracker,
@@ -249,7 +312,7 @@ impl PartialEq for UniqueVariable {
 }
 
 pub struct OpDomHandler {
-    op_manager: HashMap<String, OpGraph>,
+    op_manager: HashMap<InstTy, OpGraph>,
 }
 
 impl OpDomHandler {
@@ -257,51 +320,147 @@ impl OpDomHandler {
         OpDomHandler { op_manager: HashMap::new() }
     }
 
-    pub fn get_op_graph(&mut self, op_type: String) -> Option<&mut OpGraph> {
+    pub fn get_op_graph(&mut self, op_type: InstTy) -> Option<&mut OpGraph> {
         self.op_manager.get_mut(&op_type)
+    }
+
+    // True means new one was added, should be added to instruction list
+    // False means it was found in search, do not add instruction just use value
+    pub fn search_or_add_inst(&mut self, new_op: Op) -> (bool, Op) {
+        let contains_key = self.op_manager.contains_key(new_op.inst_type());
+
+        if !contains_key {
+            let key = new_op.inst_type().clone();
+            let op_head = OpNode::new_head_node(new_op.clone());
+
+            self.op_manager.insert(key, OpGraph::new(op_head));
+
+            return (true, new_op);
+        }
+
+        let (is_new, op_node) = self.op_manager.get_mut(new_op.inst_type())
+            .expect("Key is present, should have graph.")
+            .search_or_add(new_op);
+
+        (is_new, op_node.get_op().clone())
     }
 }
 
+
+
+
 pub struct OpGraph {
-    op_graph: Graph<Op,i32>,
-    parent_node: Option<petgraph::graph::NodeIndex<u32>>,
+    op_graph: Graph<OpNode,i32>,
+    head_node: NodeIndex<u32>,
+    tail_node: NodeIndex,
 }
 
 impl OpGraph {
-    pub fn new() -> Self {
-        OpGraph { op_graph: Graph::new(), parent_node: None }
+    pub fn new(head_node: OpNode) -> Self {
+        let mut op_graph = Graph::new();
+        let head_node = op_graph.add_node(head_node);
+        let tail_node = head_node.clone();
+        OpGraph { op_graph, head_node, tail_node }
     }
 
-    // TODO : I think this structure will have to change to include the desired "Parent Node"
-    pub fn add_op(&mut self, child_op: Op, is_sibling: bool) -> petgraph::graph::NodeIndex<u32> {
-        let child_node = self.op_graph.add_node(child_op);
+    pub fn clone_tail_index(&self) -> NodeIndex {
+        self.tail_node.clone()
+    }
 
-        match self.parent_node {
-            Some(p_node) => {
-                self.op_graph.add_edge(p_node, child_node, 1);
-            },
-            None => {
-                // No need to add edge, this is the first node.
+    pub fn revert_tail_index(&mut self, restore_index: NodeIndex) {
+        self.tail_node = restore_index;
+    }
+
+    // True means one was added, should be added to instruction list
+    // False means it was found in search, do not add instruction just use value
+    pub fn search_or_add(&mut self, new_op: Op) -> (bool, OpNode) {
+        let op_tail = self.op_graph.node_weight(self.tail_node).expect("Tail index should have node weight.").clone();
+
+        // check op_tail
+        if op_tail.get_op().clone() == new_op {
+            return (false, op_tail);
+        }
+
+        // Search through Op chain to find matching Op
+        while let Some(op_node) = op_tail.get_parent() {
+            if op_node.get_op().clone() == new_op.clone() {
+                return (false, op_node.clone());
             }
         }
 
-        if is_sibling {
-            return child_node;
-        }
+        // No Op found, add this Op to Op-Chain and return
+        let new_tail = OpNode::add_op_node(new_op, op_tail);
+        self.tail_node = self.add_child_op(new_tail.clone());
 
-        self.parent_node = Some(child_node.clone());
-        child_node
-
+        (true, new_tail)
     }
 
-    pub fn add_child_op(&mut self, parent_node: petgraph::graph::NodeIndex<u32>, child_op: Op) -> petgraph::graph::NodeIndex<u32> {
+    pub fn add_child_op(&mut self, child_op: OpNode) -> NodeIndex<u32> {
         let child_node = self.op_graph.add_node(child_op);
-        self.op_graph.add_edge(parent_node,child_node.clone(), 1);
+        self.op_graph.add_edge(self.tail_node,child_node.clone(), 1);
 
         return child_node;
     }
 
-    pub fn get_graph(&self) -> &Graph<Op, i32> {
+    pub fn get_graph(&self) -> &Graph<OpNode, i32> {
         &self.op_graph
+    }
+}
+
+
+///
+/// General outline of OpGraph
+///
+///     Graph<Op>
+///
+///     Op {
+///         DominatingParent: Option<Box?<Op>>
+///     }
+///
+///     pub fn get_dom_op(&self) -> &Op {
+///         match self.DominatingParent {
+///             Some(parent) => { &parent },
+///             None => // Do Something Here,
+///         }
+///     }
+///
+///     pub fn search_and_replace(&self) -> Op {
+///         // Find parent op that matches, or add current Op
+///     }
+///
+///     pub fn add_to_graph(&self, Op1, Op2)
+///
+
+
+#[derive(Clone)]
+pub struct OpNode {
+    op: Op,
+    parent_node: Option<Box<OpNode>>,
+}
+
+impl OpNode {
+    pub fn new_head_node(op_head: Op) -> Self {
+        OpNode { op: op_head, parent_node: None }
+    }
+
+    pub fn add_op_node(op: Op, parent_op: OpNode) -> Self {
+        OpNode { op, parent_node: Some(Box::new(parent_op)) }
+    }
+
+    pub fn get_op(&self) -> &Op {
+        &self.op
+    }
+
+    pub fn clone_op(&self) -> Op {
+        self.op.clone()
+    }
+
+    pub fn get_parent(&self) -> Option<OpNode> {
+        match self.parent_node.clone() {
+            Some(p_node) => {
+                Some(*p_node)
+            },
+            None => None,
+        }
     }
 }

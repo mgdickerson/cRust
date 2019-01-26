@@ -38,22 +38,3 @@ impl std::fmt::Debug for BasicBlock {
         write!(f, "")
     }
 }
-
-#[derive(Clone)]
-pub struct BlockTracker {
-    block_number: usize,
-}
-
-impl BlockTracker {
-    pub fn new() -> BlockTracker {
-        BlockTracker { block_number: 0 }
-    }
-
-    pub fn increment(&mut self) {
-        self.block_number += 1;
-    }
-
-    pub fn get(&self) -> usize {
-        self.block_number.clone()
-    }
-}
