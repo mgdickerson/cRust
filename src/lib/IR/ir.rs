@@ -16,7 +16,7 @@ impl Value {
     }
 }
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone, PartialEq)]
 pub enum ValTy {
     op(Op),
     con(i32),
@@ -34,7 +34,7 @@ impl ValTy {
             },
             ValTy::var(var) => {
                 // Temporarily, I want it to output var name
-                var.get_ident()
+                var.value_to_string()
             },
             ValTy::reg(reg) => reg.to_string(),
             ValTy::arr(arr) => arr.clone(),

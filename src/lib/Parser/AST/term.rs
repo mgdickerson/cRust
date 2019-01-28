@@ -68,13 +68,13 @@ impl Term {
                             let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
                             let inst = irgm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::mul);
 
-                            previous_term = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
+                            previous_term = Some(Value::new(ValTy::op(irgm.try_add_inst(inst.clone()))));
                         },
                         Some(TokenType::DivOp) => {
                             let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
                             let inst = irgm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::div);
 
-                            previous_term = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
+                            previous_term = Some(Value::new(ValTy::op(irgm.try_add_inst(inst.clone()))));
                         },
                         None => {
                             previous_term = factor.to_ir(irgm);

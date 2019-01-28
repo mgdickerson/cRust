@@ -1,0 +1,23 @@
+//Simple Redundant Op Elimination Test
+main
+var x, y, z, w;
+{
+    let x <- 1;
+    let y <- x;
+    let z <- y;
+    let w <- 1;
+
+    let x <- x + 1;
+    let x <- 1 + 1;
+    let x <- 1 + 1;
+    let x <- 1 + 2;
+
+    let y <- y + 1;
+    let z <- z + 1;
+
+    let w <- w + 7;
+    let w <- w + 2;
+    let w <- w + 4;
+
+    call OutputNum(y)
+}.

@@ -73,8 +73,10 @@ impl OpGraph {
             return (false, op_tail);
         }
 
+        let mut iter_op = op_tail.clone();
+
         // Search through Op chain to find matching Op
-        while let Some(op_node) = op_tail.get_parent() {
+        while let Some(op_node) = iter_op.next() {
             if op_node.get_op().clone() == new_op.clone() {
                 return (false, op_node.clone());
             }
@@ -122,10 +124,14 @@ impl OpNode {
         self.op.clone()
     }
 
-    pub fn get_parent(&self) -> Option<OpNode> {
+    pub fn clone_parent(&self) -> Option<Box<OpNode>> { self.parent_node.clone() }
+
+    pub fn next(&mut self) -> Option<OpNode> {
         match self.parent_node.clone() {
             Some(p_node) => {
-                Some(*p_node)
+                self.op = p_node.clone_op();
+                self.parent_node = p_node.clone_parent();
+                Some(self.clone())
             },
             None => None,
         }

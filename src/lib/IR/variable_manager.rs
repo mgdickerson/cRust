@@ -125,6 +125,10 @@ impl UniqueVariable {
 
     pub fn get_value(&self) -> Box<Value> { self.value.clone() }
 
+    pub fn value_to_string(&self) -> String {
+        self.value.get_value().to_string()
+    }
+
     pub fn get_block(&self) -> usize { self.def_block.clone() }
 
     pub fn add_use(&mut self, var_use: usize) {
@@ -149,6 +153,6 @@ impl UniqueVariable {
 
 impl PartialEq for UniqueVariable {
     fn eq(&self, other: &UniqueVariable) -> bool {
-        self.unique_ident == other.unique_ident
+        self.value == other.value
     }
 }
