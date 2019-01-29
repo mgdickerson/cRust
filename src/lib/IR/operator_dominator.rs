@@ -16,6 +16,18 @@ impl OpDomHandler {
         self.op_manager.get_mut(&op_type)
     }
 
+    pub fn set_recovery_point(&mut self) {
+        for (op_type, graph) in self.op_manager.iter_mut() {
+            graph.set_recovery_point();
+        }
+    }
+
+    pub fn restore(&mut self) {
+        for (op_type, graph) in self.op_manager.iter_mut() {
+            graph.restore();
+        }
+    }
+
     // True means new one was added, should be added to instruction list
     // False means it was found in search, do not add instruction just use value
     pub fn search_or_add_inst(&mut self, new_op: Op) -> (bool, Op) {
@@ -43,8 +55,13 @@ impl OpDomHandler {
 
 pub struct OpGraph {
     op_graph: Graph<OpNode,i32>,
-    head_node: NodeIndex<u32>,
+    head_node: NodeIndex,
     tail_node: NodeIndex,
+
+    recovery_node: Option<NodeIndex>,
+    // This is the indicate that when recovery occurred, the first instance
+    // of an instruction was created in a non-dominating branch.
+    need_new_head: bool,
 }
 
 impl OpGraph {
@@ -52,21 +69,43 @@ impl OpGraph {
         let mut op_graph = Graph::new();
         let head_node = op_graph.add_node(head_node);
         let tail_node = head_node.clone();
-        OpGraph { op_graph, head_node, tail_node }
+        OpGraph { op_graph, head_node, tail_node, recovery_node: None, need_new_head: false }
     }
 
     pub fn clone_tail_index(&self) -> NodeIndex {
         self.tail_node.clone()
     }
 
-    pub fn revert_tail_index(&mut self, restore_index: NodeIndex) {
-        self.tail_node = restore_index;
+    pub fn set_recovery_point(&mut self) {
+        let recovery_point = self.tail_node.clone();
+        self.recovery_node = Some(recovery_point);
+    }
+
+    pub fn restore(&mut self) {
+        match self.recovery_node.clone() {
+            Some(recovery_point) => {
+                self.tail_node = recovery_point;
+            },
+            None => {
+                let recovery_point = self.head_node.clone();
+                self.tail_node = recovery_point;
+                self.need_new_head = true;
+            },
+        }
     }
 
     // True means one was added, should be added to instruction list
     // False means it was found in search, do not add instruction just use value
     pub fn search_or_add(&mut self, new_op: Op) -> (bool, OpNode) {
         let op_tail = self.op_graph.node_weight(self.tail_node).expect("Tail index should have node weight.").clone();
+
+        if self.need_new_head {
+            let new_head_op = OpNode::new_head_node(new_op);
+            let new_head_node = self.op_graph.add_node(new_head_op.clone());
+            self.head_node = new_head_node.clone();
+            self.tail_node = new_head_node;
+            return (true, new_head_op);
+        }
 
         // check op_tail
         if op_tail.get_op().clone() == new_op {

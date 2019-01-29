@@ -100,21 +100,30 @@ impl WhileStmt {
         /// - connect main-node to phi
         /// - phi node is new "Main Node"
 
+        // Make copy of main node
         let main_node = irgm.clone_node_index();
+
+        // Make loop header
+        irgm.new_node(NodeType::loop_header);
         // Handy for return instruction later
         let return_point = self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
+        let loop_header = irgm.clone_node_index();
+        irgm.add_edge(main_node, loop_header);
+        irgm.set_op_recovery_point();
 
-        // Generate loop-head
+        // Generate loop-body head
         irgm.new_node(NodeType::while_node);
         let loop_node_top = irgm.clone_node_index();
         // Connect main_node to loop_node_top
-        irgm.add_edge(main_node,loop_node_top);
+        irgm.add_edge(loop_header,loop_node_top);
 
         // Go through loop body
         self.body.to_ir(irgm);
         // Add return branch instruction to "new main node"
         let bra_return = irgm.build_op_y(return_point,InstTy::bra);
         irgm.add_inst(bra_return);
+        // After going through loop body, restore op-dom tree
+        irgm.restore_op();
 
         // Generate new loop bottom node
         let loop_node_bottom = irgm.clone_node_index();
@@ -123,7 +132,7 @@ impl WhileStmt {
         irgm.new_node(NodeType::phi_node);
         let phi_node = irgm.clone_node_index();
 
-        irgm.add_edge(main_node,phi_node);
-        irgm.add_edge(loop_node_bottom,main_node);
+        irgm.add_edge(loop_header,phi_node);
+        irgm.add_edge(loop_node_bottom,loop_header);
     }
 }

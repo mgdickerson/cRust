@@ -19,5 +19,12 @@ var x, y, z, w;
     let w <- w + 2;
     let w <- w + 4;
 
+    if 1 > 1 then
+        let x <- 14 + 4;
+    else
+        let x <- 12 + 2;
+    fi;
+    let x <- 14 + 4;
+
     call OutputNum(y)
 }.

@@ -120,7 +120,12 @@ impl IfStmt {
 
         // Clone Main Node Index + add relation statement
         let main_node = irgm.clone_node_index();
+
+        irgm.new_node(NodeType::loop_header);
         self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
+        let loop_header = irgm.clone_node_index();
+        irgm.add_edge(main_node, loop_header);
+        irgm.set_op_recovery_point();
 
         // Variable holder for else_node_bottom
         let mut else_node_bottom = None;
@@ -129,22 +134,27 @@ impl IfStmt {
         irgm.new_node(NodeType::if_node);
         let if_node_top = irgm.clone_node_index();
         // Connect Main Node to If-Node-Top
-        irgm.add_edge(main_node,if_node_top);
+        irgm.add_edge(loop_header,if_node_top);
 
         // Go through if-body, generate if-bottom
         self.funcIfBody.to_ir(irgm);
         let if_node_bottom = irgm.clone_node_index();
+        // After going through body, recover initial operator domination tree
+        irgm.restore_op();
 
         match self.funcElseBody {
             Some(funcElseBody) => {
                 // Generate else-node-top
                 irgm.new_node(NodeType::else_node);
                 let else_node_top = irgm.clone_node_index();
-                irgm.add_edge(main_node,else_node_top);
+                irgm.add_edge(loop_header,else_node_top);
 
                 // go through else-body, generate else-bottom
                 funcElseBody.to_ir(irgm);
                 else_node_bottom = Some(irgm.clone_node_index());
+
+                // After going through else, recover initial op dom tree
+                irgm.restore_op();
             },
             None => {
                 // Nothing to do here, fall through.
@@ -175,7 +185,7 @@ impl IfStmt {
             },
             None => {
                 // no else body, connect main directly to phi
-                irgm.add_edge(main_node, phi_node);
+                irgm.add_edge(loop_header, phi_node);
 
             },
         }
