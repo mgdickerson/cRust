@@ -86,9 +86,6 @@ impl IRGraphManager {
             }).collect::<HashMap<usize,Node>>();
 
         // TODO : Uses are not adding correctly!
-        for uniq in vars {
-            println!("{:?}", uniq.get_uses());
-        }
 
         /*
         vars.iter().filter_map(|uniq| {
@@ -211,6 +208,7 @@ impl IRGraphManager {
 
     pub fn insert_phi_inst(&mut self, left_set: HashMap<String, UniqueVariable>, right_set: HashMap<String, UniqueVariable>)
         -> Vec<UniqueVariable> {
+
         let phi_set = VariableManager::build_phi_pairs(left_set, right_set);
         let mut inst_position = 0;
         let mut while_touch_up_vars = Vec::new();
