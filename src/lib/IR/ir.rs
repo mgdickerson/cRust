@@ -179,6 +179,11 @@ impl PartialEq for Op {
     }
 }
 
+pub enum OpPosition {
+    left,
+    right,
+}
+
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum InstTy {
     /// Op ///

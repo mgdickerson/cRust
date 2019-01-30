@@ -66,13 +66,13 @@ impl Expression {
                             let current_expr = term.to_ir(irgm).expect("Expected Valid Value, found None.");
                             let inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::add);
 
-                            previous_expr = Some(Value::new(ValTy::op(irgm.try_add_inst(inst.clone()))));
+                            previous_expr = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
                         },
                         Some(TokenType::SubOp) => {
                             let current_expr = term.to_ir(irgm).expect("Expected Valid Value, found None.");
                             let inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::sub);
 
-                            previous_expr = Some(Value::new(ValTy::op(irgm.try_add_inst(inst.clone()))));
+                            previous_expr = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
                         },
                         None => {
                             previous_expr = term.to_ir(irgm);

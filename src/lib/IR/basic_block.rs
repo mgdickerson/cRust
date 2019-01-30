@@ -16,6 +16,10 @@ impl BasicBlock {
         self.inst.push(op);
     }
 
+    pub fn insert_instruction(&mut self, position: usize, op: Op) {
+        self.inst.insert(position, op);
+    }
+
     pub fn to_iter(self) -> std::vec::IntoIter<Op> {
         self.inst.into_iter()
     }

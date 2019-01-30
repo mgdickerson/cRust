@@ -138,7 +138,8 @@ impl IRGraphManager {
     }
 
     pub fn get_block_num(&self) -> usize {
-        self.bt.get()
+        let current_node = self.graph_manager.clone_node_index();
+        self.graph_manager.get_node_id(current_node)
     }
 
     /// Variable Manager Specific Functions ///
@@ -149,25 +150,46 @@ impl IRGraphManager {
 
     pub fn get_var_manager(self) -> VariableManager { self.var_manager }
 
+    pub fn clone_var_manager(&self) -> VariableManager { self.var_manager.clone() }
+
     pub fn add_variable(&mut self, ident: String, value: Value) -> &UniqueVariable {
         self.var_manager.add_variable(ident.clone());
         self.make_unique_variable(ident, value)
     }
 
     pub fn make_unique_variable(&mut self, ident: String, value: Value) -> &UniqueVariable {
-        self.var_manager.make_unique_variable(ident, value, self.bt.get(), self.it.get())
+        let block_num = self.get_block_num();
+        self.var_manager.make_unique_variable(ident, value, block_num, self.it.get())
     }
 
     pub fn get_unique_variable(&mut self, ident: String) -> &UniqueVariable {
         self.var_manager.get_unique_variable(ident, self.it.get())
     }
 
-    pub fn get_var_by_block(&self, block_number: usize) -> Option<Vec<String>> {
-        self.var_manager.get_variables_by_block(block_number)
+    pub fn var_checkpoint(&self) -> HashMap<String, UniqueVariable> {
+        self.var_manager.clone_current_vars()
     }
 
-    pub fn make_var_table(&self, var: Option<Vec<String>>) -> Option<HashMap<String, UniqueVariable>> {
-        self.var_manager.make_var_table(var)
+    pub fn restore_vars(&mut self, checkpoint: HashMap<String, UniqueVariable>) {
+        self.var_manager.restore_vars(checkpoint);
+    }
+
+    pub fn insert_phi_inst(&mut self, left_set: HashMap<String, UniqueVariable>, right_set: HashMap<String, UniqueVariable>) {
+        let phi_set = VariableManager::build_phi_pairs(left_set, right_set);
+        let mut inst_position = 0;
+        for (left_var, right_var) in phi_set {
+            let inst = self.build_op_x_y(*left_var.get_value(), *right_var.get_value(), InstTy::phi);
+
+            // make new unique variable with phi value
+            let block_num = self.get_block_num();
+            self.var_manager.make_unique_variable(left_var.get_base_ident(),
+                Value::new(ValTy::op(inst.clone())),
+                block_num,
+                self.it.get());
+
+            self.graph_manager.insert_instruction(inst_position, inst);
+            inst_position += 1;
+        }
     }
 
     /// Op Dominator Specific Functions ///
@@ -184,12 +206,12 @@ impl IRGraphManager {
         self.op_dom_handler.get_op_graph(op_type)
     }
 
-    pub fn set_op_recovery_point(&mut self) {
-        self.op_dom_handler.set_recovery_point();
+    pub fn set_op_recovery_point(&mut self) -> OpDomHandler {
+        self.op_dom_handler.set_recovery_point()
     }
 
-    pub fn restore_op(&mut self) {
-        self.op_dom_handler.restore();
+    pub fn restore_op(&mut self, op_dom_handler: OpDomHandler) {
+        self.op_dom_handler.restore(op_dom_handler);
     }
 }
 

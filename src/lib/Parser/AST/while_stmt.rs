@@ -109,7 +109,8 @@ impl WhileStmt {
         let return_point = self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
         let loop_header = irgm.clone_node_index();
         irgm.add_edge(main_node, loop_header);
-        irgm.set_op_recovery_point();
+        let op_recovery = irgm.set_op_recovery_point();
+        let main_vars = irgm.var_checkpoint();
 
         // Generate loop-body head
         irgm.new_node(NodeType::while_node);
@@ -123,16 +124,25 @@ impl WhileStmt {
         let bra_return = irgm.build_op_y(return_point,InstTy::bra);
         irgm.add_inst(bra_return);
         // After going through loop body, restore op-dom tree
-        irgm.restore_op();
+        irgm.restore_op(op_recovery);
+        let loop_vars = irgm.var_checkpoint();
+
+        irgm.restore_vars(main_vars.clone());
 
         // Generate new loop bottom node
         let loop_node_bottom = irgm.clone_node_index();
 
         // Generate phi node
         irgm.new_node(NodeType::phi_node);
-        let phi_node = irgm.clone_node_index();
+        let branch_node = irgm.clone_node_index();
 
-        irgm.add_edge(loop_header,phi_node);
+        irgm.add_edge(loop_header,branch_node);
         irgm.add_edge(loop_node_bottom,loop_header);
+
+        // Insert Phi Inst to Loop Header
+        irgm.switch_current_node(loop_header);
+        irgm.insert_phi_inst(loop_vars, main_vars);
+
+        irgm.switch_current_node(branch_node);
     }
 }

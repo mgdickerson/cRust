@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use super::Graph;
 use petgraph::graph::NodeIndex;
 
+#[derive(Clone)]
 pub struct OpDomHandler {
     op_manager: HashMap<InstTy, OpGraph>,
 }
@@ -12,17 +13,25 @@ impl OpDomHandler {
         OpDomHandler { op_manager: HashMap::new() }
     }
 
+    fn get_op_manager(self) -> HashMap<InstTy, OpGraph> {
+        self.op_manager
+    }
+
     pub fn get_op_graph(&mut self, op_type: InstTy) -> Option<&mut OpGraph> {
         self.op_manager.get_mut(&op_type)
     }
 
-    pub fn set_recovery_point(&mut self) {
+    pub fn set_recovery_point(&mut self) -> OpDomHandler {
         for (op_type, graph) in self.op_manager.iter_mut() {
             graph.set_recovery_point();
         }
+
+        self.clone()
     }
 
-    pub fn restore(&mut self) {
+    pub fn restore(&mut self, op_dom_recovery: OpDomHandler) {
+        self.op_manager = op_dom_recovery.get_op_manager();
+
         for (op_type, graph) in self.op_manager.iter_mut() {
             graph.restore();
         }
@@ -53,6 +62,7 @@ impl OpDomHandler {
 
 
 
+#[derive(Clone)]
 pub struct OpGraph {
     op_graph: Graph<OpNode,i32>,
     head_node: NodeIndex,

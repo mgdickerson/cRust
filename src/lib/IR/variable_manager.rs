@@ -1,68 +1,64 @@
 use lib::IR::ir::Value;
 use std::collections::HashMap;
+use lib::IR::ir::{Op,OpPosition};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VariableManager {
     var_manager: HashMap<String, Vec<UniqueVariable>>,
     var_counter: HashMap<String, usize>,
-    block_var: HashMap<usize, Vec<String>>,
+    current_vars: HashMap<String, UniqueVariable>,
 }
 
 impl VariableManager {
     pub fn new() -> Self {
-        VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new(), block_var: HashMap::new() }
+        VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new(), current_vars: HashMap::new() }
     }
 
     pub fn get_var_map(self) -> HashMap<String, Vec<UniqueVariable>> {
         self.var_manager
     }
 
-    pub fn get_variables_by_block(&self, block_number: usize) -> Option<Vec<String>> {
-        match self.block_var.get(&block_number) {
-            Some(vec) => {
-                Some(vec.clone())
-            }
-            None => { None }
-        }
+    pub fn clone_current_vars(&self) -> HashMap<String, UniqueVariable> {
+        self.current_vars.clone()
     }
 
-    pub fn make_var_table(&self, vars: Option<Vec<String>>) -> Option<HashMap<String, UniqueVariable>> {
-        match vars {
-            Some(vec) => {
-                Some(vec.iter().map(|var| {
-                    let uniq_var = self.var_manager
-                        .get(var)
-                        .expect("Expected Variable in var_manager.")
-                        .last()
-                        .expect("Expected Latest variable in Vec<Unique Variables>")
-                        .clone();
-                    (var.clone(), uniq_var)
-                }).collect::<HashMap<_,_>>())
-            },
-            None => {
-                None
-            },
-        }
+    pub fn restore_vars(&mut self, checkpoint: HashMap<String, UniqueVariable>) {
+        self.current_vars = checkpoint;
+    }
+
+    pub fn build_phi_pairs(left_set: HashMap<String, UniqueVariable>, right_set: HashMap<String, UniqueVariable>)
+        -> Vec<(UniqueVariable, UniqueVariable)> {
+        let mut set = left_set.iter()
+            .filter_map(|(var_ident,var_val)| {
+                let other_val = right_set
+                    .get(var_ident)
+                    .expect("Build Phi Error: Should be present in both.")
+                    .clone();
+
+                if var_val.clone() == other_val {
+                    return None;
+                }
+
+                Some((var_val.clone(), other_val))
+            }).collect::<Vec<_>>();
+        set.sort_by_key(|(left_key, right_key)| {
+            left_key.base_ident.clone()
+        });
+
+        set
     }
 
     pub fn make_unique_variable(&mut self, ident: String, value: Value, def_block: usize, def: usize) -> &UniqueVariable {
-        let contains_block = self.block_var.contains_key(&def_block);
-        if !contains_block {
-            self.block_var.insert(def_block.clone(), Vec::new());
-        }
-
         match self.var_counter.get_mut(&ident) {
             Some(ref mut count) => {
                 let current_count = count.clone();
                 **count += 1;
                 let uniq = UniqueVariable::new(ident.clone(),value,current_count,def_block,def);
                 let key = ident;
-                self.var_manager.get_mut(&key).expect("Expected established key, found none.").push(uniq);
+                self.var_manager.get_mut(&key).expect("Expected established key, found none.").push(uniq.clone());
 
-                let has_var = self.block_var.get_mut(&def_block).expect("Should already be added.").contains(&key);
-                if !has_var {
-                    self.block_var.get_mut(&def_block).unwrap().push(key.clone());
-                }
+                // Add/Update to current_vars map
+                self.current_vars.insert(key.clone(), uniq);
 
                 return self.var_manager.get(&key).unwrap().get(current_count).expect("Expected current count to work.");
             }

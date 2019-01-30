@@ -13,6 +13,7 @@ impl Node {
     pub fn new(it: &mut InstTracker, bt: &mut BlockTracker, node_type: NodeType) -> Self {
         let node_data = NodeData::new(it);
         let node_id = NodeId::new(bt.get());
+        bt.increment();
         Node { node_id, node_data, node_type }
     }
 

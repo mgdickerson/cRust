@@ -164,6 +164,8 @@ impl Comp {
 
         //println!("{:?}", irgmanager.get_var_manager_mut_ref());
         //graph_manager.add_current_node_to_graph();
+        let clone = ir_graph_manager.clone_var_manager();
+        println!("{:?}", clone);
         println!("{:?}", display::Dot::with_config(&ir_graph_manager.get_graph(), &[display::Config::EdgeNoLabel]));
 
         /*

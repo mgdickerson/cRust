@@ -125,10 +125,13 @@ impl IfStmt {
         self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
         let loop_header = irgm.clone_node_index();
         irgm.add_edge(main_node, loop_header);
-        irgm.set_op_recovery_point();
+        let recovery = irgm.set_op_recovery_point();
+
+        let main_checkpoint = irgm.var_checkpoint();
 
         // Variable holder for else_node_bottom
         let mut else_node_bottom = None;
+        let mut else_checkpoint = None;
 
         // Generate if-node-top
         irgm.new_node(NodeType::if_node);
@@ -140,7 +143,10 @@ impl IfStmt {
         self.funcIfBody.to_ir(irgm);
         let if_node_bottom = irgm.clone_node_index();
         // After going through body, recover initial operator domination tree
-        irgm.restore_op();
+        irgm.restore_op(recovery.clone());
+
+        let if_checkpoint = irgm.var_checkpoint();
+        irgm.restore_vars(main_checkpoint.clone());
 
         match self.funcElseBody {
             Some(funcElseBody) => {
@@ -154,7 +160,10 @@ impl IfStmt {
                 else_node_bottom = Some(irgm.clone_node_index());
 
                 // After going through else, recover initial op dom tree
-                irgm.restore_op();
+                irgm.restore_op(recovery);
+
+                else_checkpoint = Some(irgm.var_checkpoint());
+                irgm.restore_vars(main_checkpoint.clone());
             },
             None => {
                 // Nothing to do here, fall through.
@@ -181,12 +190,14 @@ impl IfStmt {
 
                 // Construct phi by checking first if and else
                 // If they differ, construct phi out of both.
-
+                irgm.insert_phi_inst(if_checkpoint,
+                                     else_checkpoint
+                                         .expect("There is an else node, there should be an else checkpoint."));
             },
             None => {
                 // no else body, connect main directly to phi
                 irgm.add_edge(loop_header, phi_node);
-
+                irgm.insert_phi_inst(if_checkpoint, main_checkpoint);
             },
         }
     }

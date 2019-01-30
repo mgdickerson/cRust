@@ -73,4 +73,11 @@ impl GraphManager {
             .get_mut_data_ref()
             .add_instruction(inst);
     }
+
+    pub fn insert_instruction(&mut self, position: usize, inst: Op) {
+        self.graph.node_weight_mut(self.current_node_index)
+            .expect("Expected Node to have weight when inserting, found none.")
+            .get_mut_data_ref()
+            .insert_instruction(position, inst);
+    }
 }
