@@ -34,7 +34,8 @@ impl ValTy {
             },
             ValTy::var(var) => {
                 // Temporarily, I want it to output var name
-                var.value_to_string()
+                //var.value_to_string()
+                var.get_ident_val()
             },
             ValTy::reg(reg) => reg.to_string(),
             ValTy::arr(arr) => arr.clone(),
@@ -154,6 +155,30 @@ impl Op {
 
     pub fn inst_type(&self) -> &InstTy {
         &self.inst_type
+    }
+
+    pub fn var_cleanup(&mut self, var_to_clean: Value, replacement_var: Value) {
+        match self.x_val.clone() {
+            Some(val) => {
+                if *val == var_to_clean {
+                    self.x_val = Some(Box::new(replacement_var.clone()));
+                }
+            },
+            None => {
+                // There is no variable to clean, pass through.
+            }
+        }
+
+        match self.y_val.clone() {
+            Some(val) => {
+                if *val == var_to_clean {
+                    self.y_val = Some(Box::new(replacement_var.clone()));
+                }
+            },
+            None => {
+                // There is no variable to clean, pass through.
+            }
+        }
     }
 }
 

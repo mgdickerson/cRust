@@ -77,6 +77,25 @@ impl IRGraphManager {
         Op::build_spec_op(special_val,self.get_inst_num(),self.get_block_num(),inst_type)
     }
 
+    pub fn loop_variable_correction(&mut self, vars: Vec<UniqueVariable>) {
+        for uniq in vars {
+            match uniq.get_uses() {
+                Some(uses) => {
+                    for (block_num, inst_num) in uses {
+                        self.graph_manager.get_mut_ref_graph()
+                            .node_weights_mut()
+                            .for_each(|node| {
+                                // Continue here.
+                            })
+                    }
+                },
+                None => {
+                    // Nothing to replace, there are no further uses.
+                }
+            }
+        }
+    }
+
     /// Graph Specific Functions ///
 
     pub fn get_mut_ref_graph(&mut self) -> &mut GraphManager {
@@ -163,7 +182,8 @@ impl IRGraphManager {
     }
 
     pub fn get_unique_variable(&mut self, ident: String) -> &UniqueVariable {
-        self.var_manager.get_unique_variable(ident, self.it.get())
+        let block_num = self.get_block_num();
+        self.var_manager.get_unique_variable(ident, block_num, self.it.get() + 1)
     }
 
     pub fn var_checkpoint(&self) -> HashMap<String, UniqueVariable> {
@@ -174,11 +194,18 @@ impl IRGraphManager {
         self.var_manager.restore_vars(checkpoint);
     }
 
-    pub fn insert_phi_inst(&mut self, left_set: HashMap<String, UniqueVariable>, right_set: HashMap<String, UniqueVariable>) {
+    pub fn insert_phi_inst(&mut self, left_set: HashMap<String, UniqueVariable>, right_set: HashMap<String, UniqueVariable>)
+        -> Vec<UniqueVariable> {
         let phi_set = VariableManager::build_phi_pairs(left_set, right_set);
         let mut inst_position = 0;
+        let mut while_touch_up_vars = Vec::new();
+
         for (left_var, right_var) in phi_set {
-            let inst = self.build_op_x_y(*left_var.get_value(), *right_var.get_value(), InstTy::phi);
+            let left_val = Value::new(ValTy::var(left_var.clone()));
+            let right_val = Value::new(ValTy::var(right_var));
+            let inst = self.build_op_x_y(left_val, right_val, InstTy::phi);
+
+            while_touch_up_vars.push(left_var.clone());
 
             // make new unique variable with phi value
             let block_num = self.get_block_num();
@@ -190,6 +217,8 @@ impl IRGraphManager {
             self.graph_manager.insert_instruction(inst_position, inst);
             inst_position += 1;
         }
+
+        while_touch_up_vars
     }
 
     /// Op Dominator Specific Functions ///

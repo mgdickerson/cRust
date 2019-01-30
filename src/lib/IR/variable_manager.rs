@@ -69,10 +69,10 @@ impl VariableManager {
         }
     }
 
-    pub fn get_unique_variable(&mut self, ident: String, use_site: usize) -> &UniqueVariable {
+    pub fn get_unique_variable(&mut self, ident: String, block_num: usize, inst_num: usize) -> &UniqueVariable {
         match self.var_manager.get_mut(&ident).expect("Expected variable, found none.").last_mut() {
             Some(uniq) => {
-                uniq.add_use(use_site);
+                uniq.add_use(block_num, inst_num);
                 uniq
             }
             None => {
@@ -102,15 +102,15 @@ pub struct UniqueVariable {
     base_ident: String,
     value: Box<Value>,
     def_block: usize,
-    def: usize,
-    used: Option<Vec<usize>>,
+    def_inst: usize,
+    used: Option<Vec<(usize,usize)>>,
 }
 
 impl UniqueVariable {
-    pub fn new(ident: String, value: Value, count: usize, def_block: usize, def: usize) -> Self {
+    pub fn new(ident: String, value: Value, count: usize, def_block: usize, def_inst: usize) -> Self {
         let base_ident = ident.clone();
         let unique_ident = String::from("%") + &ident + "_" + &count.to_string();
-        UniqueVariable { unique_ident, base_ident, value: Box::new(value), def_block, def, used: None }
+        UniqueVariable { unique_ident, base_ident, value: Box::new(value), def_block, def_inst, used: None }
     }
 
     pub fn get_ident(&self) -> String {
@@ -125,12 +125,24 @@ impl UniqueVariable {
         self.value.get_value().to_string()
     }
 
+    pub fn get_ident_val(&self) -> String {
+        let mut ret_string = self.unique_ident.clone();
+        ret_string += "<";
+        ret_string += &self.value_to_string();
+        ret_string += ">";
+        ret_string
+    }
+
+    pub fn get_uses(&self) -> Option<Vec<(usize,usize)>> {
+        self.used.clone()
+    }
+
     pub fn get_block(&self) -> usize { self.def_block.clone() }
 
-    pub fn add_use(&mut self, var_use: usize) {
+    pub fn add_use(&mut self, block_num: usize, inst_num: usize) {
         match &mut self.used {
             Some(uses_vec) => {
-                uses_vec.push(var_use);
+                uses_vec.push((block_num,inst_num));
                 return
             },
             None => {
@@ -141,7 +153,7 @@ impl UniqueVariable {
         // this will only hit if use vector is not already present
         self.used = Some(Vec::new());
         match &mut self.used {
-            Some(some) => some.push(var_use),
+            Some(some) => some.push((block_num,inst_num)),
             None => { panic!("Unreachable Error.") },
         }
     }
