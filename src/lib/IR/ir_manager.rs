@@ -85,10 +85,11 @@ impl IRGraphManager {
                 (block_num, node.clone())
             }).collect::<HashMap<usize,Node>>();
 
-        // TODO : Uses are not adding correctly!
+        // TODO : Uses are adding correctly, But i will need to do use graphs for both left and right of phi arguement. Both are possibly used.
 
-        /*
-        vars.iter().filter_map(|uniq| {
+
+        vars.iter().filter_map(|uniq_lookup| {
+            let uniq = self.var_manager.get_uniq_variable(uniq_lookup.clone());
             let uniq_clone = uniq.clone();
             match uniq.get_uses() {
                 Some(uses) => Some((uniq_clone, uses)),
@@ -102,9 +103,9 @@ impl IRGraphManager {
         }).for_each(|(uniq,(block_num,inst_num))| {
             // TODO : Come Back to finish here.
             let node = graph_map.get_mut(&block_num).expect("Block number should exist");
-            println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.get_ident(), block_num, inst_num);
+            println!("Uniq: {}\tBlock: {}\tInst: {}\t\tUses: {:?}", uniq.get_ident(), block_num, inst_num, uniq.get_uses());
         });
-        */
+
 
     }
 
@@ -193,9 +194,9 @@ impl IRGraphManager {
         self.var_manager.make_unique_variable(ident, value, block_num, self.it.get())
     }
 
-    pub fn get_unique_variable(&mut self, ident: String) -> &UniqueVariable {
+    pub fn use_unique_variable(&mut self, ident: String) -> &UniqueVariable {
         let block_num = self.get_block_num();
-        self.var_manager.get_unique_variable(ident, block_num, self.it.get() + 1)
+        self.var_manager.use_unique_variable(ident, block_num, self.it.get() + 1)
     }
 
     pub fn var_checkpoint(&self) -> HashMap<String, UniqueVariable> {
@@ -215,10 +216,11 @@ impl IRGraphManager {
 
         for (left_var, right_var) in phi_set {
             let left_val = Value::new(ValTy::var(left_var.clone()));
-            let right_val = Value::new(ValTy::var(right_var));
+            let right_val = Value::new(ValTy::var(right_var.clone()));
             let inst = self.build_op_x_y(left_val, right_val, InstTy::phi);
 
             while_touch_up_vars.push(left_var.clone());
+            while_touch_up_vars.push(right_var);
 
             // make new unique variable with phi value
             let block_num = self.get_block_num();

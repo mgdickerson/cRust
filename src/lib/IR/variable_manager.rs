@@ -69,7 +69,7 @@ impl VariableManager {
         }
     }
 
-    pub fn get_unique_variable(&mut self, ident: String, block_num: usize, inst_num: usize) -> &UniqueVariable {
+    pub fn use_unique_variable(&mut self, ident: String, block_num: usize, inst_num: usize) -> &UniqueVariable {
         match self.var_manager.get_mut(&ident).expect("Expected variable, found none.").last_mut() {
             Some(uniq) => {
                 uniq.add_use(block_num, inst_num);
@@ -79,6 +79,19 @@ impl VariableManager {
                 panic!("Error: key {} not found in var_manager", ident);
             }
         }
+    }
+
+    pub fn get_uniq_variable(&self, uniq_lookup: UniqueVariable) -> UniqueVariable {
+        let uniq_vec = self.var_manager.get(&uniq_lookup.get_base_ident()).unwrap();
+        for uniq in uniq_vec {
+            if uniq_lookup.get_ident() == uniq.get_ident() {
+                return uniq.clone()
+            }
+        }
+
+        // This is basically an error case
+        // TODO : Make this a Result return?
+        uniq_lookup
     }
 
     pub fn add_variable(&mut self, var: String) {
