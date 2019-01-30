@@ -141,7 +141,8 @@ impl WhileStmt {
 
         // Insert Phi Inst to Loop Header
         irgm.switch_current_node(loop_header);
-        irgm.insert_phi_inst(loop_vars, main_vars);
+        let changed_vars = irgm.insert_phi_inst(loop_vars, main_vars);
+        irgm.loop_variable_correction(changed_vars);
 
         irgm.switch_current_node(branch_node);
     }

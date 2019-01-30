@@ -78,22 +78,37 @@ impl IRGraphManager {
     }
 
     pub fn loop_variable_correction(&mut self, vars: Vec<UniqueVariable>) {
+        let mut graph_map = self.graph_manager.get_mut_ref_graph()
+            .node_weights_mut()
+            .map(|node| {
+                let block_num = node.get_node_id();
+                (block_num, node.clone())
+            }).collect::<HashMap<usize,Node>>();
+
+        // TODO : Uses are not adding correctly!
         for uniq in vars {
-            match uniq.get_uses() {
-                Some(uses) => {
-                    for (block_num, inst_num) in uses {
-                        self.graph_manager.get_mut_ref_graph()
-                            .node_weights_mut()
-                            .for_each(|node| {
-                                // Continue here.
-                            })
-                    }
-                },
-                None => {
-                    // Nothing to replace, there are no further uses.
-                }
-            }
+            println!("{:?}", uniq.get_uses());
         }
+
+        /*
+        vars.iter().filter_map(|uniq| {
+            let uniq_clone = uniq.clone();
+            match uniq.get_uses() {
+                Some(uses) => Some((uniq_clone, uses)),
+                None => None,
+            }
+        }).filter_map(| (uniq, mut uses)| {
+            match uses.pop() {
+                Some(location) => Some((uniq.clone(),location)),
+                None => None,
+            }
+        }).for_each(|(uniq,(block_num,inst_num))| {
+            // TODO : Come Back to finish here.
+            let node = graph_map.get_mut(&block_num).expect("Block number should exist");
+            println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.get_ident(), block_num, inst_num);
+        });
+        */
+
     }
 
     /// Graph Specific Functions ///
