@@ -8,6 +8,8 @@ use super::Graph;
 use super::variable_manager::{VariableManager, UniqueVariable};
 use super::operator_dominator::{OpDomHandler,OpNode,OpGraph};
 use petgraph::graph::NodeIndex;
+use petgraph::algo::dominators::Dominators;
+use petgraph::algo::dominators;
 
 /// Rough Draft of IR_Manager Rewrite
 
@@ -78,32 +80,33 @@ impl IRGraphManager {
     }
 
     pub fn loop_variable_correction(&mut self, vars: Vec<UniqueVariable>) {
+        // Grab current_node ID so that we dont alter any uses before the occurrence of this node.
+        let current_node = self.graph_manager.clone_node_index();
+        let node_starting_point = self.graph_manager.get_node_id(current_node);
+
+        // Make map of current graph.
         let mut graph_map = self.graph_manager.get_mut_ref_graph()
             .node_weights_mut()
             .map(|node| {
                 let block_num = node.get_node_id();
-                (block_num, node.clone())
-            }).collect::<HashMap<usize,Node>>();
+                (block_num, node)
+            }).collect::<HashMap<usize,&mut Node>>();
 
-        // TODO : Uses are adding correctly, But i will need to do use graphs for both left and right of phi arguement. Both are possibly used.
-
-
-        vars.iter().filter_map(|uniq_lookup| {
-            let uniq = self.var_manager.get_uniq_variable(uniq_lookup.clone());
+        // Perform iteration and correction
+        vars.iter().filter_map(|uniq| {
             let uniq_clone = uniq.clone();
             match uniq.get_uses() {
                 Some(uses) => Some((uniq_clone, uses)),
                 None => None,
             }
-        }).filter_map(| (uniq, mut uses)| {
-            match uses.pop() {
-                Some(location) => Some((uniq.clone(),location)),
-                None => None,
+        }).for_each(|(uniq,mut uses)| {
+            for (block_num, inst_num) in uses {
+                if block_num >= node_starting_point {
+                    println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.get_ident(), block_num, inst_num);
+                }
             }
-        }).for_each(|(uniq,(block_num,inst_num))| {
-            // TODO : Come Back to finish here.
-            let node = graph_map.get_mut(&block_num).expect("Block number should exist");
-            println!("Uniq: {}\tBlock: {}\tInst: {}\t\tUses: {:?}", uniq.get_ident(), block_num, inst_num, uniq.get_uses());
+            //let node = graph_map.get_mut(&block_num).expect("Block number should exist");
+
         });
 
 
@@ -194,9 +197,9 @@ impl IRGraphManager {
         self.var_manager.make_unique_variable(ident, value, block_num, self.it.get())
     }
 
-    pub fn use_unique_variable(&mut self, ident: String) -> &UniqueVariable {
+    pub fn get_latest_unique(&mut self, ident: String) -> &UniqueVariable {
         let block_num = self.get_block_num();
-        self.var_manager.use_unique_variable(ident, block_num, self.it.get() + 1)
+        self.var_manager.get_latest_unique(ident, block_num, self.it.get() + 1)
     }
 
     pub fn var_checkpoint(&self) -> HashMap<String, UniqueVariable> {
@@ -215,19 +218,24 @@ impl IRGraphManager {
         let mut while_touch_up_vars = Vec::new();
 
         for (left_var, right_var) in phi_set {
-            let left_val = Value::new(ValTy::var(left_var.clone()));
-            let right_val = Value::new(ValTy::var(right_var.clone()));
+            let block_num = self.get_block_num();
+            let inst_num = self.it.get();
+
+            let left_uniq = self.var_manager.add_phi_uniq_use(left_var, block_num, inst_num);
+            let right_uniq = self.var_manager.add_phi_uniq_use(right_var, block_num, inst_num);
+
+            let left_val = Value::new(ValTy::var(left_uniq.clone()));
+            let right_val = Value::new(ValTy::var(right_uniq.clone()));
             let inst = self.build_op_x_y(left_val, right_val, InstTy::phi);
 
-            while_touch_up_vars.push(left_var.clone());
-            while_touch_up_vars.push(right_var);
+            while_touch_up_vars.push(left_uniq.clone());
+            while_touch_up_vars.push(right_uniq);
 
             // make new unique variable with phi value
-            let block_num = self.get_block_num();
-            self.var_manager.make_unique_variable(left_var.get_base_ident(),
+            self.var_manager.make_unique_variable(left_uniq.get_base_ident(),
                 Value::new(ValTy::op(inst.clone())),
                 block_num,
-                self.it.get());
+                inst_num);
 
             self.graph_manager.insert_instruction(inst_position, inst);
             inst_position += 1;

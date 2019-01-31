@@ -48,12 +48,12 @@ impl VariableManager {
         set
     }
 
-    pub fn make_unique_variable(&mut self, ident: String, value: Value, def_block: usize, def: usize) -> &UniqueVariable {
+    pub fn make_unique_variable(&mut self, ident: String, value: Value, def_block: usize, def_inst: usize) -> &UniqueVariable {
         match self.var_counter.get_mut(&ident) {
             Some(ref mut count) => {
                 let current_count = count.clone();
                 **count += 1;
-                let uniq = UniqueVariable::new(ident.clone(),value,current_count,def_block,def);
+                let uniq = UniqueVariable::new(ident.clone(),value,current_count,def_block,def_inst);
                 let key = ident;
                 self.var_manager.get_mut(&key).expect("Expected established key, found none.").push(uniq.clone());
 
@@ -69,7 +69,7 @@ impl VariableManager {
         }
     }
 
-    pub fn use_unique_variable(&mut self, ident: String, block_num: usize, inst_num: usize) -> &UniqueVariable {
+    pub fn get_latest_unique(&mut self, ident: String, block_num: usize, inst_num: usize) -> &UniqueVariable {
         match self.var_manager.get_mut(&ident).expect("Expected variable, found none.").last_mut() {
             Some(uniq) => {
                 uniq.add_use(block_num, inst_num);
@@ -102,6 +102,24 @@ impl VariableManager {
         }
 
         self.var_manager.insert(var, Vec::new());
+    }
+
+    pub fn add_phi_uniq_use(&mut self, uniq: UniqueVariable, block_num: usize, inst_num: usize) -> UniqueVariable {
+        // This is currently just for use in the Phi construction, thus I want to return
+        // the uniq value just before i add the usage at the Phi site.
+        let uniq_copy = self.get_uniq_variable(uniq.clone());
+
+        self.var_manager
+            .get_mut(&uniq.get_base_ident())
+            .expect("This value should appear in var_manager")
+            .iter_mut()
+            .for_each(|uniq_var| {
+                if uniq_var.get_ident() == uniq.get_ident() {
+                    uniq_var.add_use(block_num,inst_num);
+                }
+            });
+
+        uniq_copy
     }
 
     pub fn is_valid_variable(&self, var: String) -> bool {
