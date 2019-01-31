@@ -146,10 +146,12 @@ impl IfStmt {
         irgm.restore_op(recovery.clone());
 
         let if_checkpoint = irgm.var_checkpoint();
-        irgm.restore_vars(main_checkpoint.clone());
 
         match self.funcElseBody {
             Some(funcElseBody) => {
+                // TODO : Issue being run in to here. Now that the new Phi value is the "latest" that is being added instead of the correctly reset value from the "main" node. Need to use restore more intelligently.
+                irgm.restore_vars(main_checkpoint.clone());
+
                 // Generate else-node-top
                 irgm.new_node(NodeType::else_node);
                 let else_node_top = irgm.clone_node_index();
@@ -163,7 +165,6 @@ impl IfStmt {
                 irgm.restore_op(recovery);
 
                 else_checkpoint = Some(irgm.var_checkpoint());
-                irgm.restore_vars(main_checkpoint.clone());
             },
             None => {
                 // Nothing to do here, fall through.
@@ -182,6 +183,7 @@ impl IfStmt {
         // Connect if-bottom to phi
         irgm.add_edge(if_node_bottom, phi_node);
 
+        irgm.restore_vars(main_checkpoint.clone());
         // Add else node
         match else_node_bottom {
             Some(node) => {
@@ -190,6 +192,7 @@ impl IfStmt {
 
                 // Construct phi by checking first if and else
                 // If they differ, construct phi out of both.
+
                 irgm.insert_phi_inst(if_checkpoint,
                                      else_checkpoint
                                          .expect("There is an else node, there should be an else checkpoint."));
@@ -197,6 +200,7 @@ impl IfStmt {
             None => {
                 // no else body, connect main directly to phi
                 irgm.add_edge(loop_header, phi_node);
+
                 irgm.insert_phi_inst(if_checkpoint, main_checkpoint);
             },
         }

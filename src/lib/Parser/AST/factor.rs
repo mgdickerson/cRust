@@ -88,7 +88,7 @@ impl Factor {
 
                 if array.is_empty() {
                     // TODO : Is it possible to leave this as variable but not have the value comparing bug?
-                    return Some(Value::new(ValTy::var(irgm.get_latest_unique(result.get_value()).clone())));
+                    return Some(Value::new(ValTy::var(irgm.get_current_unique(result.get_value()).clone())));
                 }
 
                 let mut array_result = result.get_value() + "[";

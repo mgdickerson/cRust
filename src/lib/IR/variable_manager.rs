@@ -39,7 +39,8 @@ impl VariableManager {
                     .expect("Build Phi Error: Should be present in both.")
                     .clone();
 
-                if var_val.clone() == other_val {
+                // IS IT YOU?!?!? (it was. they compared val == val, which with aliasing can be the same....)
+                if var_val.get_ident() == other_val.get_ident() {
                     return None;
                 }
 
@@ -70,6 +71,18 @@ impl VariableManager {
                 // variable not found in list, throw error
                 panic!("Error: variable ({}) not found within list of variables.");
             }
+        }
+    }
+
+    pub fn get_current_unique(&mut self, ident: String, block_num:usize, inst_num: usize) -> &UniqueVariable {
+        let current_uniq =  self.current_vars.get(&ident).expect("Expected variable, found none.").clone();
+        let result = self.get_mut_uniq_var(current_uniq);
+        match result {
+            Ok(uniq) => {
+                uniq.add_use(block_num, inst_num);
+                uniq
+            },
+            Err(e) => panic!(e),
         }
     }
 

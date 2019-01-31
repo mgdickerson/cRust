@@ -80,7 +80,6 @@ impl IRGraphManager {
     }
 
     pub fn loop_variable_correction(&mut self, vars: Vec<UniqueVariable>) -> Vec<(UniqueVariable,usize,usize)> {
-        // TODO : So close. Still need to fix nested phis.
         // Grab current_node ID so that we dont alter any uses before the occurrence of this node.
         let current_node = self.graph_manager.clone_node_index();
         let node_starting_point = self.graph_manager.get_node_id(current_node);
@@ -104,11 +103,11 @@ impl IRGraphManager {
                 None => None,
             }
         }).for_each(|(uniq,mut uses)| {
-            println!("Current Node Id: {}", node_starting_point.clone());
+            //println!("Current Node Id: {}", node_starting_point.clone());
             for (block_num, inst_num) in uses {
+                //println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.get_ident(), block_num, inst_num);
                 if block_num >= node_starting_point {
                     remove_use_vec.push((uniq.clone(),block_num,inst_num));
-                    println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.get_ident(), block_num, inst_num);
                     let node = graph_map.get_mut(&block_num).expect("Block number should exist");
                     for inst in node.get_mut_data_ref().get_mut_ref() {
                         if inst.get_inst_num() == inst_num {
@@ -123,7 +122,7 @@ impl IRGraphManager {
 
         });
 
-        println!("Uses to Remove: {:?}", remove_use_vec.clone());
+        //println!("Uses to Remove: {:?}", remove_use_vec.clone());
         self.var_manager = local_var_manager;
         remove_use_vec
     }
@@ -213,6 +212,11 @@ impl IRGraphManager {
         self.var_manager.make_unique_variable(ident, value, block_num, self.it.get())
     }
 
+    pub fn get_current_unique(&mut self, ident: String) -> &UniqueVariable {
+        let block_num = self.get_block_num();
+        self.var_manager.get_current_unique(ident, block_num, self.it.get() + 1)
+    }
+
     pub fn get_latest_unique(&mut self, ident: String) -> &UniqueVariable {
         let block_num = self.get_block_num();
         self.var_manager.get_latest_unique(ident, block_num, self.it.get() + 1)
@@ -240,7 +244,6 @@ impl IRGraphManager {
 
     pub fn insert_phi_inst(&mut self, left_set: HashMap<String, UniqueVariable>, right_set: HashMap<String, UniqueVariable>)
         -> Vec<UniqueVariable> {
-
         let phi_set = VariableManager::build_phi_pairs(left_set, right_set);
         let mut inst_position = 0;
         let mut while_touch_up_vars = Vec::new();
@@ -249,8 +252,8 @@ impl IRGraphManager {
             let block_num = self.get_block_num();
             let inst_num = self.it.get();
 
-            let left_uniq = self.var_manager.add_phi_uniq_use(left_var, block_num, inst_num);
-            let right_uniq = self.var_manager.add_phi_uniq_use(right_var, block_num, inst_num);
+            let left_uniq = self.var_manager.add_phi_uniq_use(left_var, block_num, inst_num + 1);
+            let right_uniq = self.var_manager.add_phi_uniq_use(right_var, block_num, inst_num + 1);
 
             let left_val = Value::new(ValTy::var(left_uniq.clone()));
             let right_val = Value::new(ValTy::var(right_uniq.clone()));

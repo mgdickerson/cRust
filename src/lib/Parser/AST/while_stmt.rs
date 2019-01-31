@@ -106,7 +106,7 @@ impl WhileStmt {
         // Make loop header
         irgm.new_node(NodeType::loop_header);
         // Handy for return instruction later
-        let return_point = self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
+        self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
         let loop_header = irgm.clone_node_index();
         irgm.add_edge(main_node, loop_header);
         let op_recovery = irgm.set_op_recovery_point();
@@ -121,7 +121,7 @@ impl WhileStmt {
         // Go through loop body
         self.body.to_ir(irgm);
         // Add return branch instruction to "new main node"
-        let bra_return = irgm.build_op_y(return_point,InstTy::bra);
+        let bra_return = irgm.build_op_y(Value::new(ValTy::con(-1)),InstTy::bra);
         irgm.add_inst(bra_return);
         // After going through loop body, restore op-dom tree
         irgm.restore_op(op_recovery);
@@ -141,6 +141,7 @@ impl WhileStmt {
 
         // Insert Phi Inst to Loop Header
         irgm.switch_current_node(loop_header);
+
         let changed_vars = irgm.insert_phi_inst(loop_vars, main_vars);
         let uses_to_remove = irgm.loop_variable_correction(changed_vars);
 
