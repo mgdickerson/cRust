@@ -153,16 +153,22 @@ impl Op {
         self.block_number.clone()
     }
 
+    pub fn get_inst_num(&self) -> usize { self.inst_number.clone() }
+
     pub fn inst_type(&self) -> &InstTy {
         &self.inst_type
     }
 
     pub fn var_cleanup(&mut self, var_to_clean: Value, replacement_var: Value) {
+        let mut x_val_string = None;
+        let mut y_val_string = None;
+
         match self.x_val.clone() {
             Some(val) => {
                 if *val == var_to_clean {
                     self.x_val = Some(Box::new(replacement_var.clone()));
                 }
+                x_val_string = Some(self.x_val.clone().unwrap());
             },
             None => {
                 // There is no variable to clean, pass through.
@@ -174,9 +180,44 @@ impl Op {
                 if *val == var_to_clean {
                     self.y_val = Some(Box::new(replacement_var.clone()));
                 }
+                y_val_string = Some(self.y_val.clone().unwrap());
             },
             None => {
                 // There is no variable to clean, pass through.
+            }
+        }
+
+        // Update p_command for printing purposes.
+        match self.inst_type.clone() {
+            // Op //
+            InstTy::read | InstTy::end | InstTy::writeNL => {
+                self.p_command = self.inst_type.to_string();
+            }
+            // Op x //
+            InstTy::neg | InstTy::write | InstTy::ret => {
+                self.p_command = self.inst_type.to_string() + " " + &x_val_string.unwrap().get_value().to_string();
+            }
+            // Op x y //
+            InstTy::add | InstTy::sub | InstTy::mul |
+            InstTy::div | InstTy::cmp | InstTy::adda |
+            InstTy::bne | InstTy::beq | InstTy::ble |
+            InstTy::blt | InstTy::bge | InstTy::bgt |
+            InstTy::phi => {
+                self.p_command = self.inst_type.to_string() + " " + &x_val_string.unwrap().get_value().to_string()
+                    + " " + &y_val_string.unwrap().get_value().to_string();
+            }
+            // Op y //
+            InstTy::load | InstTy::bra => {
+                self.p_command = self.inst_type.to_string() + " " + &y_val_string.unwrap().get_value().to_string();
+            }
+            // Op y x //
+            InstTy::store | InstTy::mov => {
+                self.p_command = self.inst_type.to_string() + " " + &y_val_string.unwrap().get_value().to_string() +
+                    " " + &x_val_string.unwrap().get_value().to_string();
+            }
+            // Op [x] //
+            InstTy::call => {
+                // TODO : Handle call
             }
         }
     }

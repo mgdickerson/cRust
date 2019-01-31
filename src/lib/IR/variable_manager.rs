@@ -14,6 +14,10 @@ impl VariableManager {
         VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new(), current_vars: HashMap::new() }
     }
 
+    pub fn get_self(&self) -> VariableManager {
+        self.clone()
+    }
+
     pub fn get_var_map(self) -> HashMap<String, Vec<UniqueVariable>> {
         self.var_manager
     }
@@ -92,6 +96,17 @@ impl VariableManager {
         // This is basically an error case
         // TODO : Make this a Result return?
         uniq_lookup
+    }
+
+    pub fn get_mut_uniq_var(&mut self, uniq_lookup: UniqueVariable) -> Result<&mut UniqueVariable, String> {
+        let uniq_vec = self.var_manager.get_mut(&uniq_lookup.get_base_ident()).unwrap();
+        for uniq in uniq_vec {
+            if uniq_lookup.get_ident() == uniq.get_ident() {
+                return Result::Ok(uniq);
+            }
+        }
+
+        Err(String::from("Error getting mut_uniq_var."))
     }
 
     pub fn add_variable(&mut self, var: String) {
@@ -186,6 +201,23 @@ impl UniqueVariable {
         match &mut self.used {
             Some(some) => some.push((block_num,inst_num)),
             None => { panic!("Unreachable Error.") },
+        }
+    }
+
+    pub fn remove_use(&mut self, block_num: usize, inst_num: usize) {
+        match &mut self.used {
+            Some(uses_vec) => {
+                let uses_clone = uses_vec.clone();
+                for (iter, location) in uses_clone.iter().enumerate() {
+                    let (block_match, inst_match) = location;
+                    if *block_match == block_num && *inst_match == inst_num {
+                        uses_vec.remove(iter);
+                    }
+                }
+            }
+            None => {
+                panic!("Attempted to remove use location but there are no uses.");
+            }
         }
     }
 }

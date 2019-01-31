@@ -79,10 +79,14 @@ impl IRGraphManager {
         Op::build_spec_op(special_val,self.get_inst_num(),self.get_block_num(),inst_type)
     }
 
-    pub fn loop_variable_correction(&mut self, vars: Vec<UniqueVariable>) {
+    pub fn loop_variable_correction(&mut self, vars: Vec<UniqueVariable>) -> Vec<(UniqueVariable,usize,usize)> {
+        // TODO : So close. Still need to fix nested phis.
         // Grab current_node ID so that we dont alter any uses before the occurrence of this node.
         let current_node = self.graph_manager.clone_node_index();
         let node_starting_point = self.graph_manager.get_node_id(current_node);
+        let mut remove_use_vec = Vec::new();
+
+        let mut local_var_manager = self.var_manager.get_self();
 
         // Make map of current graph.
         let mut graph_map = self.graph_manager.get_mut_ref_graph()
@@ -100,16 +104,28 @@ impl IRGraphManager {
                 None => None,
             }
         }).for_each(|(uniq,mut uses)| {
+            println!("Current Node Id: {}", node_starting_point.clone());
             for (block_num, inst_num) in uses {
                 if block_num >= node_starting_point {
+                    remove_use_vec.push((uniq.clone(),block_num,inst_num));
                     println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.get_ident(), block_num, inst_num);
+                    let node = graph_map.get_mut(&block_num).expect("Block number should exist");
+                    for inst in node.get_mut_data_ref().get_mut_ref() {
+                        if inst.get_inst_num() == inst_num {
+                            let uniq_base = uniq.get_base_ident();
+                            let old_val = Value::new(ValTy::var(uniq.clone()));
+                            let new_val = Value::new(ValTy::var(local_var_manager.get_latest_unique(uniq_base,block_num,inst_num).clone()));
+                            inst.var_cleanup(old_val,new_val);
+                        }
+                    }
                 }
             }
-            //let node = graph_map.get_mut(&block_num).expect("Block number should exist");
 
         });
 
-
+        println!("Uses to Remove: {:?}", remove_use_vec.clone());
+        self.var_manager = local_var_manager;
+        remove_use_vec
     }
 
     /// Graph Specific Functions ///
@@ -208,6 +224,18 @@ impl IRGraphManager {
 
     pub fn restore_vars(&mut self, checkpoint: HashMap<String, UniqueVariable>) {
         self.var_manager.restore_vars(checkpoint);
+    }
+
+    pub fn remove_uses(&mut self, uses_to_remove: Vec<(UniqueVariable,usize,usize)>) {
+        for (uniq, block_num, inst_num) in uses_to_remove {
+            let mut uniq_result = self.var_manager.get_mut_uniq_var(uniq);
+            match uniq_result {
+                Ok(mut_uniq) => {
+                    mut_uniq.remove_use(block_num, inst_num);
+                },
+                Err(e) => panic!(e),
+            }
+        }
     }
 
     pub fn insert_phi_inst(&mut self, left_set: HashMap<String, UniqueVariable>, right_set: HashMap<String, UniqueVariable>)

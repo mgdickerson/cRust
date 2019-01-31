@@ -28,6 +28,10 @@ impl BasicBlock {
         self.inst
     }
 
+    pub fn get_mut_ref(&mut self) -> &mut Vec<Op> {
+        &mut self.inst
+    }
+
     pub fn update(&mut self, instruction_set: Vec<Op>) {
         self.inst = instruction_set;
     }
