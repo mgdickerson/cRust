@@ -87,7 +87,7 @@ impl Factor {
                 let (result, array) = desig.get_value();
 
                 if array.is_empty() {
-                    // TODO : Is it possible to leave this as variable but not have the value comparing bug?
+                    // TODO : there is an issue with instruction number based on operation
                     return Some(Value::new(ValTy::var(irgm.get_current_unique(result.get_value()).clone())));
                 }
 

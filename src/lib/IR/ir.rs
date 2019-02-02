@@ -34,8 +34,8 @@ impl ValTy {
             },
             ValTy::var(var) => {
                 // Temporarily, I want it to output var name
-                //var.value_to_string()
-                var.get_ident()
+                var.value_to_string()
+                //var.get_ident()
             },
             ValTy::reg(reg) => reg.to_string(),
             ValTy::arr(arr) => arr.clone(),
