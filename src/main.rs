@@ -16,6 +16,9 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::env;
 
+use std::fmt::Write;
+use std::fs::OpenOptions;
+
 /// Internal Lib
 
 mod lib;
@@ -60,8 +63,11 @@ fn main() {
     println!("Proof of concept, read each character and print for Tokenization.");
 
     // Sorts entries based on key
-    let mut paths : Vec<_> = fs::read_dir(path).unwrap()
+    let mut paths : Vec<_> = fs::read_dir(path.clone()).unwrap()
         .map(|r| r.unwrap())
+        .filter(|result| {
+            result.file_name().to_str().expect("valid_path_name").contains(".txt")
+        })
         .collect();
     paths.sort_by_key(|dir| dir.path());
 
@@ -90,7 +96,19 @@ fn main() {
         //println!("\nTesting Token_Builder results: \n\n{:?}\n\n", tokens.get_vector());
 
         let comp = Parser::AST::computation::Comp::new(&mut tc);
-        comp.to_ir();
+        let irgmanager = comp.to_ir();
+
+        let mut dot_graph_path = entry.file_name();
+        let mut file_name = path.to_str().unwrap().to_owned() + "/" + dot_graph_path.to_str().unwrap().trim_end_matches(".txt") + ".dot";
+
+        //let mut dot_graph = OpenOptions::new().write(true).create(true).open(file_name).expect("Something went wrong creating dot_graph");
+        let mut output = String::new();
+        write!(output, "{:?}", display::Dot::with_config(&irgmanager.get_graph(), &[display::Config::EdgeNoLabel]));
+        fs::write(file_name, output);
+        //write!(file_name, "{:?}", display::Dot::with_config(&irgmanager.get_graph(), &[display::Config::EdgeNoLabel]) as [u8]).expect("File already existed");
+
+        //println!("{:?}", display::Dot::with_config(&irgmanager.get_graph(), &[display::Config::EdgeNoLabel]));
+
         println!();
         println!();
         println!();

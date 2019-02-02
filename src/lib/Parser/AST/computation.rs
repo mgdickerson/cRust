@@ -146,7 +146,7 @@ impl Comp {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self) {
+    pub fn to_ir(self) -> IRGraphManager {
         // This graph is directed.
         let mut ir_graph_manager = IRGraphManager::new();
 
@@ -166,8 +166,8 @@ impl Comp {
         //graph_manager.add_current_node_to_graph();
         let clone = ir_graph_manager.clone_var_manager();
         //println!("{:?}", clone);
-        println!("{:?}", display::Dot::with_config(&ir_graph_manager.get_graph(), &[display::Config::EdgeNoLabel]));
 
+        ir_graph_manager
         /*
         println!("{:?}", irgm.get_var_manager().get_var_map());
         let (nodes, edges) = graph_manager.get_graph().into_nodes_edges();
