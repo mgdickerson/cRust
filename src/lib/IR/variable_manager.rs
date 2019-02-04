@@ -1,6 +1,6 @@
 use lib::IR::ir::Value;
 use std::collections::HashMap;
-use lib::IR::ir::{Op,OpPosition};
+use lib::IR::ir::Op;
 
 #[derive(Debug, Clone)]
 pub struct VariableManager {

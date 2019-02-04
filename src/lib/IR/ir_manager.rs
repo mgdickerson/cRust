@@ -1,3 +1,4 @@
+use lib::Parser::AST::number::Number;
 use lib::IR::ir::{Value,ValTy,Op,InstTy};
 use std::collections::HashMap;
 
@@ -6,6 +7,8 @@ use lib::Graph::node::{Node,NodeId,NodeData,NodeType};
 
 use super::Graph;
 use super::variable_manager::{VariableManager, UniqueVariable};
+use super::array_manager::{ArrayManager,UniqueArray};
+use super::address_manager::{AddressManager,UniqueAddress};
 use super::operator_dominator::{OpDomHandler,OpNode,OpGraph};
 use petgraph::graph::NodeIndex;
 use petgraph::algo::dominators::Dominators;
@@ -27,6 +30,12 @@ pub struct IRGraphManager {
     // User made Variable Tracker
     var_manager: VariableManager,
 
+    // User made Array tracker
+    array_manager: ArrayManager,
+
+    // User made Address Manager (for use with arrays and stack variables)
+    addr_manager: AddressManager,
+
     // Manages all things graph related.
     graph_manager: GraphManager,
 }
@@ -43,6 +52,8 @@ impl IRGraphManager {
             bt,
             it,
             var_manager: VariableManager::new(),
+            array_manager: ArrayManager::new(),
+            addr_manager: AddressManager::new(),
             op_dom_handler: OpDomHandler::new(),
             graph_manager,
         }
@@ -273,6 +284,38 @@ impl IRGraphManager {
         }
 
         while_touch_up_vars
+    }
+
+    /// Array Manager Specific Functions ///
+
+    pub fn add_array(&mut self, array_ident: String, array_depth: Vec<Number>) {
+        self.array_manager.add_array(array_ident, array_depth);
+    }
+
+    pub fn assign_array_address(&mut self, array_ident: String, uniq_addr: UniqueAddress) {
+        self.array_manager.assign_addr(array_ident, uniq_addr);
+    }
+
+    pub fn get_array_ref(&self, array_ident: String) -> &UniqueArray {
+        self.array_manager.get_array_ref(array_ident)
+    }
+
+    pub fn build_array_inst(&mut self, uniq_array: UniqueArray, val_vec: Vec<Value>, val_to_assign: Option<Value>) -> Vec<Op> {
+        ArrayManager::build_inst(self, uniq_array, val_vec, val_to_assign)
+    }
+
+    /// Address Manager ///
+
+    pub fn get_global_addr(&self) -> UniqueAddress {
+        self.addr_manager.get_global_reg()
+    }
+
+    pub fn get_base_addr(&self) -> UniqueAddress {
+        self.addr_manager.get_base_reg()
+    }
+
+    pub fn get_addr_assignment(&mut self, addr_name: String, size: usize) -> UniqueAddress {
+        self.addr_manager.get_addr_assignment(addr_name, size)
     }
 
     /// Op Dominator Specific Functions ///

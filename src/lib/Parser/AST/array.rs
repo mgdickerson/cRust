@@ -140,10 +140,16 @@ impl Array {
                     panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
                 }
 
-                var_name = func_name.clone().unwrap() + "_" + &var_name;
+                // Not sure this is necessary.
+                //var_name = func_name.clone().unwrap() + "_" + &var_name;
             }
 
-            let unique = Array::get_unique(var_name, irgm);
+            irgm.add_array(var_name.clone(), self.arrayDepthVec.clone());
+            let arr_size = irgm.get_array_ref(var_name.clone()).get_size();
+
+            let addr = irgm.get_addr_assignment(var_name.clone(), arr_size);
+            irgm.assign_array_address(var_name, addr);
+
 
             //let inst = irgm.build_op_x_y(Value::new(ValTy::var(unique)), Value::new(ValTy::con(0)), InstTy::mov);
             //current_node.get_mut_data_ref().add_instruction(inst);

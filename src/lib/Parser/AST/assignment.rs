@@ -83,33 +83,26 @@ impl Assignment {
     }
 
     pub fn to_ir(self, irgm : &mut IRGraphManager) {
-        let (result, array) = self.designator.get_value();
-        let ident;
-        let inst;
+        let (result, expr_array) = self.designator.get_value();
 
         let expr_value = self.expression.to_ir(irgm).expect("Expected some expression with related Assignment Operation");
 
-        if array.is_empty() {
-            ident = Value::new(ValTy::var(irgm.make_unique_variable(result.get_value(), expr_value.clone()).clone()));
+        if expr_array.is_empty() {
+            irgm.make_unique_variable(result.get_value(), expr_value.clone()).clone();
         } else {
-            let mut array_result = result.get_value() + "[";
-            let mut first = true;
-            for element in array {
-                if !first {
-                    array_result += ", ";
-                }
-                array_result += &element.to_ir(irgm).expect("Expected valid Value").get_value().to_string();
-                first = false;
+            let val_array = expr_array.iter()
+                .filter_map(|expr| {
+                    expr.to_owned().to_ir(irgm)
+                }).collect::<Vec<Value>>();
+
+            let uniq_arr = irgm.get_array_ref(result.get_value()).clone();
+            let inst_list = irgm.build_array_inst(uniq_arr, val_array, Some(expr_value));
+
+            let ret_val = Value::new(ValTy::op(inst_list.last().expect("There should be a final Op.").clone()));
+
+            for inst in inst_list {
+                irgm.add_inst(inst);
             }
-            array_result += "]";
-
-            inst = irgm.build_op_y(Value::new(ValTy::arr(array_result)), InstTy::load);
-            irgm.add_inst(inst.clone());
-
-            ident = Value::new(ValTy::op(inst));
         }
-
-        //let new_inst = irgm.build_op_x_y(ident,expr_value,InstTy::mov);
-        //current_node.get_mut_data_ref().add_instruction(new_inst);
     }
 }

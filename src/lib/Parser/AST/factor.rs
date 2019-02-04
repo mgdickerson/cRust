@@ -83,30 +83,28 @@ impl Factor {
     pub fn to_ir(self, irgm : &mut IRGraphManager) -> Option<Value> {
         match self.factor {
             Some(FactorType::desig(desig)) => {
-                // TODO : needs testing but there is SOMETHING in place for arrays
-                let (result, array) = desig.get_value();
+                let (result, expr_array) = desig.get_value();
 
-                if array.is_empty() {
-                    // TODO : there is an issue with instruction number based on operation
+                if expr_array.is_empty() {
+                    // TODO : there is an issue with instruction number based on operation (possibly re-working to op_builder adding usage)
                     return Some(Value::new(ValTy::var(irgm.get_current_unique(result.get_value()).clone())));
                 }
 
-                let mut array_result = result.get_value() + "[";
-                let mut first = true;
-                for element in array {
-                    if !first {
-                        array_result += ", ";
-                    }
-                    array_result += &element.to_ir(irgm).expect("Expected valid Value").get_value().to_string();
-                    first = false;
+                let val_array = expr_array.iter()
+                    .filter_map(|expr| {
+                        expr.to_owned().to_ir(irgm)
+                    }).collect::<Vec<Value>>();
+
+                let uniq_arr = irgm.get_array_ref(result.get_value()).clone();
+                let inst_list = irgm.build_array_inst(uniq_arr, val_array, None);
+
+                let ret_val = Value::new(ValTy::op(inst_list.last().expect("There should be a final Op.").clone()));
+
+                for inst in inst_list {
+                    irgm.add_inst(inst);
                 }
-                array_result += "]";
 
-                // TODO : Replace with in class implementation of these.
-                let inst = irgm.build_op_y(Value::new(ValTy::arr(array_result)), InstTy::load);
-                let val = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
-
-                return val;
+                return Some(ret_val);
             },
             Some(FactorType::num(num)) => {
                 let result = num.get_value();

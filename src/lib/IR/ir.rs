@@ -1,4 +1,6 @@
 use lib::IR::variable_manager::UniqueVariable;
+use lib::IR::array_manager::UniqueArray;
+use lib::IR::address_manager::UniqueAddress;
 
 #[derive(Debug,Clone,PartialEq)]
 pub struct Value {
@@ -21,8 +23,8 @@ pub enum ValTy {
     op(Op),
     con(i32),
     var(UniqueVariable),
-    reg(i32),
-    arr(String),
+    adr(UniqueAddress),
+    arr(UniqueArray),
 }
 
 impl ValTy {
@@ -37,8 +39,8 @@ impl ValTy {
                 var.value_to_string()
                 //var.get_ident()
             },
-            ValTy::reg(reg) => reg.to_string(),
-            ValTy::arr(arr) => arr.clone(),
+            ValTy::adr(adr) => adr.to_string(),
+            ValTy::arr(arr) => arr.to_string(),
         }
     }
 }
@@ -115,6 +117,8 @@ impl Op {
         Op { x_val, y_val, special_val, inst_number, block_number, inst_type, p_command }
     }
 
+    // TODO : Need to make another generalization here. Instead of adding use when variable
+    // TODO : is called, add use when variable is used in one of these build ops.
     pub fn build_op(inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
         Op::new(None,None,None,inst_number,block_number,inst_type)
     }
@@ -243,11 +247,6 @@ impl PartialEq for Op {
 
         false
     }
-}
-
-pub enum OpPosition {
-    left,
-    right,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
