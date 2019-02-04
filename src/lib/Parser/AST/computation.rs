@@ -157,7 +157,7 @@ impl Comp {
         }
 
         for func in self.funcDecl {
-            //func.to_ir(&mut graph, &mut initial_node, &mut irgmanager);
+            func.to_ir(&mut ir_graph_manager);
         }
 
         self.funcBody.to_ir(&mut ir_graph_manager);
