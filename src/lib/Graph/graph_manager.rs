@@ -5,6 +5,7 @@ extern crate petgraph;
 use petgraph::graph::Graph;
 use petgraph::prelude::NodeIndex;
 
+#[derive(Clone)]
 pub struct GraphManager {
     graph: Graph<Node, i32>,
     current_node_index: NodeIndex,
@@ -23,6 +24,10 @@ impl GraphManager {
         let current_node = Node::new(it, bt, node_type);
         self.current_node_index = self.graph.add_node(current_node);
         self.get_mut_ref_current_node_index()
+    }
+
+    pub fn clone_graph(&self) -> Self {
+        self.clone()
     }
 
     pub fn get_node_index(self) -> NodeIndex {

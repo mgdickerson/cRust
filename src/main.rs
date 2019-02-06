@@ -96,14 +96,13 @@ fn main() {
         //println!("\nTesting Token_Builder results: \n\n{:?}\n\n", tokens.get_vector());
 
         let comp = Parser::AST::computation::Comp::new(&mut tc);
-        let irgmanager = comp.to_ir();
+        let mut irgmanager = comp.to_ir();
 
         let mut dot_graph_path = entry.file_name();
         let mut file_name = path.to_str().unwrap().to_owned() + "/" + dot_graph_path.to_str().unwrap().trim_end_matches(".txt") + ".dot";
 
-        //let mut dot_graph = OpenOptions::new().write(true).create(true).open(file_name).expect("Something went wrong creating dot_graph");
         let mut output = String::new();
-        write!(output, "{:?}", display::Dot::with_config(&irgmanager.get_graph(), &[display::Config::EdgeNoLabel]));
+        write!(output, "{:?}", display::Dot::with_config(&irgmanager.graph_manager().get_mut_ref_graph().clone(), &[display::Config::EdgeNoLabel]));
         fs::write(file_name, output);
         //write!(file_name, "{:?}", display::Dot::with_config(&irgmanager.get_graph(), &[display::Config::EdgeNoLabel]) as [u8]).expect("File already existed");
 
@@ -114,84 +113,4 @@ fn main() {
         println!();
 
     }
-
-    // TODO : Graph tests being done here!
-    // TODO : Using standard Graph because it does not require Impl Copy.
-
-    /*
-    let mut irm = IRManager::new();
-
-    let mut vec = Node::new(&mut irm);
-    vec.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(1)))),None,None,1,0,InstTy::neg));
-    vec.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(2)))),Some(Box::new(Value::new(ValTy::con(73)))),None,2,0,InstTy::add));
-    vec.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(3)))),None,None,3,0,InstTy::neg));
-
-    let mut vec1 = Node::new(&mut irm);
-    vec1.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(12)))),None,None,4,1,InstTy::neg));;
-    vec1.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(13)))),None,None,5,1,InstTy::neg));
-    vec1.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(14)))),None,None,6,1,InstTy::neg));
-
-    let mut vec2 = Node::new(&mut irm);
-    vec2.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(109)))),None,None,7,2,InstTy::neg));;
-    vec2.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(108)))),None,None,8,2,InstTy::neg));
-    vec2.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(107)))),None,None,9,2,InstTy::neg));
-
-    let mut vec3 = Node::new(&mut irm);
-    vec3.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(122)))),None,None,10,3,InstTy::neg));;
-    vec3.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(133)))),None,None,11,3,InstTy::neg));
-    vec3.get_mut_data_ref().add_instruction(Op::new(Some(Box::new(Value::new(ValTy::con(144)))),None,None,12,3,InstTy::neg));
-
-    let mut og = Graph::new();
-    let node1 = og.add_node(vec);
-    let node2 = og.add_node(vec1);
-    let node3 = og.add_node(vec2);
-    let node4 = og.add_node(vec3);
-
-    og.add_edge(node1,node2,1);
-    og.add_edge(node1,node3,1);
-    og.add_edge(node2,node4,1);
-    og.add_edge(node3,node4,1);
-    og.add_edge(node4,node1,1);
-
-    println!("{:?}", display::Dot::with_config(&og, &[display::Config::EdgeNoLabel]));
-    */
-
-    /*
-
-
-        let mut b:Vec<Box<dyn lib::IR::ir::Inst>> = vec!();
-        b.push(Box::new(ir::Add::new(1, 2)));
-        b.push(Box::new(ir::Neg::new(1)));
-
-        for y in b {
-            y.debugPrint();
-        }
-
-
-    let mut arena = Arena::new();
-
-    for x in 0..10 {
-        let nodeId = arena.new_node();
-        arena.get_mut_ref(nodeId.clone()).unwrap().add_instr(Box::new(ir::Add::new(x, x + 1)));
-        arena.get_mut_ref(nodeId.clone()).unwrap().add_instr(Box::new(ir::Neg::new(x)));
-        arena.get_mut_ref(nodeId).unwrap().add_instr(Box::new(ir::Sub::new(x, x + 1)));
-    }
-
-    let mut iter = arena.iter();
-    for some in iter {
-        for inst in some.instructions() {
-            inst.debugPrint();
-        }
-    }
-
-    let mut node = Node::new(NodeId::new(0));
-    node.add_parent(NodeId::new(1));
-    node.add_parent(NodeId::new(2));
-    node.add_child(NodeId::new(1));
-    node.add_child(NodeId::new(3));
-    let parents = node.parents();
-    let children = node.children();
-    println!("{:?}", parents);
-    println!("{:?}", children);
-    */
 }

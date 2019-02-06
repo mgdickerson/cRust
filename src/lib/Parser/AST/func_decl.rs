@@ -18,9 +18,9 @@ pub struct FuncDecl {
 
 impl FuncDecl {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut funcName;
+        let funcName;
         let mut varDecl = vec!();
-        let mut funcBody;
+        let funcBody;
 
         match tc.get_next_token().expect("FuncDecl Error").get_type() {
             TokenType::FuncDecl => {
@@ -137,9 +137,10 @@ impl FuncDecl {
 
     pub fn to_ir(self, irgm : &mut IRGraphManager) {
         let (func_name, func_param) = self.funcName.get_value();
-        let func_name_string = String::from("f_") + &func_name.get_value();
 
-        irgm.get_var_manager_mut_ref().add_variable(func_name_string.clone());
+        irgm.new_function(func_name.get_value());
+
+        /* Currently Need this out of instruction pool
         match func_param {
             Some(param) => {
                 for p in param.get_value() {
@@ -161,7 +162,8 @@ impl FuncDecl {
         for var in self.varDecl {
             var.to_ir(irgm,false,Some(func_name_string.clone()));
         }
+        */
 
-
+        irgm.end_function();
     }
 }

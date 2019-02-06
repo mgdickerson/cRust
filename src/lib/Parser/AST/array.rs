@@ -135,7 +135,7 @@ impl Array {
             let mut var_name = ident.get_value();
 
             if !is_global {
-                if irgm.get_var_manager_mut_ref().is_valid_variable(var_name.clone()) {
+                if irgm.variable_manager().is_valid_variable(var_name.clone()) {
                     // this variable is already a global variable, send error.
                     panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
                 }
@@ -144,20 +144,11 @@ impl Array {
                 //var_name = func_name.clone().unwrap() + "_" + &var_name;
             }
 
-            irgm.add_array(var_name.clone(), self.arrayDepthVec.clone());
-            let arr_size = irgm.get_array_ref(var_name.clone()).get_size();
+            irgm.array_manager().add_array(var_name.clone(), self.arrayDepthVec.clone());
+            let arr_size = irgm.array_manager().get_array_ref(var_name.clone()).get_size();
 
-            let addr = irgm.get_addr_assignment(var_name.clone(), arr_size);
-            irgm.assign_array_address(var_name, addr);
-
-
-            //let inst = irgm.build_op_x_y(Value::new(ValTy::var(unique)), Value::new(ValTy::con(0)), InstTy::mov);
-            //current_node.get_mut_data_ref().add_instruction(inst);
+            let addr = irgm.address_manager().get_addr_assignment(var_name.clone(), arr_size);
+            irgm.array_manager().assign_addr(var_name, addr);
         }
-    }
-
-    fn get_unique(var: String, irgm: &mut IRGraphManager) -> String {
-        let unique = irgm.add_variable(var, Value::new(ValTy::con(0)));
-        unique.get_ident()
     }
 }

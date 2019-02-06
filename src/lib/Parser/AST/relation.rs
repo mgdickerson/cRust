@@ -56,32 +56,33 @@ impl Relation {
             expect("Expected Right Comp Op, none found");
 
         let inst = irgm.build_op_x_y(leftCompVal,rightCompVal,InstTy::cmp);
-        let inst_val = Value::new(ValTy::op(irgm.add_inst(inst.clone())));
+        irgm.graph_manager().add_instruction(inst.clone());
+        let inst_val = Value::new(ValTy::op(inst));
 
         match self.relOp.get_contents().as_ref() {
             "==" => {
                 let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::bne);
-                irgm.add_inst(rel_inst);
+                irgm.graph_manager().add_instruction(rel_inst);
             },
             "!=" => {
                 let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::beq);
-                irgm.add_inst(rel_inst);
+                irgm.graph_manager().add_instruction(rel_inst);
             },
             "<" => {
                 let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::bge);
-                irgm.add_inst(rel_inst);
+                irgm.graph_manager().add_instruction(rel_inst);
             },
             "<=" => {
                 let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::bgt);
-                irgm.add_inst(rel_inst);
+                irgm.graph_manager().add_instruction(rel_inst);
             },
             ">" => {
                 let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::ble);
-                irgm.add_inst(rel_inst);
+                irgm.graph_manager().add_instruction(rel_inst);
             },
             ">=" => {
                 let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::blt);
-                irgm.add_inst(rel_inst);
+                irgm.graph_manager().add_instruction(rel_inst);
             },
             _ => {
                 panic!("Error: Expected a relOp token, but was not found.");

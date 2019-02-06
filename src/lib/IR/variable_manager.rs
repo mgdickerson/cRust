@@ -1,3 +1,4 @@
+use lib::IR::function_manager::{FunctionManager,UniqueFunction};
 use lib::IR::ir::Value;
 use std::collections::HashMap;
 use lib::IR::ir::Op;
@@ -7,14 +8,15 @@ pub struct VariableManager {
     var_manager: HashMap<String, Vec<UniqueVariable>>,
     var_counter: HashMap<String, usize>,
     current_vars: HashMap<String, UniqueVariable>,
+    active_func: Option<UniqueFunction>,
 }
 
 impl VariableManager {
     pub fn new() -> Self {
-        VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new(), current_vars: HashMap::new() }
+        VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new(), current_vars: HashMap::new(), active_func: None }
     }
 
-    pub fn get_self(&self) -> VariableManager {
+    pub fn clone_self(&self) -> VariableManager {
         self.clone()
     }
 
@@ -22,7 +24,35 @@ impl VariableManager {
         self.var_manager
     }
 
-    pub fn clone_current_vars(&self) -> HashMap<String, UniqueVariable> {
+    pub fn add_active_function(&mut self, func: UniqueFunction) {
+        self.active_func = Some(func);
+        match &mut self.active_func {
+            Some(uniq_func) => {
+                uniq_func.add_checkpoint(self.var_manager.clone());
+            },
+            None => panic!("Just added, this should not fail."),
+        }
+    }
+
+    pub fn get_active_function(&mut self) -> UniqueFunction {
+        let uniq_func = self.active_func.clone().expect("Should have function to recover.");
+        match &mut self.active_func {
+            Some(func) => {
+                self.var_manager = func.recover_checkpoint();
+            },
+            None => panic!("Should have failed when cloning."),
+        }
+        self.active_func = None;
+        uniq_func
+    }
+
+    pub fn var_list(&self) -> Vec<String> {
+        self.var_manager.iter().map(|(key,value)| {
+            key.clone()
+        }).collect::<Vec<String>>()
+    }
+
+    pub fn var_checkpoint(&self) -> HashMap<String, UniqueVariable> {
         self.current_vars.clone()
     }
 
@@ -46,7 +76,7 @@ impl VariableManager {
 
                 Some((var_val.clone(), other_val))
             }).collect::<Vec<_>>();
-        set.sort_by_key(|(left_key, right_key)| {
+        set.sort_by_key(|(left_key, _right_key)| {
             left_key.base_ident.clone()
         });
 
@@ -74,7 +104,7 @@ impl VariableManager {
         }
     }
 
-    pub fn get_current_unique(&mut self, ident: String, block_num:usize, inst_num: usize) -> &UniqueVariable {
+    pub fn get_current_unique(&mut self, ident: String, block_num: usize, inst_num: usize) -> &UniqueVariable {
         let current_uniq =  self.current_vars.get(&ident).expect("Expected variable, found none.").clone();
         let result = self.get_mut_uniq_var(current_uniq);
         match result {
@@ -98,19 +128,6 @@ impl VariableManager {
         }
     }
 
-    pub fn get_uniq_variable(&self, uniq_lookup: UniqueVariable) -> UniqueVariable {
-        let uniq_vec = self.var_manager.get(&uniq_lookup.get_base_ident()).unwrap();
-        for uniq in uniq_vec {
-            if uniq_lookup.get_ident() == uniq.get_ident() {
-                return uniq.clone()
-            }
-        }
-
-        // This is basically an error case
-        // TODO : Make this a Result return?
-        uniq_lookup
-    }
-
     pub fn get_mut_uniq_var(&mut self, uniq_lookup: UniqueVariable) -> Result<&mut UniqueVariable, String> {
         let uniq_vec = self.var_manager.get_mut(&uniq_lookup.get_base_ident()).unwrap();
         for uniq in uniq_vec {
@@ -123,10 +140,18 @@ impl VariableManager {
     }
 
     pub fn add_variable(&mut self, var: String) {
-        let var_already_added = self.var_counter.insert(var.clone(), 0);
+        match &mut self.active_func {
+            Some(active_func) => {
+                self.var_counter.insert(var.clone(), 0);
+                active_func.add_local(&var);
+            },
+            None => {
+                let var_already_added = self.var_counter.insert(var.clone(), 0);
 
-        if var_already_added != None {
-            panic!("Variable {} already used", var.clone());
+                if var_already_added != None {
+                    panic!("Variable {} already used", var.clone());
+                }
+            },
         }
 
         self.var_manager.insert(var, Vec::new());
@@ -135,7 +160,7 @@ impl VariableManager {
     pub fn add_phi_uniq_use(&mut self, uniq: UniqueVariable, block_num: usize, inst_num: usize) -> UniqueVariable {
         // This is currently just for use in the Phi construction, thus I want to return
         // the uniq value just before i add the usage at the Phi site.
-        let uniq_copy = self.get_uniq_variable(uniq.clone());
+        let uniq_copy = self.get_mut_uniq_var(uniq.clone()).expect("Phi unique usage should exist.").clone();
 
         self.var_manager
             .get_mut(&uniq.get_base_ident())

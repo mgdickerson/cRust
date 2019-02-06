@@ -26,7 +26,7 @@ pub struct Factor {
 impl Factor {
     pub fn new(tc: &mut TokenCollection) -> Self {
         let mut factor = None;
-        let mut node_type = TokenType::None;
+        let node_type = TokenType::None;
 
         match tc.peek_next_token_type() {
             Some(TokenType::Ident) => {
@@ -86,8 +86,14 @@ impl Factor {
                 let (result, expr_array) = desig.get_value();
 
                 if expr_array.is_empty() {
-                    // TODO : there is an issue with instruction number based on operation (possibly re-working to op_builder adding usage)
-                    return Some(Value::new(ValTy::var(irgm.get_current_unique(result.get_value()).clone())));
+                    let block_num = irgm.get_block_num();
+                    let inst_num = irgm.get_inst_num() + 1;
+                    return Some(Value::new(
+                        ValTy::var(irgm.variable_manager()
+                            .get_current_unique(result.get_value(),
+                                                block_num,
+                                                inst_num)
+                            .clone())));
                 }
 
                 let val_array = expr_array.iter()
@@ -95,13 +101,13 @@ impl Factor {
                         expr.to_owned().to_ir(irgm)
                     }).collect::<Vec<Value>>();
 
-                let uniq_arr = irgm.get_array_ref(result.get_value()).clone();
+                let uniq_arr = irgm.array_manager().get_array_ref(result.get_value()).clone();
                 let inst_list = irgm.build_array_inst(uniq_arr, val_array, None);
 
                 let ret_val = Value::new(ValTy::op(inst_list.last().expect("There should be a final Op.").clone()));
 
                 for inst in inst_list {
-                    irgm.add_inst(inst);
+                    irgm.graph_manager().add_instruction(inst);
                 }
 
                 return Some(ret_val);
@@ -114,7 +120,7 @@ impl Factor {
                 // TODO : This is a rough impl, just to get the "call" to print out.
                 // TODO : Still needs to be implemented.
                 let inst = irgm.build_spec_op(Vec::new(), InstTy::call);
-                irgm.add_inst(inst.clone());
+                irgm.graph_manager().add_instruction(inst.clone());
                 return Some(Value::new(ValTy::op(inst)));
             },
             Some(FactorType::expr(expr)) => {

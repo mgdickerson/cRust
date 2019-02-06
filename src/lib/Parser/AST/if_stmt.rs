@@ -17,8 +17,8 @@ pub struct IfStmt {
 
 impl IfStmt {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut relation;
-        let mut funcIfBody;
+        let relation;
+        let funcIfBody;
         let mut funcElseBody = Option::None;
 
         match tc.get_next_token().expect("If Statment Error").get_type() {
@@ -119,15 +119,14 @@ impl IfStmt {
         /// - go through assigned values and figure out phi
 
         // Clone Main Node Index + add relation statement
-        let main_node = irgm.clone_node_index();
+        let main_node = irgm.graph_manager().clone_node_index();
 
         irgm.new_node(NodeType::loop_header);
         self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
-        let loop_header = irgm.clone_node_index();
-        irgm.add_edge(main_node, loop_header);
-        let recovery = irgm.set_op_recovery_point();
+        let loop_header = irgm.graph_manager().clone_node_index();
+        irgm.graph_manager().add_edge(main_node, loop_header);
 
-        let main_checkpoint = irgm.var_checkpoint();
+        let main_checkpoint = irgm.variable_manager().var_checkpoint();
 
         // Variable holder for else_node_bottom
         let mut else_node_bottom = None;
@@ -135,36 +134,31 @@ impl IfStmt {
 
         // Generate if-node-top
         irgm.new_node(NodeType::if_node);
-        let if_node_top = irgm.clone_node_index();
+        let if_node_top = irgm.graph_manager().clone_node_index();
         // Connect Main Node to If-Node-Top
-        irgm.add_edge(loop_header,if_node_top);
+        irgm.graph_manager().add_edge(loop_header,if_node_top);
 
         // Go through if-body, generate if-bottom
         self.funcIfBody.to_ir(irgm);
-        let if_node_bottom = irgm.clone_node_index();
-        // After going through body, recover initial operator domination tree
-        irgm.restore_op(recovery.clone());
+        let if_node_bottom = irgm.graph_manager().clone_node_index();
 
-        let if_checkpoint = irgm.var_checkpoint();
+        let if_checkpoint = irgm.variable_manager().var_checkpoint();
 
         match self.funcElseBody {
             Some(funcElseBody) => {
                 // TODO : Issue being run in to here. Now that the new Phi value is the "latest" that is being added instead of the correctly reset value from the "main" node. Need to use restore more intelligently.
-                irgm.restore_vars(main_checkpoint.clone());
+                irgm.variable_manager().restore_vars(main_checkpoint.clone());
 
                 // Generate else-node-top
                 irgm.new_node(NodeType::else_node);
-                let else_node_top = irgm.clone_node_index();
-                irgm.add_edge(loop_header,else_node_top);
+                let else_node_top = irgm.graph_manager().clone_node_index();
+                irgm.graph_manager().add_edge(loop_header,else_node_top);
 
                 // go through else-body, generate else-bottom
                 funcElseBody.to_ir(irgm);
-                else_node_bottom = Some(irgm.clone_node_index());
+                else_node_bottom = Some(irgm.graph_manager().clone_node_index());
 
-                // After going through else, recover initial op dom tree
-                irgm.restore_op(recovery);
-
-                else_checkpoint = Some(irgm.var_checkpoint());
+                else_checkpoint = Some(irgm.variable_manager().var_checkpoint());
             },
             None => {
                 // Nothing to do here, fall through.
@@ -176,19 +170,19 @@ impl IfStmt {
 
         // Main branch node after if/else (phi node)
         irgm.new_node(NodeType::phi_node);
-        let phi_node = irgm.clone_node_index();
+        let phi_node = irgm.graph_manager().clone_node_index();
 
         // Figure out possible phi
 
         // Connect if-bottom to phi
-        irgm.add_edge(if_node_bottom, phi_node);
+        irgm.graph_manager().add_edge(if_node_bottom, phi_node);
 
-        irgm.restore_vars(main_checkpoint.clone());
+        irgm.variable_manager().restore_vars(main_checkpoint.clone());
         // Add else node
         match else_node_bottom {
             Some(node) => {
                 // Connect else-bottom to phi
-                irgm.add_edge(node, phi_node);
+                irgm.graph_manager().add_edge(node, phi_node);
 
                 // Construct phi by checking first if and else
                 // If they differ, construct phi out of both.
@@ -199,7 +193,7 @@ impl IfStmt {
             },
             None => {
                 // no else body, connect main directly to phi
-                irgm.add_edge(loop_header, phi_node);
+                irgm.graph_manager().add_edge(loop_header, phi_node);
 
                 irgm.insert_phi_inst(if_checkpoint, main_checkpoint);
             },

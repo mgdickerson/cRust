@@ -3,15 +3,21 @@ use lib::Parser::AST::number::Number;
 use lib::IR::ir::{Value, ValTy, Op, InstTy};
 use lib::IR::ir_manager::IRGraphManager;
 use lib::IR::address_manager::UniqueAddress;
+use lib::IR::function_manager::{FunctionManager,UniqueFunction};
 
 #[derive(Debug, Clone)]
 pub struct ArrayManager {
-    array_manager: HashMap<String, UniqueArray>
+    array_manager: HashMap<String, UniqueArray>,
+    active_func: Option<UniqueFunction>,
 }
 
 impl ArrayManager {
     pub fn new() -> Self {
-        ArrayManager{ array_manager: HashMap::new() }
+        ArrayManager{ array_manager: HashMap::new(), active_func: None }
+    }
+
+    pub fn add_active_function(&mut self, func: UniqueFunction) {
+        self.active_func = Some(func);
     }
 
     pub fn add_array(&mut self, array_ident: String, array_depth: Vec<Number>) {
@@ -51,7 +57,7 @@ impl ArrayManager {
                         let mul_val = Value::new(ValTy::op(mul_inst));
                         let offset_inst = irgm.build_op_x_y(last_inst, mul_val, InstTy::add);
                         inst_vec.push(offset_inst.clone());
-                        last_offset_inst = Some((Value::new(ValTy::op(offset_inst))));
+                        last_offset_inst = Some(Value::new(ValTy::op(offset_inst)));
                     },
                     None => {
                         last_offset_inst = Some(Value::new(ValTy::op(mul_inst)));
@@ -63,7 +69,7 @@ impl ArrayManager {
         let last_mul_inst = inst_vec.last().expect("Should be at least one instruction.").clone();
 
         // Find Array home register
-        let global_reg = Value::new(ValTy::adr(irgm.get_global_addr()));
+        let global_reg = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
         let arr_reg = Value::new(ValTy::adr(uniq_arr.clone_addr()));
         let add_inst = irgm.build_op_x_y(global_reg, arr_reg, InstTy::add);
         inst_vec.push(add_inst.clone());
@@ -117,7 +123,7 @@ impl UniqueArray {
     }
 
     pub fn generate_adjustment(&self, adjust: usize) -> i32 {
-        let mut iter = self.array_depth.iter().skip(adjust);
+        let iter = self.array_depth.iter().skip(adjust);
         iter.product()
     }
 

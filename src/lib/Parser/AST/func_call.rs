@@ -16,7 +16,7 @@ pub struct FuncCall {
 impl FuncCall {
     pub fn new(tc: &mut TokenCollection) -> Self {
         let mut variables = vec!();
-        let mut funcName;
+        let funcName;
 
         match tc.get_next_token().expect("Func Call Error").get_type() {
             TokenType::FuncCall => {

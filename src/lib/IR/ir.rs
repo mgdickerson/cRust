@@ -25,6 +25,7 @@ pub enum ValTy {
     var(UniqueVariable),
     adr(UniqueAddress),
     arr(UniqueArray),
+    // TODO : Add register type specifically for return
 }
 
 impl ValTy {
@@ -104,8 +105,8 @@ impl Op {
             // Op [x] //
             InstTy::call => {
                 p_command = String::from("call ");
-                let mut first = true;
                 match special_val_string {
+                    // TODO : Still need to fix this.
                     Some(val_vec) => {},
                     None => {},
                 }

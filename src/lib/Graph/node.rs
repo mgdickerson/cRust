@@ -40,7 +40,6 @@ impl std::fmt::Debug for Node {
 pub enum NodeType {
     main_node,
     loop_header,
-    cond_node,
     if_node,
     else_node,
     while_node,

@@ -16,8 +16,8 @@ pub struct Assignment {
 
 impl Assignment {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut designator;
-        let mut expression;
+        let designator;
+        let expression;
 
         match tc.get_next_token().expect("Assignment Error").get_type() {
             TokenType::Assignment => {
@@ -88,20 +88,23 @@ impl Assignment {
         let expr_value = self.expression.to_ir(irgm).expect("Expected some expression with related Assignment Operation");
 
         if expr_array.is_empty() {
-            irgm.make_unique_variable(result.get_value(), expr_value.clone()).clone();
+            let block_num = irgm.get_block_num();
+            let inst_num = irgm.get_inst_num();
+            irgm.variable_manager().make_unique_variable(result.get_value(), expr_value.clone(), block_num, inst_num);
         } else {
             let val_array = expr_array.iter()
                 .filter_map(|expr| {
                     expr.to_owned().to_ir(irgm)
                 }).collect::<Vec<Value>>();
 
-            let uniq_arr = irgm.get_array_ref(result.get_value()).clone();
+            let uniq_arr = irgm.array_manager().get_array_ref(result.get_value()).clone();
             let inst_list = irgm.build_array_inst(uniq_arr, val_array, Some(expr_value));
 
+            // TODO : Not sure why this is here, but it seems important.
             let ret_val = Value::new(ValTy::op(inst_list.last().expect("There should be a final Op.").clone()));
 
             for inst in inst_list {
-                irgm.add_inst(inst);
+                irgm.graph_manager().add_instruction(inst);
             }
         }
     }

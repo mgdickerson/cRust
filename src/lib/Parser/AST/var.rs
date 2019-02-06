@@ -70,7 +70,7 @@ impl Var {
             let mut var_name = ident.get_value();
 
             if !is_global {
-                if irgm.get_var_manager_mut_ref().is_valid_variable(var_name.clone()) {
+                if irgm.variable_manager().is_valid_variable(var_name.clone()) {
                     // this variable is already a global variable, send error.
                     panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
                 }
@@ -78,15 +78,10 @@ impl Var {
                 var_name = func_name.clone().unwrap() + "_" + &var_name;
             }
 
-            let unique = Var::get_unique(var_name, irgm);
+            irgm.variable_manager().add_variable(var_name);
 
             //let inst = irgm.build_op_x_y(Value::new(ValTy::var(unique)), Value::new(ValTy::con(0)), InstTy::mov);
             //current_node.get_mut_data_ref().add_instruction(inst);
         }
-    }
-
-    fn get_unique(var: String, irgm: &mut IRGraphManager) -> String {
-        let unique = irgm.add_variable(var, Value::new(ValTy::con(0)));
-        unique.get_ident()
     }
 }

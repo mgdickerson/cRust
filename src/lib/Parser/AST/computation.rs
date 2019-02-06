@@ -22,14 +22,14 @@ impl Comp {
     pub fn new(tc: &mut TokenCollection) -> Self {
         let mut varDecl = vec!();
         let mut funcDecl = vec!();
-        let mut funcBody;
+        let funcBody;
 
         while let Some(next_token) = tc.peek_next_token_type() {
             match next_token {
                 TokenType::Comment => {
                     tc.get_next_token();
                 },
-                notComment => {
+                _ => {
                     break;
                 }
             }
@@ -164,7 +164,7 @@ impl Comp {
 
         //println!("{:?}", irgmanager.get_var_manager_mut_ref());
         //graph_manager.add_current_node_to_graph();
-        let clone = ir_graph_manager.clone_var_manager();
+        //let clone = ir_graph_manager.variable_manager();
         //println!("{:?}", clone);
 
         ir_graph_manager

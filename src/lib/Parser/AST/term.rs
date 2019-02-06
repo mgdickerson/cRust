@@ -23,9 +23,6 @@ impl Term {
     pub fn new(tc: &mut TokenCollection) -> Self {
         let mut term_list = Vec::new();
 
-        let mut factors : Vec<Factor> = vec!();
-        let mut operations : Vec<Token> = vec!();
-
         term_list.push(TermList::factor(Factor::new(tc)));
 
         loop {
@@ -68,13 +65,15 @@ impl Term {
                             let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
                             let inst = irgm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::mul);
 
-                            previous_term = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
+                            irgm.graph_manager().add_instruction(inst.clone());
+                            previous_term = Some(Value::new(ValTy::op(inst)));
                         },
                         Some(TokenType::DivOp) => {
                             let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
                             let inst = irgm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::div);
 
-                            previous_term = Some(Value::new(ValTy::op(irgm.add_inst(inst.clone()))));
+                            irgm.graph_manager().add_instruction(inst.clone());
+                            previous_term = Some(Value::new(ValTy::op(inst)));
                         },
                         None => {
                             previous_term = factor.to_ir(irgm);

@@ -9,6 +9,7 @@ use super::Graph;
 use super::variable_manager::{VariableManager, UniqueVariable};
 use super::array_manager::{ArrayManager,UniqueArray};
 use super::address_manager::{AddressManager,UniqueAddress};
+use super::function_manager::{FunctionManager,UniqueFunction};
 use super::operator_dominator::{OpDomHandler,OpNode,OpGraph};
 use petgraph::graph::NodeIndex;
 use petgraph::algo::dominators::Dominators;
@@ -36,13 +37,16 @@ pub struct IRGraphManager {
     // User made Address Manager (for use with arrays and stack variables)
     addr_manager: AddressManager,
 
+    func_manager: FunctionManager,
+    is_func: bool,
+
     // Manages all things graph related.
     graph_manager: GraphManager,
 }
 
 impl IRGraphManager {
     pub fn new() -> Self {
-        let mut graph : Graph<Node, i32> = Graph::new();
+        let graph : Graph<Node, i32> = Graph::new();
         let mut it = InstTracker::new();
         let mut bt = BlockTracker::new();
 
@@ -54,6 +58,8 @@ impl IRGraphManager {
             var_manager: VariableManager::new(),
             array_manager: ArrayManager::new(),
             addr_manager: AddressManager::new(),
+            func_manager: FunctionManager::new(),
+            is_func: false,
             op_dom_handler: OpDomHandler::new(),
             graph_manager,
         }
@@ -96,7 +102,7 @@ impl IRGraphManager {
         let node_starting_point = self.graph_manager.get_node_id(current_node);
         let mut remove_use_vec = Vec::new();
 
-        let mut local_var_manager = self.var_manager.get_self();
+        let mut local_var_manager = self.var_manager.clone_self();
 
         // Make map of current graph.
         let mut graph_map = self.graph_manager.get_mut_ref_graph()
@@ -113,7 +119,7 @@ impl IRGraphManager {
                 Some(uses) => Some((uniq_clone, uses, phi_inst)),
                 None => None,
             }
-        }).for_each(|(uniq,mut uses, phi_inst)| {
+        }).for_each(|(uniq, uses, phi_inst)| {
             println!("Current Node Id: {}\tPhi Inst: {}", node_starting_point.clone(), phi_inst);
             for (block_num, inst_num) in uses {
                 println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.get_ident(), block_num, inst_num);
@@ -140,48 +146,14 @@ impl IRGraphManager {
 
     /// Graph Specific Functions ///
 
-    pub fn get_mut_ref_graph(&mut self) -> &mut GraphManager {
+    pub fn graph_manager(&mut self) -> &mut GraphManager {
         &mut self.graph_manager
     }
-
-    pub fn get_graph(self) -> Graph<Node, i32> { self.graph_manager.get_graph() }
 
     pub fn new_node(&mut self, node_type: NodeType) -> &NodeIndex {
         let it = &mut self.it;
         let bt = &mut self.bt;
         self.graph_manager.new_node(it, bt, node_type)
-    }
-
-    pub fn clone_node_index(&self) -> NodeIndex {
-        self.graph_manager.clone_node_index()
-    }
-
-    pub fn switch_current_node(&mut self, new_node: NodeIndex) {
-        self.graph_manager.switch_current_node_index(new_node);
-    }
-
-    pub fn get_node_id(&self, node_index: NodeIndex) -> usize {
-        self.graph_manager.get_node_id(node_index)
-    }
-
-    pub fn add_edge(&mut self, parent: NodeIndex, child: NodeIndex) {
-        self.graph_manager.add_edge(parent, child);
-    }
-
-    pub fn try_add_inst(&mut self, inst: Op) -> Op {
-        let (new_inst, op) = self.op_dom_handler.search_or_add_inst(inst);
-
-        if new_inst {
-            self.add_inst(op.clone());
-        }
-
-        op
-    }
-
-    pub fn add_inst(&mut self, inst: Op) -> Op {
-        self.graph_manager.add_instruction(inst.clone());
-
-        inst
     }
 
     /// Tracker Specific Functions ///
@@ -205,40 +177,19 @@ impl IRGraphManager {
 
     /// Variable Manager Specific Functions ///
 
-    pub fn get_var_manager_mut_ref(&mut self) -> &mut VariableManager {
+    pub fn variable_manager(&mut self) -> &mut VariableManager {
         &mut self.var_manager
     }
 
-    pub fn get_var_manager(self) -> VariableManager { self.var_manager }
-
-    pub fn clone_var_manager(&self) -> VariableManager { self.var_manager.clone() }
-
-    pub fn add_variable(&mut self, ident: String, value: Value) -> &UniqueVariable {
-        self.var_manager.add_variable(ident.clone());
-        self.make_unique_variable(ident, value)
-    }
-
-    pub fn make_unique_variable(&mut self, ident: String, value: Value) -> &UniqueVariable {
+    pub fn get_current_unique(&mut self, ident: String, block_num:usize, inst_num: usize) -> &UniqueVariable {
         let block_num = self.get_block_num();
-        self.var_manager.make_unique_variable(ident, value, block_num, self.it.get())
-    }
-
-    pub fn get_current_unique(&mut self, ident: String) -> &UniqueVariable {
-        let block_num = self.get_block_num();
-        self.var_manager.get_current_unique(ident, block_num, self.it.get() + 1)
-    }
-
-    pub fn get_latest_unique(&mut self, ident: String) -> &UniqueVariable {
-        let block_num = self.get_block_num();
-        self.var_manager.get_latest_unique(ident, block_num, self.it.get() + 1)
-    }
-
-    pub fn var_checkpoint(&self) -> HashMap<String, UniqueVariable> {
-        self.var_manager.clone_current_vars()
-    }
-
-    pub fn restore_vars(&mut self, checkpoint: HashMap<String, UniqueVariable>) {
-        self.var_manager.restore_vars(checkpoint);
+        let inst_num = self.get_inst_num() + 1;
+        if self.is_func.clone() {
+            // Check to see if variable being used is global, and if so has it already been loaded back?
+            self.var_manager.get_current_unique(ident,block_num,inst_num)
+        } else {
+            self.var_manager.get_current_unique(ident,block_num,inst_num)
+        }
     }
 
     pub fn remove_uses(&mut self, uses_to_remove: Vec<(UniqueVariable,usize,usize)>) {
@@ -288,16 +239,8 @@ impl IRGraphManager {
 
     /// Array Manager Specific Functions ///
 
-    pub fn add_array(&mut self, array_ident: String, array_depth: Vec<Number>) {
-        self.array_manager.add_array(array_ident, array_depth);
-    }
-
-    pub fn assign_array_address(&mut self, array_ident: String, uniq_addr: UniqueAddress) {
-        self.array_manager.assign_addr(array_ident, uniq_addr);
-    }
-
-    pub fn get_array_ref(&self, array_ident: String) -> &UniqueArray {
-        self.array_manager.get_array_ref(array_ident)
+    pub fn array_manager(&mut self) -> &mut ArrayManager {
+        &mut self.array_manager
     }
 
     pub fn build_array_inst(&mut self, uniq_array: UniqueArray, val_vec: Vec<Value>, val_to_assign: Option<Value>) -> Vec<Op> {
@@ -305,40 +248,29 @@ impl IRGraphManager {
     }
 
     /// Address Manager ///
+    /// These are all just accessors
 
-    pub fn get_global_addr(&self) -> UniqueAddress {
-        self.addr_manager.get_global_reg()
+    pub fn address_manager(&mut self) -> &mut AddressManager {
+        &mut self.addr_manager
     }
 
-    pub fn get_base_addr(&self) -> UniqueAddress {
-        self.addr_manager.get_base_reg()
+    /// Function Manager Functions ///
+
+    pub fn function_manager(&mut self) -> &mut FunctionManager {
+        &mut self.func_manager
     }
 
-    pub fn get_addr_assignment(&mut self, addr_name: String, size: usize) -> UniqueAddress {
-        self.addr_manager.get_addr_assignment(addr_name, size)
+    pub fn new_function(&mut self, func_name: String) {
+        self.is_func = true;
+        let func = self.func_manager.new_function(&func_name);
+        self.array_manager.add_active_function(func.clone());
+        self.var_manager.add_active_function(func);
     }
 
-    /// Op Dominator Specific Functions ///
-
-    pub fn get_op_dom_manager_mut_ref(&mut self) -> &mut OpDomHandler {
-        &mut self.op_dom_handler
+    pub fn end_function(&mut self) {
+        self.is_func = false;
     }
 
-    pub fn get_op_dom(self) -> OpDomHandler {
-        self.op_dom_handler
-    }
-
-    pub fn get_op_graph(&mut self, op_type: InstTy) -> Option<&mut OpGraph> {
-        self.op_dom_handler.get_op_graph(op_type)
-    }
-
-    pub fn set_op_recovery_point(&mut self) -> OpDomHandler {
-        self.op_dom_handler.set_recovery_point()
-    }
-
-    pub fn restore_op(&mut self, op_dom_handler: OpDomHandler) {
-        self.op_dom_handler.restore(op_dom_handler);
-    }
 }
 
 #[derive(Clone)]
