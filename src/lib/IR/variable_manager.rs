@@ -1,5 +1,5 @@
 use lib::IR::function_manager::{FunctionManager,UniqueFunction};
-use lib::IR::ir::Value;
+use lib::IR::ir::{Value,ValTy};
 use std::collections::HashMap;
 use lib::IR::ir::Op;
 
@@ -150,7 +150,7 @@ impl VariableManager {
         Err(String::from("Error getting mut_uniq_var."))
     }
 
-    pub fn add_variable(&mut self, var: String) {
+    pub fn add_variable(&mut self, var: String, block_num: usize, inst_num: usize) {
         match &mut self.active_func {
             Some(active_func) => {
                 self.var_counter.insert(var.clone(), 0);
@@ -165,7 +165,8 @@ impl VariableManager {
             },
         }
 
-        self.var_manager.insert(var, Vec::new());
+        self.var_manager.insert(var.clone(), Vec::new());
+        self.make_unique_variable(var, Value::new(ValTy::con(0)), block_num, inst_num);
     }
 
     pub fn add_phi_uniq_use(&mut self, uniq: UniqueVariable, block_num: usize, inst_num: usize) -> UniqueVariable {

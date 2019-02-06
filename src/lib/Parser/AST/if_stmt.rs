@@ -121,7 +121,7 @@ impl IfStmt {
         // Clone Main Node Index + add relation statement
         let main_node = irgm.graph_manager().clone_node_index();
 
-        irgm.new_node(NodeType::loop_header);
+        irgm.new_node(String::from("If_Header"), NodeType::loop_header);
         self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
         let loop_header = irgm.graph_manager().clone_node_index();
         irgm.graph_manager().add_edge(main_node, loop_header);
@@ -133,7 +133,7 @@ impl IfStmt {
         let mut else_checkpoint = None;
 
         // Generate if-node-top
-        irgm.new_node(NodeType::if_node);
+        irgm.new_node(String::from("If_Top_Node"), NodeType::if_node);
         let if_node_top = irgm.graph_manager().clone_node_index();
         // Connect Main Node to If-Node-Top
         irgm.graph_manager().add_edge(loop_header,if_node_top);
@@ -150,7 +150,7 @@ impl IfStmt {
                 irgm.variable_manager().restore_vars(main_checkpoint.clone());
 
                 // Generate else-node-top
-                irgm.new_node(NodeType::else_node);
+                irgm.new_node(String::from("Else_Top_Node"), NodeType::else_node);
                 let else_node_top = irgm.graph_manager().clone_node_index();
                 irgm.graph_manager().add_edge(loop_header,else_node_top);
 
@@ -169,7 +169,7 @@ impl IfStmt {
         // TODO : Will i need a clean up cycle to determine branch locations?
 
         // Main branch node after if/else (phi node)
-        irgm.new_node(NodeType::phi_node);
+        irgm.new_node(String::from("Phi_Node"), NodeType::phi_node);
         let phi_node = irgm.graph_manager().clone_node_index();
 
         // Figure out possible phi

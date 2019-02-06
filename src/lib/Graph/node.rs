@@ -4,17 +4,18 @@ use lib::IR::ir_manager::{InstTracker, BlockTracker};
 
 #[derive(Clone)]
 pub struct Node {
+    node_tag: String,
     node_id: NodeId,
     node_data: NodeData,
     node_type: NodeType,
 }
 
 impl Node {
-    pub fn new(it: &mut InstTracker, bt: &mut BlockTracker, node_type: NodeType) -> Self {
+    pub fn new(node_tag: String, it: &mut InstTracker, bt: &mut BlockTracker, node_type: NodeType) -> Self {
         let node_data = NodeData::new(it);
         let node_id = NodeId::new(bt.get());
         bt.increment();
-        Node { node_id, node_data, node_type }
+        Node { node_tag, node_id, node_data, node_type }
     }
 
     pub fn get_mut_data_ref(&mut self) -> &mut BasicBlock {
@@ -32,12 +33,13 @@ impl Node {
 
 impl std::fmt::Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Node: [{}] ( \\l {:?}) \\l", self.node_id.get(), self.node_data.get_ref())
+        write!(f, "Node: [{}] \\l{} ( \\l {:?}) \\l", self.node_id.get(), self.node_tag.clone(), self.node_data.get_ref())
     }
 }
 
 #[derive(Debug,Clone)]
 pub enum NodeType {
+    function_head,
     main_node,
     loop_header,
     if_node,

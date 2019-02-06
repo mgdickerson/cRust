@@ -150,10 +150,10 @@ impl IRGraphManager {
         &mut self.graph_manager
     }
 
-    pub fn new_node(&mut self, node_type: NodeType) -> &NodeIndex {
+    pub fn new_node(&mut self, node_tag: String, node_type: NodeType) -> &NodeIndex {
         let it = &mut self.it;
         let bt = &mut self.bt;
-        self.graph_manager.new_node(it, bt, node_type)
+        self.graph_manager.new_node(node_tag, it, bt, node_type)
     }
 
     /// Tracker Specific Functions ///

@@ -66,19 +66,23 @@ impl Var {
     }
 
     pub fn to_ir(self, irgm: &mut IRGraphManager, is_global: bool, func_name: Option<String>) {
+        let block_num = irgm.get_block_num();
+        let inst_num = irgm.get_inst_num();
+
         for ident in self.var_vec {
             let mut var_name = ident.get_value();
 
             if !is_global {
-                if irgm.variable_manager().is_valid_variable(var_name.clone()) {
+                if irgm.variable_manager().active_function().check_global(&var_name) {
                     // this variable is already a global variable, send error.
-                    panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
+                    //panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
+                    println!("In function: {}\tVariable: {} is already global.", func_name.clone().unwrap(), var_name.clone());
                 }
 
                 //var_name = func_name.clone().unwrap() + "_" + &var_name;
             }
 
-            irgm.variable_manager().add_variable(var_name);
+            irgm.variable_manager().add_variable(var_name, block_num.clone(), inst_num.clone());
 
             //let inst = irgm.build_op_x_y(Value::new(ValTy::var(unique)), Value::new(ValTy::con(0)), InstTy::mov);
             //current_node.get_mut_data_ref().add_instruction(inst);

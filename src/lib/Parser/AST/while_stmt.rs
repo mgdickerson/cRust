@@ -104,7 +104,7 @@ impl WhileStmt {
         let main_node = irgm.graph_manager().clone_node_index();
 
         // Make loop header
-        irgm.new_node(NodeType::loop_header);
+        irgm.new_node(String::from("While_Header"), NodeType::loop_header);
         // Handy for return instruction later
         self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
         let loop_header = irgm.graph_manager().clone_node_index();
@@ -112,7 +112,7 @@ impl WhileStmt {
         let main_vars = irgm.variable_manager().var_checkpoint();
 
         // Generate loop-body head
-        irgm.new_node(NodeType::while_node);
+        irgm.new_node(String::from("Loop_Head"), NodeType::while_node);
         let loop_node_top = irgm.graph_manager().clone_node_index();
         // Connect main_node to loop_node_top
         irgm.graph_manager().add_edge(loop_header,loop_node_top);
@@ -130,7 +130,7 @@ impl WhileStmt {
         let loop_node_bottom = irgm.graph_manager().clone_node_index();
 
         // Generate phi node
-        irgm.new_node(NodeType::phi_node);
+        irgm.new_node(String::from("Phi_Node"), NodeType::phi_node);
         let branch_node = irgm.graph_manager().clone_node_index();
 
         irgm.graph_manager().add_edge(loop_header,branch_node);

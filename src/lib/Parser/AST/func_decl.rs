@@ -4,7 +4,7 @@ use Parser::AST::func_ident::FuncIdent;
 use Parser::AST::func_body::FuncBody;
 use Parser::AST::var_decl::VarDecl;
 
-use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeType, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 
@@ -140,12 +140,15 @@ impl FuncDecl {
 
         irgm.new_function(func_name.get_value());
 
+        let block_num = irgm.get_block_num();
+        let inst_num = irgm.get_inst_num();
+
         match func_param {
             Some(parameters) => {
                 parameters.get_value()
                     .iter()
                     .for_each(|variable| {
-                        irgm.variable_manager().add_variable(variable.get_value());
+                        irgm.variable_manager().add_variable(variable.get_value(), block_num, inst_num);
                     });
             },
             None => {
@@ -157,29 +160,8 @@ impl FuncDecl {
             var.to_ir(irgm, false, Some(func_name.get_value()));
         }
 
-        /* Currently Need this out of instruction pool
-        match func_param {
-            Some(param) => {
-                for p in param.get_value() {
-                    let param_ident = String::from("param_") + &p.get_value();
-                    if irgm.get_var_manager_mut_ref().is_valid_variable(param_ident.clone()) {
-                        // this variable is already a global variable, send error.
-                        panic!("{} local variable {} is already a global variable.", func_name_string.clone(), param_ident.clone());
-                    }
-
-                    let func_param_name = func_name_string.clone() + "_" + &param_ident;
-                    irgm.get_var_manager_mut_ref().add_variable(func_param_name);
-                }
-            },
-            None => {
-                // Fall through
-            },
-        }
-
-        for var in self.varDecl {
-            var.to_ir(irgm,false,Some(func_name_string.clone()));
-        }
-        */
+        irgm.new_node(func_name.get_value(), NodeType::function_head);
+        self.funcBody.to_ir(irgm);
 
         irgm.end_function();
     }

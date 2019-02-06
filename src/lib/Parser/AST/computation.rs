@@ -5,7 +5,7 @@ use Parser::AST::var_decl::VarDecl;
 use Parser::AST::func_decl::FuncDecl;
 use Parser::AST::func_body::FuncBody;
 
-use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeType, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 use lib::Utility::display;
@@ -160,6 +160,7 @@ impl Comp {
             func.to_ir(&mut ir_graph_manager);
         }
 
+        ir_graph_manager.new_node(String::from("Main"), NodeType::main_node);
         self.funcBody.to_ir(&mut ir_graph_manager);
 
         //println!("{:?}", irgmanager.get_var_manager_mut_ref());

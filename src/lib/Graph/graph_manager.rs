@@ -13,15 +13,15 @@ pub struct GraphManager {
 
 impl GraphManager {
     pub fn new(mut graph: Graph<Node,i32>, it: &mut InstTracker, bt: &mut BlockTracker) -> Self {
-        let current_node = Node::new(it,bt, NodeType::main_node);
+        let current_node = Node::new(String::from("Test_Node"), it, bt, NodeType::main_node);
         let current_node_index = graph.add_node(current_node);
         GraphManager { graph, current_node_index }
     }
 
     // -- Node Related Functions -- //
 
-    pub fn new_node(&mut self, it: &mut InstTracker, bt: &mut BlockTracker, node_type: NodeType) -> &mut NodeIndex {
-        let current_node = Node::new(it, bt, node_type);
+    pub fn new_node(&mut self, node_tag: String, it: &mut InstTracker, bt: &mut BlockTracker, node_type: NodeType) -> &mut NodeIndex {
+        let current_node = Node::new(node_tag, it, bt, node_type);
         self.current_node_index = self.graph.add_node(current_node);
         self.get_mut_ref_current_node_index()
     }
