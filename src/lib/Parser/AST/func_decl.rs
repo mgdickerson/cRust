@@ -140,6 +140,23 @@ impl FuncDecl {
 
         irgm.new_function(func_name.get_value());
 
+        match func_param {
+            Some(parameters) => {
+                parameters.get_value()
+                    .iter()
+                    .for_each(|variable| {
+                        irgm.variable_manager().add_variable(variable.get_value());
+                    });
+            },
+            None => {
+                // Pass through
+            },
+        }
+
+        for var in self.varDecl {
+            var.to_ir(irgm, false, Some(func_name.get_value()));
+        }
+
         /* Currently Need this out of instruction pool
         match func_param {
             Some(param) => {

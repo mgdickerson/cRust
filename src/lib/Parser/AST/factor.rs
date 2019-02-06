@@ -89,11 +89,7 @@ impl Factor {
                     let block_num = irgm.get_block_num();
                     let inst_num = irgm.get_inst_num() + 1;
                     return Some(Value::new(
-                        ValTy::var(irgm.variable_manager()
-                            .get_current_unique(result.get_value(),
-                                                block_num,
-                                                inst_num)
-                            .clone())));
+                        ValTy::var(irgm.get_current_unique(result.get_value()).clone())));
                 }
 
                 let val_array = expr_array.iter()

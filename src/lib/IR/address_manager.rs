@@ -34,11 +34,11 @@ impl AddressManager {
         UniqueAddress::new(String::from("baseReg"), self.base_addr.clone())
     }
 
-    pub fn get_addr_assignment(&mut self, addr_name: String, size: usize) -> UniqueAddress {
+    pub fn get_addr_assignment(&mut self, addr_name: &String, size: usize) -> UniqueAddress {
         let current_clone = self.current_available_addr.clone();
         self.current_available_addr += size;
 
-        UniqueAddress::new(addr_name, current_clone)
+        UniqueAddress::new(addr_name.clone(), current_clone)
     }
 }
 

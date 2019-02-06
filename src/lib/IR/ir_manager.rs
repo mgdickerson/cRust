@@ -181,12 +181,29 @@ impl IRGraphManager {
         &mut self.var_manager
     }
 
-    pub fn get_current_unique(&mut self, ident: String, block_num:usize, inst_num: usize) -> &UniqueVariable {
-        let block_num = self.get_block_num();
-        let inst_num = self.get_inst_num() + 1;
+    pub fn get_current_unique(&mut self, ident: String) -> &UniqueVariable {
+        let mut block_num = self.get_block_num();
+        let mut inst_num = self.get_inst_num() + 1;
         if self.is_func.clone() {
             // Check to see if variable being used is global, and if so has it already been loaded back?
-            self.var_manager.get_current_unique(ident,block_num,inst_num)
+            let is_local = self.var_manager.active_function().check_local(&ident);
+            if is_local {
+                self.var_manager.get_current_unique(ident,block_num,inst_num)
+            } else {
+                let global_already_added = self.var_manager.active_function().check_global(&ident);
+                if !global_already_added {
+                    let var_addr = Value::new(ValTy::adr(self.addr_manager.get_addr_assignment(&ident, 4)));
+                    let inst = self.build_op_y(var_addr, InstTy::load);
+                    let inst_val = Value::new(ValTy::op(inst.clone()));
+                    self.var_manager.make_unique_variable(ident.clone(), inst_val, block_num, inst_num);
+                    self.graph_manager.add_instruction(inst);
+                    self.inc_block_tracker();
+                    self.inc_inst_tracker();
+                    block_num = self.get_block_num();
+                    inst_num = self.get_inst_num() + 1;
+                }
+                self.var_manager.get_current_unique(ident,block_num,inst_num)
+            }
         } else {
             self.var_manager.get_current_unique(ident,block_num,inst_num)
         }

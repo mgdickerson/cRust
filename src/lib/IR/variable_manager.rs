@@ -34,6 +34,17 @@ impl VariableManager {
         }
     }
 
+    pub fn active_function(&mut self) -> &mut UniqueFunction {
+        match &mut self.active_func {
+            Some(func) => {
+                func
+            },
+            None => {
+                panic!("Should have active function before referencing it.");
+            }
+        }
+    }
+
     pub fn get_active_function(&mut self) -> UniqueFunction {
         let uniq_func = self.active_func.clone().expect("Should have function to recover.");
         match &mut self.active_func {

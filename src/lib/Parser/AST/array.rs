@@ -147,7 +147,7 @@ impl Array {
             irgm.array_manager().add_array(var_name.clone(), self.arrayDepthVec.clone());
             let arr_size = irgm.array_manager().get_array_ref(var_name.clone()).get_size();
 
-            let addr = irgm.address_manager().get_addr_assignment(var_name.clone(), arr_size);
+            let addr = irgm.address_manager().get_addr_assignment(&var_name, arr_size);
             irgm.array_manager().assign_addr(var_name, addr);
         }
     }

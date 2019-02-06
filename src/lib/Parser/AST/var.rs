@@ -75,7 +75,7 @@ impl Var {
                     panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
                 }
 
-                var_name = func_name.clone().unwrap() + "_" + &var_name;
+                //var_name = func_name.clone().unwrap() + "_" + &var_name;
             }
 
             irgm.variable_manager().add_variable(var_name);
