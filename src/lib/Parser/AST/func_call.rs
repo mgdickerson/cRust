@@ -94,4 +94,21 @@ impl FuncCall {
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
     }
+
+    pub fn to_ir(self, irgm: &mut IRGraphManager) {
+
+        // TODO : Need to grab the function from function list first.
+        print!("Affected Globals: ");
+        for global in irgm.variable_manager().active_function().list_affected_globals() {
+            print!("{}  ", global);
+        }
+        println!();
+        print!("Parameters to Pass: ");
+        for param in irgm.variable_manager().active_function().list_func_param() {
+            print!("{}  ", param);
+        }
+        println!();
+        print!("Local Variables: ");
+
+    }
 }

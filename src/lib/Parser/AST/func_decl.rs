@@ -148,7 +148,7 @@ impl FuncDecl {
                 parameters.get_value()
                     .iter()
                     .for_each(|variable| {
-                        irgm.variable_manager().add_variable(variable.get_value(), block_num, inst_num);
+                        irgm.variable_manager().add_parameters(variable.get_value(), block_num, inst_num);
                     });
             },
             None => {
@@ -163,6 +163,7 @@ impl FuncDecl {
         irgm.new_node(func_name.get_value(), NodeType::function_head);
         self.funcBody.to_ir(irgm);
 
-        irgm.end_function();
+        let uniq_func = irgm.end_function();
+        irgm.function_manager().add_func_to_manager(uniq_func);
     }
 }

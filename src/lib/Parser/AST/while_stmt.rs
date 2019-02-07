@@ -109,7 +109,7 @@ impl WhileStmt {
         self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
         let loop_header = irgm.graph_manager().clone_node_index();
         irgm.graph_manager().add_edge(main_node, loop_header);
-        let main_vars = irgm.variable_manager().var_checkpoint();
+        let (main_vars, func_param, func_global) = irgm.variable_manager().var_checkpoint();
 
         // Generate loop-body head
         irgm.new_node(String::from("Loop_Head"), NodeType::while_node);
@@ -122,9 +122,9 @@ impl WhileStmt {
         // Add return branch instruction to "new main node"
         let bra_return = irgm.build_op_y(Value::new(ValTy::con(-1)),InstTy::bra);
         irgm.graph_manager().add_instruction(bra_return);
-        let loop_vars = irgm.variable_manager().var_checkpoint();
+        let (loop_vars, _, _) = irgm.variable_manager().var_checkpoint();
 
-        irgm.variable_manager().restore_vars(main_vars.clone());
+        irgm.variable_manager().restore_vars((main_vars.clone(), func_param.clone(), func_global.clone()));
 
         // Generate new loop bottom node
         let loop_node_bottom = irgm.graph_manager().clone_node_index();

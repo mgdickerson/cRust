@@ -106,7 +106,7 @@ impl FuncBody {
                     wh_st.to_ir(irgm);
                 },
                 Stmt::funcCall(fn_cl) => {
-
+                    fn_cl.to_ir(irgm);
                 },
                 Stmt::return_stmt(rt) => {
 

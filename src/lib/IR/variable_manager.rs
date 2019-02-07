@@ -63,12 +63,29 @@ impl VariableManager {
         }).collect::<Vec<String>>()
     }
 
-    pub fn var_checkpoint(&self) -> HashMap<String, UniqueVariable> {
-        self.current_vars.clone()
+    pub fn var_checkpoint(&self) -> (HashMap<String, UniqueVariable>, Option<HashMap<String,bool>>, Option<HashMap<String,bool>>) {
+        match &self.active_func {
+            Some(func) => {
+                let (param,global) = func.get_load_checkpoint();
+                (self.current_vars.clone(),Some(param),Some(global))
+            },
+            None => {
+                (self.current_vars.clone(), None, None)
+            },
+        }
     }
 
-    pub fn restore_vars(&mut self, checkpoint: HashMap<String, UniqueVariable>) {
-        self.current_vars = checkpoint;
+    pub fn restore_vars(&mut self, checkpoint: (HashMap<String, UniqueVariable>, Option<HashMap<String,bool>>, Option<HashMap<String,bool>>)) {
+        let (current_vars, param, global) = checkpoint;
+        self.current_vars = current_vars;
+        match &mut self.active_func {
+            Some(func) => {
+                func.recover_load_checkpoint((param.unwrap(),global.unwrap()));
+            },
+            None => {
+                // Do Nothing
+            },
+        }
     }
 
     pub fn build_phi_pairs(left_set: HashMap<String, UniqueVariable>, right_set: HashMap<String, UniqueVariable>)
@@ -148,6 +165,19 @@ impl VariableManager {
         }
 
         Err(String::from("Error getting mut_uniq_var."))
+    }
+
+    pub fn add_parameters(&mut self, param: String, block_num: usize, inst_num: usize) {
+        match &mut self.active_func {
+            Some(active_func) => {
+                self.var_counter.insert(param.clone(), 0);
+                active_func.add_param(&param);
+            },
+            None => panic!("Adding parameters should only ever be called within a function."),
+        }
+
+        self.var_manager.insert(param.clone(), Vec::new());
+        //self.make_unique_variable(param, Value::new(ValTy::con(0)), block_num, inst_num);
     }
 
     pub fn add_variable(&mut self, var: String, block_num: usize, inst_num: usize) {
