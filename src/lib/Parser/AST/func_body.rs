@@ -115,4 +115,25 @@ impl FuncBody {
         }
     }
 
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        for stmt in &self.stmt_vec {
+            match stmt {
+                Stmt::assignment(assign) => {
+                    assign.scan_globals(irgm);
+                },
+                Stmt::if_stmt(if_st) => {
+                    if_st.scan_globals(irgm);
+                },
+                Stmt::while_stmt(wh_st) => {
+                    wh_st.scan_globals(irgm);
+                },
+                Stmt::funcCall(fn_cl) => {
+                    fn_cl.scan_globals(irgm);
+                },
+                Stmt::return_stmt(rt) => {
+                    rt.scan_globals(irgm);
+                },
+            }
+        }
+    }
 }

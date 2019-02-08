@@ -140,11 +140,15 @@ impl Array {
                     panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
                 }
 
-                // Not sure this is necessary.
-                //var_name = func_name.clone().unwrap() + "_" + &var_name;
+                irgm.array_manager().add_array(&var_name, self.arrayDepthVec.clone());
+                let arr_size = irgm.array_manager().get_array_ref(var_name.clone()).get_size();
+
+                let addr = irgm.address_manager().get_addr_assignment(&var_name, arr_size);
+                irgm.array_manager().assign_addr(var_name, addr);
+                return
             }
 
-            irgm.array_manager().add_array(var_name.clone(), self.arrayDepthVec.clone());
+            irgm.array_manager().add_global(&var_name, self.arrayDepthVec.clone());
             let arr_size = irgm.array_manager().get_array_ref(var_name.clone()).get_size();
 
             let addr = irgm.address_manager().get_addr_assignment(&var_name, arr_size);

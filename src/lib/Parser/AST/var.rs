@@ -79,13 +79,11 @@ impl Var {
                     println!("In function: {}\tVariable: {} is already global.", func_name.clone().unwrap(), var_name.clone());
                 }
 
-                //var_name = func_name.clone().unwrap() + "_" + &var_name;
+                irgm.variable_manager().add_variable(var_name, 0, 0);
+                continue
             }
 
-            irgm.variable_manager().add_variable(var_name, block_num.clone(), inst_num.clone());
-
-            //let inst = irgm.build_op_x_y(Value::new(ValTy::var(unique)), Value::new(ValTy::con(0)), InstTy::mov);
-            //current_node.get_mut_data_ref().add_instruction(inst);
+            irgm.variable_manager().add_global(&var_name);
         }
     }
 }

@@ -108,4 +108,9 @@ impl Assignment {
             }
         }
     }
+
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        self.designator.scan_globals(irgm);
+        self.expression.scan_globals(irgm);
+    }
 }

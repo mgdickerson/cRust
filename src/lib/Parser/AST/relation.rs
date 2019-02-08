@@ -91,4 +91,9 @@ impl Relation {
 
         inst_val
     }
+
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        self.leftExp.scan_globals(irgm);
+        self.rightExp.scan_globals(irgm);
+    }
 }

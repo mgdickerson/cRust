@@ -54,4 +54,12 @@ impl ReturnStmt {
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
     }
+
+    pub fn to_ir(self, irgm: &mut IRGraphManager) {
+
+    }
+
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        self.expression.scan_globals(irgm);
+    }
 }

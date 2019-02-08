@@ -27,6 +27,7 @@ var i;
 	while i < y do
 		let x <- x * x
 	od;
+	let a <- a + 4;
 	return x + 4
 	
 };

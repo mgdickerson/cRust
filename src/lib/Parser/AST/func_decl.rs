@@ -139,17 +139,17 @@ impl FuncDecl {
         let (func_name, func_param) = self.funcName.get_value();
 
         irgm.new_function(func_name.get_value());
+        irgm.new_node(func_name.get_value(), NodeType::function_head);
 
-        let block_num = irgm.get_block_num();
-        let inst_num = irgm.get_inst_num();
+        // Scan function for globals used within
+        self.funcBody.scan_globals(irgm);
 
         match func_param {
             Some(parameters) => {
-                parameters.get_value()
-                    .iter()
-                    .for_each(|variable| {
-                        irgm.variable_manager().add_parameters(variable.get_value(), block_num, inst_num);
-                    });
+                parameters.get_value().iter().for_each(|variable| {
+                    irgm.variable_manager().active_function().add_parameter(&variable.get_value());
+                    irgm.variable_manager().add_variable(variable.get_value(), 0, 0);
+                });
             },
             None => {
                 // Pass through
@@ -160,7 +160,22 @@ impl FuncDecl {
             var.to_ir(irgm, false, Some(func_name.get_value()));
         }
 
-        irgm.new_node(func_name.get_value(), NodeType::function_head);
+        println!("Adding variables that needs loading: {:?}", irgm.variable_manager().active_function().load_list());
+        for ident in irgm.variable_manager().active_function().load_list() {
+            println!("Var: {}", ident);
+
+            let var_addr = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(&ident, 4)));
+
+            let inst = irgm.build_op_y(var_addr, InstTy::load);
+            let inst_val = Value::new(ValTy::op(inst.clone()));
+
+            let block_num = irgm.get_block_num();
+            let inst_num = irgm.get_inst_num() + 1;
+
+            irgm.variable_manager().make_unique_variable(ident.clone(), inst_val, block_num, inst_num);
+            irgm.graph_manager().add_instruction(inst);
+        }
+
         self.funcBody.to_ir(irgm);
 
         let uniq_func = irgm.end_function();

@@ -98,17 +98,50 @@ impl FuncCall {
     pub fn to_ir(self, irgm: &mut IRGraphManager) {
 
         // TODO : Need to grab the function from function list first.
-        print!("Affected Globals: ");
-        for global in irgm.variable_manager().active_function().list_affected_globals() {
-            print!("{}  ", global);
-        }
-        println!();
-        print!("Parameters to Pass: ");
-        for param in irgm.variable_manager().active_function().list_func_param() {
-            print!("{}  ", param);
-        }
-        println!();
-        print!("Local Variables: ");
 
+        match self.funcName.get_value().as_ref() {
+            "InputNum" => {},
+            "OutputNum" => {},
+            "OutputNewLine" => {},
+            func_name => {
+                let uniq_func = irgm.function_manager().get_mut_function(&self.funcName.get_value());
+
+                print!("Affected Globals: ");
+                for global in uniq_func.list_affected_globals() {
+                    print!("{}  ", global);
+                }
+                println!();
+
+            },
+        }
+    }
+
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        let recursive_call = irgm.variable_manager().active_function().get_name();
+
+        if self.funcName.get_value() == recursive_call {
+            for expr in &self.variables {
+                expr.scan_globals(irgm);
+            }
+
+            // There are no further global items this should call
+            return
+        }
+
+        match self.funcName.get_value().as_ref() {
+            "InputNum" => {},
+            "OutputNum" => {},
+            "OutputNewLine" => {},
+            func_name => {
+                let affected_globals = irgm.function_manager().get_mut_function(&self.funcName.get_value()).list_affected_globals();
+                for global in affected_globals {
+                    irgm.function_manager().get_mut_function(&self.funcName.get_value()).add_to_affected_globals(&global);
+                }
+            },
+        }
+
+        for expr in &self.variables {
+            expr.scan_globals(irgm);
+        }
     }
 }

@@ -8,20 +8,30 @@ use lib::IR::function_manager::{FunctionManager,UniqueFunction};
 #[derive(Debug, Clone)]
 pub struct ArrayManager {
     array_manager: HashMap<String, UniqueArray>,
+    array_global: Vec<String>,
     active_func: Option<UniqueFunction>,
 }
 
 impl ArrayManager {
     pub fn new() -> Self {
-        ArrayManager{ array_manager: HashMap::new(), active_func: None }
+        ArrayManager{ array_manager: HashMap::new(), array_global: Vec::new(), active_func: None }
     }
 
     pub fn add_active_function(&mut self, func: UniqueFunction) {
         self.active_func = Some(func);
     }
 
-    pub fn add_array(&mut self, array_ident: String, array_depth: Vec<Number>) {
-        self.array_manager.insert(array_ident.clone(), UniqueArray::new(array_ident, array_depth, None));
+    pub fn is_global(&self, array_ident: &String) -> bool {
+        self.array_global.contains(array_ident)
+    }
+
+    pub fn add_global(&mut self, array_ident: &String, array_depth: Vec<Number>) {
+        self.array_global.push(array_ident.clone());
+        self.add_array(array_ident, array_depth);
+    }
+
+    pub fn add_array(&mut self, array_ident: &String, array_depth: Vec<Number>) {
+        self.array_manager.insert(array_ident.clone(), UniqueArray::new(array_ident.clone(), array_depth, None));
     }
 
     pub fn assign_addr(&mut self, array_ident: String, uniq_addr: UniqueAddress) {

@@ -126,7 +126,7 @@ impl IfStmt {
         let loop_header = irgm.graph_manager().clone_node_index();
         irgm.graph_manager().add_edge(main_node, loop_header);
 
-        let (main_checkpoint, func_param, func_global) = irgm.variable_manager().var_checkpoint();
+        let main_checkpoint = irgm.variable_manager().var_checkpoint();
 
 
         // Variable holder for else_node_bottom
@@ -143,12 +143,12 @@ impl IfStmt {
         self.funcIfBody.to_ir(irgm);
         let if_node_bottom = irgm.graph_manager().clone_node_index();
 
-        let (if_checkpoint, _, _) = irgm.variable_manager().var_checkpoint();
+        let if_checkpoint = irgm.variable_manager().var_checkpoint();
 
         match self.funcElseBody {
             Some(funcElseBody) => {
                 // TODO : Issue being run in to here. Now that the new Phi value is the "latest" that is being added instead of the correctly reset value from the "main" node. Need to use restore more intelligently.
-                irgm.variable_manager().restore_vars((main_checkpoint.clone(), func_param.clone(), func_global.clone()));
+                irgm.variable_manager().restore_vars(main_checkpoint.clone());
 
                 // Generate else-node-top
                 irgm.new_node(String::from("Else_Top_Node"), NodeType::else_node);
@@ -159,7 +159,7 @@ impl IfStmt {
                 funcElseBody.to_ir(irgm);
                 else_node_bottom = Some(irgm.graph_manager().clone_node_index());
 
-                let (check, _, _) = irgm.variable_manager().var_checkpoint();
+                let check = irgm.variable_manager().var_checkpoint();
                 else_checkpoint = Some(check);
             },
             None => {
@@ -179,7 +179,7 @@ impl IfStmt {
         // Connect if-bottom to phi
         irgm.graph_manager().add_edge(if_node_bottom, phi_node);
 
-        irgm.variable_manager().restore_vars((main_checkpoint.clone(), func_param.clone(), func_global.clone()));
+        irgm.variable_manager().restore_vars(main_checkpoint.clone());
         // Add else node
         match else_node_bottom {
             Some(node) => {
@@ -198,6 +198,19 @@ impl IfStmt {
                 irgm.graph_manager().add_edge(loop_header, phi_node);
 
                 irgm.insert_phi_inst(if_checkpoint, main_checkpoint);
+            },
+        }
+    }
+
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        self.relation.scan_globals(irgm);
+        self.funcIfBody.scan_globals(irgm);
+        match &self.funcElseBody {
+            Some(else_body) => {
+                else_body.scan_globals(irgm);
+            },
+            None => {
+                // Do Nothing
             },
         }
     }

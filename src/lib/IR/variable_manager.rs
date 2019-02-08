@@ -8,12 +8,13 @@ pub struct VariableManager {
     var_manager: HashMap<String, Vec<UniqueVariable>>,
     var_counter: HashMap<String, usize>,
     current_vars: HashMap<String, UniqueVariable>,
+    global_vars: Vec<String>,
     active_func: Option<UniqueFunction>,
 }
 
 impl VariableManager {
     pub fn new() -> Self {
-        VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new(), current_vars: HashMap::new(), active_func: None }
+        VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new(), current_vars: HashMap::new(), global_vars: Vec::new(), active_func: None }
     }
 
     pub fn clone_self(&self) -> VariableManager {
@@ -22,6 +23,10 @@ impl VariableManager {
 
     pub fn get_var_map(self) -> HashMap<String, Vec<UniqueVariable>> {
         self.var_manager
+    }
+
+    pub fn get_var_counter(&self) -> HashMap<String, usize> {
+        self.var_counter.clone()
     }
 
     pub fn add_active_function(&mut self, func: UniqueFunction) {
@@ -57,35 +62,22 @@ impl VariableManager {
         uniq_func
     }
 
+    pub fn is_global(&self, var: &String) -> bool {
+        self.global_vars.contains(var)
+    }
+
     pub fn var_list(&self) -> Vec<String> {
         self.var_manager.iter().map(|(key,value)| {
             key.clone()
         }).collect::<Vec<String>>()
     }
 
-    pub fn var_checkpoint(&self) -> (HashMap<String, UniqueVariable>, Option<HashMap<String,bool>>, Option<HashMap<String,bool>>) {
-        match &self.active_func {
-            Some(func) => {
-                let (param,global) = func.get_load_checkpoint();
-                (self.current_vars.clone(),Some(param),Some(global))
-            },
-            None => {
-                (self.current_vars.clone(), None, None)
-            },
-        }
+    pub fn var_checkpoint(&self) -> HashMap<String, UniqueVariable> {
+        self.current_vars.clone()
     }
 
-    pub fn restore_vars(&mut self, checkpoint: (HashMap<String, UniqueVariable>, Option<HashMap<String,bool>>, Option<HashMap<String,bool>>)) {
-        let (current_vars, param, global) = checkpoint;
-        self.current_vars = current_vars;
-        match &mut self.active_func {
-            Some(func) => {
-                func.recover_load_checkpoint((param.unwrap(),global.unwrap()));
-            },
-            None => {
-                // Do Nothing
-            },
-        }
+    pub fn restore_vars(&mut self, checkpoint: HashMap<String, UniqueVariable>) {
+        self.current_vars = checkpoint;
     }
 
     pub fn build_phi_pairs(left_set: HashMap<String, UniqueVariable>, right_set: HashMap<String, UniqueVariable>)
@@ -123,11 +115,13 @@ impl VariableManager {
                 // Add/Update to current_vars map
                 self.current_vars.insert(key.clone(), uniq);
 
-                return self.var_manager.get(&key).unwrap().get(current_count).expect("Expected current count to work.");
+                //println!("Current Key: {}\tCurrent Count: {}", key, current_count);
+
+                return self.var_manager.get(&key).unwrap().last().expect("There should be a last as one was just inserted.");
             }
             None => {
                 // variable not found in list, throw error
-                panic!("Error: variable ({}) not found within list of variables.");
+                panic!("Error: variable ({}) not found within list of variables.", ident);
             }
         }
     }
@@ -157,6 +151,8 @@ impl VariableManager {
     }
 
     pub fn get_mut_uniq_var(&mut self, uniq_lookup: UniqueVariable) -> Result<&mut UniqueVariable, String> {
+        let error_message = String::from("Error getting mut_uniq_var ") + &uniq_lookup.base_ident;
+
         let uniq_vec = self.var_manager.get_mut(&uniq_lookup.get_base_ident()).unwrap();
         for uniq in uniq_vec {
             if uniq_lookup.get_ident() == uniq.get_ident() {
@@ -164,27 +160,13 @@ impl VariableManager {
             }
         }
 
-        Err(String::from("Error getting mut_uniq_var."))
-    }
-
-    pub fn add_parameters(&mut self, param: String, block_num: usize, inst_num: usize) {
-        match &mut self.active_func {
-            Some(active_func) => {
-                self.var_counter.insert(param.clone(), 0);
-                active_func.add_param(&param);
-            },
-            None => panic!("Adding parameters should only ever be called within a function."),
-        }
-
-        self.var_manager.insert(param.clone(), Vec::new());
-        //self.make_unique_variable(param, Value::new(ValTy::con(0)), block_num, inst_num);
+        Err(error_message)
     }
 
     pub fn add_variable(&mut self, var: String, block_num: usize, inst_num: usize) {
         match &mut self.active_func {
             Some(active_func) => {
                 self.var_counter.insert(var.clone(), 0);
-                active_func.add_local(&var);
             },
             None => {
                 let var_already_added = self.var_counter.insert(var.clone(), 0);
@@ -197,6 +179,11 @@ impl VariableManager {
 
         self.var_manager.insert(var.clone(), Vec::new());
         self.make_unique_variable(var, Value::new(ValTy::con(0)), block_num, inst_num);
+    }
+
+    pub fn add_global(&mut self, var: &String) {
+        self.global_vars.push(var.clone());
+        self.add_variable(var.clone(), 0, 0);
     }
 
     pub fn add_phi_uniq_use(&mut self, uniq: UniqueVariable, block_num: usize, inst_num: usize) -> UniqueVariable {

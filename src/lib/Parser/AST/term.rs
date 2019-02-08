@@ -45,7 +45,7 @@ impl Term {
         }
     }
 
-    pub fn get_value(&self) -> Vec<TermList>  {
+    pub fn get_value(&self) -> Vec<TermList> {
         return self.term_list.clone()
     }
 
@@ -53,7 +53,7 @@ impl Term {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, irgm : &mut IRGraphManager) -> Option<Value> {
+    pub fn to_ir(self, irgm: &mut IRGraphManager) -> Option<Value> {
         let mut previous_term = None;
         let mut current_math_op = None;
 
@@ -90,4 +90,16 @@ impl Term {
         previous_term
     }
 
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        for term in &self.term_list {
+            match term {
+                TermList::factor(factor) => {
+                    factor.scan_globals(irgm);
+                },
+                _ => {
+                    // Does not produce a global
+                },
+            }
+        }
+    }
 }

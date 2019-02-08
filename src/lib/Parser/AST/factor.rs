@@ -132,4 +132,21 @@ impl Factor {
         None
     }
 
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        match &self.factor {
+            Some(FactorType::desig(desig)) => {
+                desig.scan_globals(irgm);
+            },
+            Some(FactorType::expr(expr)) => {
+                expr.scan_globals(irgm);
+            }
+            Some(FactorType::func_call(func)) => {
+                func.scan_globals(irgm);
+            }
+            _ => {
+                // nothing else would produce a variable
+            }
+        }
+    }
+
 }

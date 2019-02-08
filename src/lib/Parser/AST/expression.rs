@@ -91,4 +91,17 @@ impl Expression {
         previous_expr
     }
 
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        for expr in &self.exp_list {
+            match expr {
+                ExpList::term(term) => {
+                    term.scan_globals(irgm);
+                },
+                _ => {
+                    // These do not return variables.
+                },
+            }
+        }
+    }
+
 }
