@@ -56,8 +56,7 @@ impl Relation {
             expect("Expected Right Comp Op, none found");
 
         let inst = irgm.build_op_x_y(leftCompVal,rightCompVal,InstTy::cmp);
-        irgm.graph_manager().add_instruction(inst.clone());
-        let inst_val = Value::new(ValTy::op(inst));
+        let inst_val = irgm.graph_manager().add_instruction(inst);
 
         match self.relOp.get_contents().as_ref() {
             "==" => {

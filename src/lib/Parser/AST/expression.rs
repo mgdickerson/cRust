@@ -66,15 +66,15 @@ impl Expression {
                             let current_expr = term.to_ir(irgm).expect("Expected Valid Value, found None.");
                             let inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::add);
 
-                            irgm.graph_manager().add_instruction(inst.clone());
-                            previous_expr = Some(Value::new(ValTy::op(inst)));
+                            let inst_val = irgm.graph_manager().add_instruction(inst);
+                            previous_expr = Some(inst_val);
                         },
                         Some(TokenType::SubOp) => {
                             let current_expr = term.to_ir(irgm).expect("Expected Valid Value, found None.");
                             let inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::sub);
 
-                            irgm.graph_manager().add_instruction(inst.clone());
-                            previous_expr = Some(Value::new(ValTy::op(inst)));
+                            let inst_val = irgm.graph_manager().add_instruction(inst);
+                            previous_expr = Some(inst_val);
                         },
                         None => {
                             previous_expr = term.to_ir(irgm);

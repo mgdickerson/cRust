@@ -72,11 +72,12 @@ impl GraphManager {
 
     // -- Convenience Feature for adding inst -- //
 
-    pub fn add_instruction(&mut self, inst: Op) {
+    pub fn add_instruction(&mut self, inst: Op) -> Value {
         self.graph.node_weight_mut(self.current_node_index)
             .expect("Expected Node to have weight, none was found while adding instruction.")
             .get_mut_data_ref()
-            .add_instruction(inst);
+            .add_instruction(inst.clone());
+        Value::new(ValTy::op(inst))
     }
 
     pub fn insert_instruction(&mut self, position: usize, inst: Op) {

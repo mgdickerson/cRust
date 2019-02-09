@@ -1,5 +1,6 @@
 use lib::IR::variable_manager::{VariableManager, UniqueVariable};
 use std::collections::HashMap;
+use petgraph::prelude::NodeIndex;
 
 #[derive(Debug, Clone)]
 pub struct FunctionManager {
@@ -11,8 +12,8 @@ impl FunctionManager {
         FunctionManager { func_manager: HashMap::new() }
     }
 
-    pub fn new_function(&mut self, func_name: &String) -> UniqueFunction {
-        UniqueFunction::new(func_name.clone())
+    pub fn new_function(&mut self, func_name: &String, func_index: & NodeIndex) -> UniqueFunction {
+        UniqueFunction::new(func_name.clone(), func_index)
     }
 
     pub fn get_mut_function(&mut self, func_name: & String) -> &mut UniqueFunction {
@@ -31,19 +32,21 @@ impl FunctionManager {
 #[derive(Debug, Clone)]
 pub struct UniqueFunction {
     func_name: String,
-    recovery_point: Option<HashMap<String, Vec<UniqueVariable>>>,
-
-    // TODO : Switch to a simpler ToLoad: Vec<String>, AffectedGlobals: Vec<String>, system. reduce struct overhead.
-    variables_to_load: Vec<String>,
+    func_index: NodeIndex,
+    recovery_point: Option<(HashMap<String, Vec<UniqueVariable>>, HashMap<String, UniqueVariable>)>,
+    params_to_load: Vec<String>,
     affected_globals: Vec<String>,
+    has_return: bool,
 }
 
 impl UniqueFunction {
-    pub fn new(func_name: String) -> Self {
+    pub fn new(func_name: String, func_index: & NodeIndex) -> Self {
         UniqueFunction { func_name,
             recovery_point: None,
-            variables_to_load: Vec::new(),
+            func_index: func_index.clone(),
+            params_to_load: Vec::new(),
             affected_globals: Vec::new(),
+            has_return: false,
         }
     }
 
@@ -52,35 +55,47 @@ impl UniqueFunction {
     }
 
     pub fn add_parameter(&mut self, param: &String) {
-        self.variables_to_load.push(param.clone());
+        if self.params_to_load.contains(param) {
+            return;
+        }
+
+        self.params_to_load.push(param.clone());
     }
 
     pub fn add_global(&mut self, global_base: &String) {
+        if self.affected_globals.contains(global_base) {
+            return;
+        }
+
         self.affected_globals.push(global_base.clone());
-        self.variables_to_load.push(global_base.clone());
+        //self.variables_to_load.push(global_base.clone());
     }
 
-    pub fn add_to_affected_globals(&mut self, global: &String) {
-        self.affected_globals.push(global.clone());
-    }
-
-    pub fn load_list(&self) -> Vec<String> {
-        self.variables_to_load.clone()
+    pub fn load_param_list(&self) -> Vec<String> {
+        self.params_to_load.clone()
     }
 
     pub fn check_global(&self, global_base: &String) -> bool {
         self.affected_globals.contains(global_base)
     }
 
-    pub fn list_affected_globals(&self) -> Vec<String> {
+    pub fn load_globals_list(&self) -> Vec<String> {
         self.affected_globals.clone()
     }
 
-    pub fn add_checkpoint(&mut self, checkpoint: HashMap<String, Vec<UniqueVariable>>) {
+    pub fn add_checkpoint(&mut self, checkpoint: (HashMap<String, Vec<UniqueVariable>>, HashMap<String, UniqueVariable>)) {
         self.recovery_point = Some(checkpoint);
     }
 
-    pub fn recover_checkpoint(&self) -> HashMap<String, Vec<UniqueVariable>> {
+    pub fn recover_checkpoint(&self) -> (HashMap<String, Vec<UniqueVariable>>, HashMap<String, UniqueVariable>) {
         self.recovery_point.clone().expect("Should have a recovery point before requesting one.")
+    }
+
+    pub fn has_return(&self) -> bool {
+        self.has_return.clone()
+    }
+
+    pub fn set_return(&mut self, ret: bool) {
+        self.has_return = ret;
     }
 }

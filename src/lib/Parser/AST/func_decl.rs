@@ -138,8 +138,8 @@ impl FuncDecl {
     pub fn to_ir(self, irgm : &mut IRGraphManager) {
         let (func_name, func_param) = self.funcName.get_value();
 
-        irgm.new_function(func_name.get_value());
-        irgm.new_node(func_name.get_value(), NodeType::function_head);
+        let func_index = irgm.new_node(func_name.get_value(), NodeType::function_head).clone();
+        irgm.new_function(func_name.get_value(), &func_index);
 
         // Scan function for globals used within
         self.funcBody.scan_globals(irgm);
@@ -160,8 +160,13 @@ impl FuncDecl {
             var.to_ir(irgm, false, Some(func_name.get_value()));
         }
 
-        println!("Adding variables that needs loading: {:?}", irgm.variable_manager().active_function().load_list());
-        for ident in irgm.variable_manager().active_function().load_list() {
+        for global in irgm.variable_manager().active_function().load_globals_list() {
+            // TODO : Need to load globals
+        }
+
+        println!("Adding variables that needs loading: {:?}", irgm.variable_manager().active_function().load_param_list());
+        // TODO : Need to do an add instruction with the FP or Global pointer offset
+        for ident in irgm.variable_manager().active_function().load_param_list() {
             println!("Var: {}", ident);
 
             let var_addr = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(&ident, 4)));

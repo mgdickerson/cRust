@@ -1,6 +1,7 @@
 use lib::IR::variable_manager::UniqueVariable;
 use lib::IR::array_manager::UniqueArray;
 use lib::IR::address_manager::UniqueAddress;
+use lib::IR::ret_register::RetRegister;
 
 #[derive(Debug,Clone,PartialEq)]
 pub struct Value {
@@ -25,6 +26,7 @@ pub enum ValTy {
     var(UniqueVariable),
     adr(UniqueAddress),
     arr(UniqueArray),
+    ret(RetRegister),
     // TODO : Add register type specifically for return
 }
 
@@ -42,6 +44,7 @@ impl ValTy {
             },
             ValTy::adr(adr) => adr.to_string(),
             ValTy::arr(arr) => arr.to_string(),
+            ValTy::ret(ret) => ret.to_string(),
         }
     }
 }
@@ -51,7 +54,7 @@ pub struct Op {
     // Value Operands
     x_val: Option<Box<Value>>,
     y_val: Option<Box<Value>>,
-    special_val: Option<Vec<Box<Value>>>,
+    special_val: Option<String>,
 
     // General Information about self
     inst_number: usize,
@@ -65,7 +68,7 @@ pub struct Op {
 impl Op {
     pub fn new(x_val: Option<Box<Value>>,
                y_val: Option<Box<Value>>,
-               special_val: Option<Vec<Box<Value>>>,
+               special_val: Option<String>,
                inst_number: usize,
                block_number: usize,
                inst_type: InstTy) -> Self
@@ -107,8 +110,12 @@ impl Op {
                 p_command = String::from("call ");
                 match special_val_string {
                     // TODO : Still need to fix this.
-                    Some(val_vec) => {},
-                    None => {},
+                    Some(val_str) => {
+                        p_command += &val_str;
+                    },
+                    None => {
+                        panic!("Should probably always have a string value.");
+                    },
                 }
             }
 
@@ -120,29 +127,18 @@ impl Op {
 
     // TODO : Need to make another generalization here. Instead of adding use when variable
     // TODO : is called, add use when variable is used in one of these build ops.
-    pub fn build_op(inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
-        Op::new(None,None,None,inst_number,block_number,inst_type)
-    }
-
-    pub fn build_op_x(x_val: Value, inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
-        Op::new(Some(Box::new(x_val)),None,None,inst_number,block_number,inst_type)
-    }
-
-    pub fn build_op_x_y(x_val: Value, y_val: Value, inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
-        Op::new(Some(Box::new(x_val)),
-                Some(Box::new(y_val)),
-                None,
+    pub fn build_op(x_val: Option<Box<Value>>,
+                    y_val: Option<Box<Value>>,
+                    special_val: Option<String>,
+                    block_number: usize,
+                    inst_number: usize,
+                    inst_type: InstTy) -> Op {
+        Op::new(x_val,
+                y_val,
+                special_val,
                 inst_number,
                 block_number,
                 inst_type)
-    }
-
-    pub fn build_op_y(y_val: Value, inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
-        Op::new(None, Some(Box::new(y_val)), None, inst_number, block_number, inst_type)
-    }
-
-    pub fn build_spec_op(special_val: Vec<Box<Value>>, inst_number: usize, block_number: usize, inst_type: InstTy) -> Op {
-        Op::new(None,None,Some(special_val),inst_number,block_number,inst_type)
     }
 
     pub fn to_string(&self) -> String {
@@ -287,7 +283,7 @@ pub enum InstTy {
     store,
     mov,
 
-    /// Op [x] ///
+    /// Op Str ///
     call,
 }
 

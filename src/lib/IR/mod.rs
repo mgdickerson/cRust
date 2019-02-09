@@ -6,6 +6,7 @@ pub mod variable_manager;
 pub mod address_manager;
 pub mod operator_dominator;
 pub mod function_manager;
+pub mod ret_register;
 
 extern crate petgraph;
 use petgraph::Graph;

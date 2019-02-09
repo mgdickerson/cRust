@@ -100,7 +100,6 @@ impl Assignment {
             let uniq_arr = irgm.array_manager().get_array_ref(result.get_value()).clone();
             let inst_list = irgm.build_array_inst(uniq_arr, val_array, Some(expr_value));
 
-            // TODO : Not sure why this is here, but it seems important.
             let ret_val = Value::new(ValTy::op(inst_list.last().expect("There should be a final Op.").clone()));
 
             for inst in inst_list {

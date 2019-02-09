@@ -33,7 +33,7 @@ impl VariableManager {
         self.active_func = Some(func);
         match &mut self.active_func {
             Some(uniq_func) => {
-                uniq_func.add_checkpoint(self.var_manager.clone());
+                uniq_func.add_checkpoint((self.var_manager.clone(), self.current_vars.clone()));
             },
             None => panic!("Just added, this should not fail."),
         }
@@ -54,7 +54,9 @@ impl VariableManager {
         let uniq_func = self.active_func.clone().expect("Should have function to recover.");
         match &mut self.active_func {
             Some(func) => {
-                self.var_manager = func.recover_checkpoint();
+                let (var_manager, current_vars) = func.recover_checkpoint();
+                self.var_manager = var_manager;
+                self.current_vars = current_vars;
             },
             None => panic!("Should have failed when cloning."),
         }

@@ -95,7 +95,7 @@ impl ArrayManager {
         match &value_to_assign {
             Some(val) => {
                 let store_inst = irgm.build_op_x_y(val.clone(), adda_val, InstTy::store);
-                inst_vec.push(store_inst);
+                inst_vec.push(store_inst.clone());
             },
             None => {
                 let load_inst = irgm.build_op_y(adda_val, InstTy::load);

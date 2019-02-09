@@ -56,10 +56,15 @@ impl ReturnStmt {
     }
 
     pub fn to_ir(self, irgm: &mut IRGraphManager) {
+        let ret_val = self.expression.to_ir(irgm);
+
+        // This will be a special instruction that always returns values on register R27;
+        let ret_inst = irgm.build_op_x(ret_val.expect("return calls should always return an expr"), InstTy::ret);
 
     }
 
     pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        irgm.variable_manager().active_function().set_return(true);
         self.expression.scan_globals(irgm);
     }
 }

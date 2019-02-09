@@ -89,7 +89,7 @@ impl Factor {
                     let block_num = irgm.get_block_num();
                     let inst_num = irgm.get_inst_num() + 1;
                     return Some(Value::new(
-                        ValTy::var(irgm.get_current_unique(result.get_value()).clone())));
+                        ValTy::var(irgm.get_current_unique(&result.get_value()).clone())));
                 }
 
                 let val_array = expr_array.iter()
@@ -113,11 +113,7 @@ impl Factor {
                 return Some(Value::new(ValTy::con(result)));
             },
             Some(FactorType::func_call(func)) => {
-                // TODO : This is a rough impl, just to get the "call" to print out.
-                // TODO : Still needs to be implemented.
-                let inst = irgm.build_spec_op(Vec::new(), InstTy::call);
-                irgm.graph_manager().add_instruction(inst.clone());
-                return Some(Value::new(ValTy::op(inst)));
+                return func.to_ir(irgm);
             },
             Some(FactorType::expr(expr)) => {
                 return expr.to_ir(irgm);

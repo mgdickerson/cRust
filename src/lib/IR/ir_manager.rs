@@ -65,35 +65,40 @@ impl IRGraphManager {
         }
     }
 
+    pub fn is_func(&self) -> bool {
+        self.is_func
+    }
+
     /// Op Specific Functions ///
 
     pub fn build_op(&mut self, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
-        Op::build_op(self.get_inst_num(), self.get_block_num(), inst_type)
+        Op::build_op(None, None, None, self.get_block_num(), self.get_inst_num(), inst_type)
     }
 
     pub fn build_op_x(&mut self, x_val: Value, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
-        Op::build_op_x(x_val,self.get_inst_num(),self.get_block_num(),inst_type)
+        Op::build_op(Some(Box::new(x_val)), None, None, self.get_block_num(), self.get_inst_num(), inst_type)
     }
 
     pub fn build_op_x_y(&mut self, x_val: Value, y_val: Value, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
-        Op::build_op_x_y(x_val,
-                         y_val,
-                         self.get_inst_num(),
-                         self.get_block_num(),
-                         inst_type)
+        Op::build_op(Some(Box::new(x_val)),
+                     Some(Box::new(y_val)),
+                     None,
+                     self.get_block_num(),
+                     self.get_inst_num(),
+                     inst_type)
     }
 
     pub fn build_op_y(&mut self, y_val: Value, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
-        Op::build_op_y(y_val, self.get_inst_num(), self.get_block_num(), inst_type)
+        Op::build_op(None, Some(Box::new(y_val)), None, self.get_block_num(), self.get_inst_num(), inst_type)
     }
 
-    pub fn build_spec_op(&mut self, special_val: Vec<Box<Value>>, inst_type: InstTy) -> Op {
+    pub fn build_spec_op(&mut self, special_val: &String, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
-        Op::build_spec_op(special_val,self.get_inst_num(),self.get_block_num(),inst_type)
+        Op::build_op(None, None, Some(special_val.clone()), self.get_block_num(), self.get_inst_num(), inst_type)
     }
 
     pub fn loop_variable_correction(&mut self, vars: Vec<(UniqueVariable,usize)>) -> Vec<(UniqueVariable,usize,usize)> {
@@ -181,10 +186,10 @@ impl IRGraphManager {
         &mut self.var_manager
     }
 
-    pub fn get_current_unique(&mut self, ident: String) -> &UniqueVariable {
+    pub fn get_current_unique(&mut self, ident: & String) -> &UniqueVariable {
         let mut block_num = self.get_block_num();
         let mut inst_num = self.get_inst_num() + 1;
-        self.var_manager.get_current_unique(ident,block_num,inst_num)
+        self.var_manager.get_current_unique(ident.clone(),block_num,inst_num)
     }
 
     pub fn remove_uses(&mut self, uses_to_remove: Vec<(UniqueVariable,usize,usize)>) {
@@ -255,9 +260,9 @@ impl IRGraphManager {
         &mut self.func_manager
     }
 
-    pub fn new_function(&mut self, func_name: String) {
+    pub fn new_function(&mut self, func_name: String, func_index: & NodeIndex) {
         self.is_func = true;
-        let func = self.func_manager.new_function(&func_name);
+        let func = self.func_manager.new_function(&func_name, func_index);
         self.array_manager.add_active_function(func.clone());
         self.var_manager.add_active_function(func);
     }
@@ -267,6 +272,15 @@ impl IRGraphManager {
         self.var_manager.get_active_function()
     }
 
+    pub fn get_func_call(&mut self, func_name: &String) -> UniqueFunction {
+        if self.is_func {
+            if func_name.clone() == self.var_manager.active_function().get_name() {
+                return self.var_manager.active_function().clone()
+            }
+        }
+
+        return self.func_manager.get_mut_function(func_name).clone();
+    }
 }
 
 #[derive(Clone)]
