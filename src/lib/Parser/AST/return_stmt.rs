@@ -60,7 +60,7 @@ impl ReturnStmt {
 
         // This will be a special instruction that always returns values on register R27;
         let ret_inst = irgm.build_op_x(ret_val.expect("return calls should always return an expr"), InstTy::ret);
-
+        irgm.graph_manager().add_instruction(ret_inst);
     }
 
     pub fn scan_globals(&self, irgm : &mut IRGraphManager) {

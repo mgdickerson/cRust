@@ -160,27 +160,41 @@ impl FuncDecl {
             var.to_ir(irgm, false, Some(func_name.get_value()));
         }
 
+        // Load all global values
         for global in irgm.variable_manager().active_function().load_globals_list() {
-            // TODO : Need to load globals
-        }
+            let global_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
+            let var_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(&global, 4)));
 
-        println!("Adding variables that needs loading: {:?}", irgm.variable_manager().active_function().load_param_list());
-        // TODO : Need to do an add instruction with the FP or Global pointer offset
-        for ident in irgm.variable_manager().active_function().load_param_list() {
-            println!("Var: {}", ident);
+            let adda_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
+            let adda_val = irgm.graph_manager().add_instruction(adda_inst);
 
-            let var_addr = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(&ident, 4)));
-
-            let inst = irgm.build_op_y(var_addr, InstTy::load);
-            let inst_val = Value::new(ValTy::op(inst.clone()));
+            let inst = irgm.build_op_y(adda_val, InstTy::load);
+            let inst_val = irgm.graph_manager().add_instruction(inst);
 
             let block_num = irgm.get_block_num();
-            let inst_num = irgm.get_inst_num() + 1;
+            let inst_num = irgm.get_inst_num();
 
-            irgm.variable_manager().make_unique_variable(ident.clone(), inst_val, block_num, inst_num);
-            irgm.graph_manager().add_instruction(inst);
+            irgm.variable_manager().make_unique_variable(global, inst_val, block_num, inst_num);
         }
 
+        // Load all param values
+        for param in irgm.variable_manager().active_function().load_param_list() {
+            let frame_pointer_addr = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+            let var_addr = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(&param, 4)));
+
+            let adda_inst = irgm.build_op_x_y(frame_pointer_addr, var_addr, InstTy::add);
+            let adda_val = irgm.graph_manager().add_instruction(adda_inst);
+
+            let inst = irgm.build_op_y(adda_val, InstTy::load);
+            let inst_val = irgm.graph_manager().add_instruction(inst);
+
+            let block_num = irgm.get_block_num();
+            let inst_num = irgm.get_inst_num();
+
+            irgm.variable_manager().make_unique_variable(param, inst_val, block_num, inst_num);
+        }
+
+        // After loading all necessary variables, convert func_body to IR
         self.funcBody.to_ir(irgm);
 
         let uniq_func = irgm.end_function();

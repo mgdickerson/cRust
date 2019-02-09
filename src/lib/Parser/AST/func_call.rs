@@ -121,34 +121,53 @@ impl FuncCall {
             func_name => {
                 let uniq_func = irgm.get_func_call(&String::from(func_name));
 
+                // Store all global parameters affected.
                 for global in &uniq_func.load_globals_list() {
                     let global_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
 
                     let uniq_var_val = Value::new(ValTy::var(irgm.get_current_unique(global).clone()));
                     let var_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(global, 4)));
 
-                    let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::adda);
+                    let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
                     let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
 
                     let inst = irgm.build_op_x_y(add_reg_val, uniq_var_val, InstTy::store);
                     irgm.graph_manager().add_instruction(inst);
                 }
 
-                for param in &uniq_func.load_param_list() {
-                    // TODO : Same as globals, but with the FP addr
+                // Store all called parameters affected.
+                for (count, param) in uniq_func.load_param_list().iter().enumerate() {
+                    let param_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+
+                    // Unlike global this will pull value from the vec<expr> contained, not pull from list.
+                    let uniq_var_val;
+                    if count < self.variables.len() {
+                        uniq_var_val = self.variables[count].to_owned().to_ir(irgm).expect("All called variables should have some expr.");
+                    } else {
+                        uniq_var_val = Value::new(ValTy::con(0));
+                    }
+
+                    let var_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(param, 4)));
+
+                    let add_inst = irgm.build_op_x_y(param_addr_val, var_addr_val, InstTy::add);
+                    let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
+
+                    let inst = irgm.build_op_x_y(add_reg_val, uniq_var_val, InstTy::store);
+                    irgm.graph_manager().add_instruction(inst);
                 }
 
-                // TODO : Rest of this function
+                // All variables have been loaded, call function
+                let inst = irgm.build_spec_op(&func_name.to_string(), InstTy::call);
+                irgm.graph_manager().add_instruction(inst);
 
-                println!("Called function {} has return: {}", func_name, uniq_func.has_return());
-
+                //println!("Called function {} has return: {}", func_name, uniq_func.has_return());
                 if uniq_func.has_return() {
                     return Some(Value::new(ValTy::ret(RetRegister::new())));
                 }
             },
         }
 
-        // TODO : This is a placeholder for getting a proper return type
+        // If there is not an associated return type, return None
         None
     }
 
