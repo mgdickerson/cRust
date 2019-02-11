@@ -13,7 +13,6 @@ impl Value {
         Value { val: val_ty }
     }
 
-    // TODO : Clean up errors.
     pub fn get_value(&self) -> &ValTy {
         &self.val
     }
@@ -27,7 +26,6 @@ pub enum ValTy {
     adr(UniqueAddress),
     arr(UniqueArray),
     ret(RetRegister),
-    // TODO : Add register type specifically for return
 }
 
 impl ValTy {
@@ -109,7 +107,6 @@ impl Op {
             InstTy::call => {
                 p_command = String::from("call ");
                 match special_val_string {
-                    // TODO : Still need to fix this.
                     Some(val_str) => {
                         p_command += &val_str;
                     },
@@ -218,7 +215,7 @@ impl Op {
             }
             // Op [x] //
             InstTy::call => {
-                // TODO : Handle call
+                // the call instruction itself should not change. (though parameters might).
             }
         }
     }

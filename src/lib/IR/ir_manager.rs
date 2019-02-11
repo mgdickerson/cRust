@@ -125,6 +125,9 @@ impl IRGraphManager {
                 None => None,
             }
         }).for_each(|(uniq, uses, phi_inst)| {
+            // TODO : Issue being run in to, is that because assignments dont make instructions, they are not updating their phi's correctly.
+            //self.var_manager.
+
             //println!("Current Node Id: {}\tPhi Inst: {}", node_starting_point.clone(), phi_inst);
             for (block_num, inst_num) in uses {
                 //println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.get_ident(), block_num, inst_num);

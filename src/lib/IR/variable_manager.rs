@@ -92,6 +92,7 @@ impl VariableManager {
                     .clone();
 
                 // IS IT YOU?!?!? (it was. they compared val == val, which with aliasing can be the same....)
+                //println!("Comparing {} to {} for phi_builder.", var_val.get_ident(), other_val.get_ident());
                 if var_val.get_ident() == other_val.get_ident() {
                     return None;
                 }
@@ -292,7 +293,8 @@ impl UniqueVariable {
 }
 
 impl PartialEq for UniqueVariable {
+    // I think i have found the issue once more. I think this should be a string comparison, not a value comparison.
     fn eq(&self, other: &UniqueVariable) -> bool {
-        self.value == other.value
+        self.unique_ident == other.unique_ident
     }
 }

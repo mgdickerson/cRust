@@ -129,7 +129,6 @@ impl Array {
         self.debugLine.clone()
     }
 
-    // TODO : Currently the vector depth information is tossed, will need to handle this in var handler
     pub fn to_ir(self,  irgm: &mut IRGraphManager, is_global: bool, func_name: Option<String>) {
         for ident in self.identList {
             let mut var_name = ident.get_value();

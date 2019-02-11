@@ -79,9 +79,15 @@ impl ArrayManager {
         let last_mul_inst = inst_vec.last().expect("Should be at least one instruction.").clone();
 
         // Find Array home register
-        let global_reg = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+        // TODO : I believe this is the spot to change.
+        let ref_register;
+        if irgm.array_manager().is_global(&uniq_arr.base_ident) {
+            ref_register = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
+        } else {
+            ref_register = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+        }
         let arr_reg = Value::new(ValTy::adr(uniq_arr.clone_addr()));
-        let add_inst = irgm.build_op_x_y(global_reg, arr_reg, InstTy::add);
+        let add_inst = irgm.build_op_x_y(ref_register, arr_reg, InstTy::add);
         inst_vec.push(add_inst.clone());
 
         // Adda offset to home register
@@ -94,7 +100,7 @@ impl ArrayManager {
         // if there is a value to assign, store, otherwise load.
         match &value_to_assign {
             Some(val) => {
-                let store_inst = irgm.build_op_x_y(val.clone(), adda_val, InstTy::store);
+                let store_inst = irgm.build_op_x_y(adda_val, val.clone(), InstTy::store);
                 inst_vec.push(store_inst.clone());
             },
             None => {
