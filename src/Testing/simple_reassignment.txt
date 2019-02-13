@@ -1,0 +1,17 @@
+main
+var z, j, k, l;
+{
+	let z <- 0;
+	let k <- 1;
+	let j <- 2;
+	let l <- 3;
+
+	while z < 1000 do
+		let l <- l + 1;
+
+        let k <- j;
+        let j <- l;
+
+        let z <- z + 1;
+	od
+}.

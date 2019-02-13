@@ -2,8 +2,9 @@ use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 pub struct Array {
@@ -128,21 +129,29 @@ impl Array {
         self.debugLine.clone()
     }
 
-    // TODO : Currently the vector depth information is tossed, will need to handle this in var handler
-    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager, is_global: bool, func_name: Option<String>) {
+    pub fn to_ir(self,  irgm: &mut IRGraphManager, is_global: bool, func_name: Option<String>) {
         for ident in self.identList {
             let mut var_name = ident.get_value();
 
             if !is_global {
-                if irm.get_var_manager_mut_ref().is_valid_variable(var_name.clone()) {
+                if irgm.variable_manager().is_valid_variable(var_name.clone()) {
                     // this variable is already a global variable, send error.
                     panic!("{} local variable {} is already a global variable.", func_name.unwrap().clone(), var_name);
                 }
 
-                var_name = func_name.clone().unwrap() + "_" + &var_name;
+                irgm.array_manager().add_array(&var_name, self.arrayDepthVec.clone());
+                let arr_size = irgm.array_manager().get_array_ref(var_name.clone()).get_size();
+
+                let addr = irgm.address_manager().get_addr_assignment(&var_name, arr_size);
+                irgm.array_manager().assign_addr(var_name, addr);
+                return
             }
 
-            irm.get_var_manager_mut_ref().add_variable(var_name);
+            irgm.array_manager().add_global(&var_name, self.arrayDepthVec.clone());
+            let arr_size = irgm.array_manager().get_array_ref(var_name.clone()).get_size();
+
+            let addr = irgm.address_manager().get_addr_assignment(&var_name, arr_size);
+            irgm.array_manager().assign_addr(var_name, addr);
         }
     }
 }

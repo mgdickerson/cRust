@@ -6,8 +6,9 @@ use Parser::AST::while_stmt::WhileStmt;
 use Parser::AST::func_call::FuncCall;
 use Parser::AST::return_stmt::ReturnStmt;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 enum Stmt {
@@ -92,26 +93,47 @@ impl FuncBody {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
+    pub fn to_ir(self, irgm : &mut IRGraphManager) {
         for stmt in self.stmt_vec {
             match stmt {
                 Stmt::assignment(assign) => {
-
+                    assign.to_ir(irgm);
                 },
                 Stmt::if_stmt(if_st) => {
-
+                    if_st.to_ir(irgm);
                 },
                 Stmt::while_stmt(wh_st) => {
-
+                    wh_st.to_ir(irgm);
                 },
                 Stmt::funcCall(fn_cl) => {
-
+                    fn_cl.to_ir(irgm);
                 },
                 Stmt::return_stmt(rt) => {
-
+                    rt.to_ir(irgm);
                 },
             }
         }
     }
 
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        for stmt in &self.stmt_vec {
+            match stmt {
+                Stmt::assignment(assign) => {
+                    assign.scan_globals(irgm);
+                },
+                Stmt::if_stmt(if_st) => {
+                    if_st.scan_globals(irgm);
+                },
+                Stmt::while_stmt(wh_st) => {
+                    wh_st.scan_globals(irgm);
+                },
+                Stmt::funcCall(fn_cl) => {
+                    fn_cl.scan_globals(irgm);
+                },
+                Stmt::return_stmt(rt) => {
+                    rt.scan_globals(irgm);
+                },
+            }
+        }
+    }
 }

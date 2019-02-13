@@ -3,6 +3,8 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::ident::Ident;
 use Parser::AST::expression::Expression;
 
+use super::IRGraphManager;
+
 #[derive(Debug,Clone)]
 pub struct Designator {
     node_type: TokenType,
@@ -73,5 +75,15 @@ impl Designator {
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
+    }
+
+    pub fn scan_globals(&self, irgm: &mut IRGraphManager) {
+        let (ident, expr_array) = self.get_value();
+
+        if expr_array.is_empty() {
+            if irgm.variable_manager().is_global(&ident.get_value()) {
+                irgm.variable_manager().active_function().add_global(&ident.get_value());
+            }
+        }
     }
 }

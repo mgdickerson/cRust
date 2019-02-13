@@ -1,16 +1,21 @@
 use std;
-use lib::IR::basic_block::BasicBlock;
-use lib::IR::ir_manager::IRManager;
+use lib::Graph::basic_block::BasicBlock;
+use lib::IR::ir_manager::{InstTracker, BlockTracker};
 
 #[derive(Clone)]
 pub struct Node {
+    node_tag: String,
     node_id: NodeId,
     node_data: NodeData,
+    node_type: NodeType,
 }
 
 impl Node {
-    pub fn new(irm: &mut IRManager) -> Self {
-        Node { node_id: NodeId::new(irm.get_block_num()), node_data: NodeData::new(irm) }
+    pub fn new(node_tag: String, it: &mut InstTracker, bt: &mut BlockTracker, node_type: NodeType) -> Self {
+        let node_data = NodeData::new(it);
+        let node_id = NodeId::new(bt.get());
+        bt.increment();
+        Node { node_tag, node_id, node_data, node_type }
     }
 
     pub fn get_mut_data_ref(&mut self) -> &mut BasicBlock {
@@ -20,12 +25,27 @@ impl Node {
     pub fn get_data(self) -> BasicBlock {
         self.node_data.get()
     }
+
+    pub fn get_node_id(&self) -> usize {
+        self.node_id.get()
+    }
 }
 
 impl std::fmt::Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Node: [{}] ( \\l {:?}) \\l", self.node_id.get(), self.node_data.get_ref())
+        write!(f, "Node: [{}] \\l{} ( \\l {:?}) \\l", self.node_id.get(), self.node_tag.clone(), self.node_data.get_ref())
     }
+}
+
+#[derive(Debug,Clone)]
+pub enum NodeType {
+    function_head,
+    main_node,
+    loop_header,
+    if_node,
+    else_node,
+    while_node,
+    phi_node,
 }
 
 #[derive(Debug,Clone)]
@@ -49,8 +69,8 @@ pub struct NodeData {
 }
 
 impl NodeData {
-    pub fn new(irm: &mut IRManager) -> Self {
-        NodeData { data: BasicBlock::new(irm) }
+    pub fn new(it: &mut InstTracker) -> Self {
+        NodeData { data: BasicBlock::new(it) }
     }
 
     pub fn get(self) -> BasicBlock {

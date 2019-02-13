@@ -3,6 +3,11 @@ use lib::Lexer::token::TokenType;
 use lib::Lexer::token::Token;
 use Parser::AST::expression::Expression;
 
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
+use super::Graph;
+use super::{Rc,RefCell};
+use lib::Graph::graph_manager::GraphManager;
+
 #[derive(Debug,Clone)]
 pub struct Relation {
     node_type: TokenType,
@@ -43,5 +48,52 @@ impl Relation {
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
+    }
+
+    pub fn to_ir(self, irgm: &mut IRGraphManager, branch_location: Value) -> Value {
+        let leftCompVal = self.leftExp.to_ir(irgm).
+            expect("Expected Left Comp Op, none found");
+        let rightCompVal = self.rightExp.to_ir(irgm).
+            expect("Expected Right Comp Op, none found");
+
+        let inst = irgm.build_op_x_y(leftCompVal,rightCompVal,InstTy::cmp);
+        let inst_val = irgm.graph_manager().add_instruction(inst);
+
+        match self.relOp.get_contents().as_ref() {
+            "==" => {
+                let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::bne);
+                irgm.graph_manager().add_instruction(rel_inst);
+            },
+            "!=" => {
+                let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::beq);
+                irgm.graph_manager().add_instruction(rel_inst);
+            },
+            "<" => {
+                let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::bge);
+                irgm.graph_manager().add_instruction(rel_inst);
+            },
+            "<=" => {
+                let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::bgt);
+                irgm.graph_manager().add_instruction(rel_inst);
+            },
+            ">" => {
+                let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::ble);
+                irgm.graph_manager().add_instruction(rel_inst);
+            },
+            ">=" => {
+                let rel_inst = irgm.build_op_x_y(inst_val.clone(),branch_location,InstTy::blt);
+                irgm.graph_manager().add_instruction(rel_inst);
+            },
+            _ => {
+                panic!("Error: Expected a relOp token, but was not found.");
+            },
+        }
+
+        inst_val
+    }
+
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        self.leftExp.scan_globals(irgm);
+        self.rightExp.scan_globals(irgm);
     }
 }

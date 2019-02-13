@@ -1,47 +1,187 @@
-use lib::IR::basic_block::BlockTracker;
-use lib::IR::ir::{Value,Op,InstTy,InstTracker};
+use lib::Parser::AST::number::Number;
+use lib::IR::ir::{Value,ValTy,Op,InstTy};
 use std::collections::HashMap;
-use super::Graph;
+use super::{Rc,RefCell};
 
-pub struct IRManager {
+use lib::Graph::graph_manager::GraphManager;
+use lib::Graph::node::{Node,NodeId,NodeData,NodeType};
+
+use super::Graph;
+use super::variable_manager::{VariableManager, UniqueVariable};
+use super::array_manager::{ArrayManager,UniqueArray};
+use super::address_manager::{AddressManager,UniqueAddress};
+use super::function_manager::{FunctionManager,UniqueFunction};
+use super::operator_dominator::{OpDomHandler,OpNode,OpGraph};
+use petgraph::graph::NodeIndex;
+use petgraph::algo::dominators::Dominators;
+use petgraph::algo::dominators;
+
+/// Rough Draft of IR_Manager Rewrite
+
+pub struct IRGraphManager {
+    // Tracker for BlockId, which should match NodeId
     bt: BlockTracker,
+
+    // Tacker for Instruction Id,
+    // could also contain the OpDomHandler.
+    // Combining the two would allow assignment
+    // and possibly assign temp variables for outputs.
     it: InstTracker,
+    op_dom_handler: OpDomHandler,
+
+    // User made Variable Tracker
     var_manager: VariableManager,
-    op_dom_handle: OpDomHandler,
+
+    // User made Array tracker
+    array_manager: ArrayManager,
+
+    // User made Address Manager (for use with arrays and stack variables)
+    addr_manager: AddressManager,
+
+    func_manager: FunctionManager,
+    is_func: bool,
+
+    // Manages all things graph related.
+    graph_manager: GraphManager,
 }
 
-impl IRManager {
+impl IRGraphManager {
     pub fn new() -> Self {
-        IRManager { bt: BlockTracker::new(),
-                    it: InstTracker::new(),
-                    var_manager: VariableManager::new(),
-                    op_dom_handle: OpDomHandler::new()
+        let graph : Graph<Node, i32> = Graph::new();
+        let mut it = InstTracker::new();
+        let mut bt = BlockTracker::new();
+
+        let graph_manager = GraphManager::new(graph, &mut it, &mut bt);
+
+        IRGraphManager {
+            bt,
+            it,
+            var_manager: VariableManager::new(),
+            array_manager: ArrayManager::new(),
+            addr_manager: AddressManager::new(),
+            func_manager: FunctionManager::new(),
+            is_func: false,
+            op_dom_handler: OpDomHandler::new(),
+            graph_manager,
         }
     }
 
-    pub fn build_op(&self, inst_type: InstTy) -> Op {
-        Op::build_op(self.get_inst_num(), self.get_block_num(), inst_type)
+    pub fn is_func(&self) -> bool {
+        self.is_func
     }
 
-    pub fn build_op_x(&self, x_val: Value, inst_type: InstTy) -> Op {
-        Op::build_op_x(x_val,self.get_inst_num(),self.get_block_num(),inst_type)
+    /// Op Specific Functions ///
+
+    pub fn build_op(&mut self, inst_type: InstTy) -> Op {
+        self.inc_inst_tracker();
+        Op::build_op(None, None, None, self.get_block_num(), self.get_inst_num(), inst_type, &mut self.var_manager)
     }
 
-    pub fn build_op_x_y(&self, x_val: Value, y_val: Value, inst_type: InstTy) -> Op {
-        Op::build_op_x_y(x_val,
-                y_val,
-                self.get_inst_num(),
-                self.get_block_num(),
-                inst_type)
+    pub fn build_op_x(&mut self, x_val: Value, inst_type: InstTy) -> Op {
+        self.inc_inst_tracker();
+        Op::build_op(Some(x_val), None, None, self.get_block_num(), self.get_inst_num(), inst_type, &mut self.var_manager)
     }
 
-    pub fn build_op_y(&self, y_val: Value, inst_type: InstTy) -> Op {
-        Op::build_op_y(y_val, self.get_inst_num(), self.get_block_num(), inst_type)
+    pub fn build_op_x_y(&mut self, x_val: Value, y_val: Value, inst_type: InstTy) -> Op {
+        self.inc_inst_tracker();
+        Op::build_op(Some(x_val),
+                     Some(y_val),
+                     None,
+                     self.get_block_num(),
+                     self.get_inst_num(),
+                     inst_type,
+                     &mut self.var_manager)
     }
 
-    pub fn build_spec_op(&self, special_val: Vec<Box<Value>>, inst_type: InstTy) -> Op {
-        Op::build_spec_op(special_val,self.get_inst_num(),self.get_block_num(),inst_type)
+    pub fn build_op_y(&mut self, y_val: Value, inst_type: InstTy) -> Op {
+        self.inc_inst_tracker();
+        Op::build_op(None, Some(y_val), None, self.get_block_num(), self.get_inst_num(), inst_type, &mut self.var_manager)
     }
+
+    pub fn build_spec_op(&mut self, special_val: &String, inst_type: InstTy) -> Op {
+        self.inc_inst_tracker();
+        Op::build_op(None, None, Some(special_val.clone()), self.get_block_num(), self.get_inst_num(), inst_type, &mut self.var_manager)
+    }
+
+    pub fn loop_variable_correction(&mut self, vars: Vec<(Rc<RefCell<UniqueVariable>>,usize)>) -> Vec<(Rc<RefCell<UniqueVariable>>,usize,usize)> {
+        // Grab current_node ID so that we dont alter any uses before the occurrence of this node.
+        let current_node = self.graph_manager.clone_node_index();
+        let node_starting_point = self.graph_manager.get_node_id(current_node);
+        let mut remove_use_vec = Vec::new();
+        let mut vars_to_correct = Vec::new();
+
+        let mut local_var_manager = self.var_manager.clone_self();
+
+        // Make map of current graph.
+        let mut graph_map = self.graph_manager.get_mut_ref_graph()
+            .node_weights_mut()
+            .map(|node| {
+                let block_num = node.get_node_id();
+                (block_num, node)
+            }).collect::<HashMap<usize,&mut Node>>();
+
+        // Perform iteration and correction
+        vars.iter().filter_map(|(uniq, phi_inst)| {
+            match uniq.borrow().get_uses() {
+                Some(uses) => Some((uniq, uses, phi_inst)),
+                None => None,
+            }
+        }).for_each(|(uniq, uses, phi_inst)| {
+            // TODO : Issue being run in to, is that because assignments dont make instructions, they are not updating their phi's correctly.
+            // TODO : Need to go through the variable manager and check to see if any matching assignments were made in the block. If so, update them.
+
+            //????
+            // TODO : Forgot to add the uses for when build is called....
+
+            //println!("Current Node Id: {}\tPhi Inst: {}", node_starting_point.clone(), phi_inst);
+            for (block_num, inst_num) in uses {
+                println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.borrow().get_ident(), block_num, inst_num);
+                if block_num >= node_starting_point {
+                    remove_use_vec.push((Rc::clone(uniq),block_num,inst_num));
+                    vars_to_correct.push(Rc::clone(uniq));
+                    let node = graph_map.get_mut(&block_num).expect("Block number should exist");
+                    for inst in node.get_mut_data_ref().get_mut_ref() {
+                        if inst.borrow().get_inst_num() != phi_inst.clone() {
+                            let uniq_base = uniq.borrow().get_base_ident();
+                            let old_val = Value::new(ValTy::var(Rc::clone(uniq)));
+                            let new_val = Value::new(ValTy::var(Rc::clone(&local_var_manager.get_latest_unique(uniq_base))));
+                            //println!("Inst before: {:?}", inst.borrow());
+                            inst.borrow_mut().var_cleanup(old_val,new_val);
+                            //println!("Inst after: {:?}", inst.borrow());
+                        }
+                    }
+                }
+            }
+
+        });
+
+        //println!("Uses to Remove: {:?}", remove_use_vec.clone());
+        self.var_manager = local_var_manager;
+
+        for uniq in vars_to_correct {
+            let uniq_base = uniq.borrow().get_base_ident();
+            let old_val = Value::new(ValTy::var(Rc::clone(&uniq)));
+            let new_val = Value::new(ValTy::var(Rc::clone(&self.var_manager.get_latest_unique(uniq_base))));
+
+            self.var_manager.loop_correction(old_val, new_val);
+        }
+
+        remove_use_vec
+    }
+
+    /// Graph Specific Functions ///
+
+    pub fn graph_manager(&mut self) -> &mut GraphManager {
+        &mut self.graph_manager
+    }
+
+    pub fn new_node(&mut self, node_tag: String, node_type: NodeType) -> &NodeIndex {
+        let it = &mut self.it;
+        let bt = &mut self.bt;
+        self.graph_manager.new_node(node_tag, it, bt, node_type)
+    }
+
+    /// Tracker Specific Functions ///
 
     pub fn inc_inst_tracker(&mut self) {
         self.it.increment();
@@ -56,163 +196,151 @@ impl IRManager {
     }
 
     pub fn get_block_num(&self) -> usize {
-        self.bt.get()
+        let current_node = self.graph_manager.clone_node_index();
+        self.graph_manager.get_node_id(current_node)
     }
 
-    pub fn get_var_manager_mut_ref(&mut self) -> &mut VariableManager {
+    /// Variable Manager Specific Functions ///
+
+    pub fn variable_manager(&mut self) -> &mut VariableManager {
         &mut self.var_manager
     }
 
-    pub fn get_op_dom_manager_mut_ref(&mut self) -> &mut OpDomHandler {
-        &mut self.op_dom_handle
-    }
-}
-
-#[derive(Debug)]
-pub struct VariableManager {
-    var_manager: HashMap<String, UniqueVariable>,
-    var_counter: HashMap<String, usize>,
-}
-
-impl VariableManager {
-    pub fn new() -> Self {
-        VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new() }
+    pub fn get_current_unique(&mut self, ident: & String) -> Rc<RefCell<UniqueVariable>> {
+        let mut block_num = self.get_block_num();
+        let mut inst_num = self.get_inst_num() + 1;
+        self.var_manager.get_current_unique(ident.clone())
     }
 
-    pub fn make_unique_variable(&mut self, ident: String, def: usize) -> &UniqueVariable {
-        match self.var_counter.get_mut(&ident) {
-            Some(ref mut count) => {
-                let current_count = count.clone();
-                **count += 1;
-                let uniq = UniqueVariable::new(ident.clone(),current_count,def);
-                let uniq_key = uniq.get_ident();
-                self.var_manager.insert(uniq_key.clone(), uniq);
-
-                return self.var_manager.get(&uniq_key).unwrap();
-            }
-            None => {
-                // variable not found in list, throw error
-                panic!("Error: variable ({}) not found within list of variables.");
+    /*
+     * temp removing this function so i can get rid of get_mut_uniq_var()
+    pub fn remove_uses(&mut self, uses_to_remove: Vec<(UniqueVariable,usize,usize)>) {
+        for (uniq, block_num, inst_num) in uses_to_remove {
+            let mut uniq_result = self.var_manager.get_mut_uniq_var(uniq);
+            match uniq_result {
+                Ok(mut_uniq) => {
+                    mut_uniq.remove_use(block_num, inst_num);
+                },
+                Err(e) => panic!(e),
             }
         }
     }
+    */
 
-    pub fn get_unique_variable(&mut self, ident: String, use_site: usize) -> &UniqueVariable {
-        match self.var_manager.get_mut(&ident) {
-            Some(uniq) => {
-                uniq.add_use(use_site);
-                uniq
-            }
-            None => {
-                panic!("Error: key {} not found in var_manager", ident);
-            }
-        }
-    }
+    pub fn insert_phi_inst(&mut self, left_set: HashMap<String, Rc<RefCell<UniqueVariable>>>, right_set: HashMap<String, Rc<RefCell<UniqueVariable>>>)
+        -> Vec<(Rc<RefCell<UniqueVariable>>, usize)> {
+        let phi_set = VariableManager::build_phi_pairs(left_set, right_set);
+        let mut inst_position = 0;
+        let mut while_touch_up_vars = Vec::new();
 
-    pub fn add_variable(&mut self, var: String) {
-        let var_already_added = self.var_counter.insert(var.clone(), 0);
+        for (left_var, right_var) in phi_set {
+            let block_num = self.get_block_num();
+            let inst_num = self.it.get();
 
-        if var_already_added != None {
-            panic!("Variable {} already used", var);
-        }
-    }
+            self.var_manager.add_var_use(Rc::clone(&left_var), block_num, inst_num + 1);
+            self.var_manager.add_var_use(Rc::clone(&right_var), block_num, inst_num + 1);
 
-    pub fn is_valid_variable(&self, var: String) -> bool {
-        self.var_counter.contains_key(&var)
-    }
-}
+            let left_val = Value::new(ValTy::var(Rc::clone(&left_var)));
+            let right_val = Value::new(ValTy::var(Rc::clone(&right_var)));
+            let inst = self.build_op_x_y(left_val, right_val, InstTy::phi);
+            let inst_val = self.graph_manager.insert_instruction(inst_position, inst);
 
-#[derive(Debug)]
-pub struct UniqueVariable {
-    unique_ident: String,
-    def: usize,
-    used: Option<Vec<usize>>,
-}
+            // make new unique variable with phi value
+            self.var_manager.make_unique_variable(left_var.borrow().get_base_ident(),
+                inst_val,
+                block_num,
+                inst_num + 1);
 
-impl UniqueVariable {
-    pub fn new(ident: String, count: usize, def: usize) -> Self {
-        let unique_ident = String::from("%") + &ident + "_" + &count.to_string();
-        UniqueVariable { unique_ident, def, used: None }
-    }
+            //while_touch_up_vars.push(left_uniq.clone());
+            while_touch_up_vars.push((Rc::clone(&right_var), inst_num + 1));
 
-    pub fn get_ident(&self) -> String {
-        self.unique_ident.clone()
-    }
 
-    pub fn add_use(&mut self, var_use: usize) {
-        match &mut self.used {
-            Some(uses_vec) => {
-                uses_vec.push(var_use);
-                return
-            },
-            None => {
-                // pass through
-            }
+            inst_position += 1;
         }
 
-        // this will only hit if use vector is not already present
-        self.used = Some(Vec::new());
-        match &mut self.used {
-            Some(some) => some.push(var_use),
-            None => { panic!("Unreachable Error.") },
-        }
-    }
-}
-
-pub struct OpDomHandler {
-    op_manager: HashMap<String, OpGraph>,
-}
-
-impl OpDomHandler {
-    pub fn new() -> Self {
-        OpDomHandler { op_manager: HashMap::new() }
+        while_touch_up_vars
     }
 
-    pub fn get_op_graph(&mut self, op_type: String) -> Option<&mut OpGraph> {
-        self.op_manager.get_mut(&op_type)
-    }
-}
+    /// Array Manager Specific Functions ///
 
-pub struct OpGraph {
-    op_graph: Graph<Op,i32>,
-    parent_node: Option<petgraph::graph::NodeIndex<u32>>,
-}
-
-impl OpGraph {
-    pub fn new() -> Self {
-        OpGraph { op_graph: Graph::new(), parent_node: None }
+    pub fn array_manager(&mut self) -> &mut ArrayManager {
+        &mut self.array_manager
     }
 
-    // TODO : I think this structure will have to change to include the desired "Parent Node"
-    pub fn add_op(&mut self, child_op: Op, is_sibling: bool) -> petgraph::graph::NodeIndex<u32> {
-        let child_node = self.op_graph.add_node(child_op);
+    pub fn build_array_inst(&mut self, uniq_array: UniqueArray, val_vec: Vec<Value>, val_to_assign: Option<Value>) -> Value {
+        ArrayManager::build_inst(self, uniq_array, val_vec, val_to_assign)
+    }
 
-        match self.parent_node {
-            Some(p_node) => {
-                self.op_graph.add_edge(p_node, child_node, 1);
-            },
-            None => {
-                // No need to add edge, this is the first node.
+    /// Address Manager ///
+    /// These are all just accessors
+
+    pub fn address_manager(&mut self) -> &mut AddressManager {
+        &mut self.addr_manager
+    }
+
+    /// Function Manager Functions ///
+
+    pub fn function_manager(&mut self) -> &mut FunctionManager {
+        &mut self.func_manager
+    }
+
+    pub fn new_function(&mut self, func_name: String, func_index: & NodeIndex) {
+        self.is_func = true;
+        let func = self.func_manager.new_function(&func_name, func_index);
+        self.array_manager.add_active_function(func.clone());
+        self.var_manager.add_active_function(func);
+    }
+
+    pub fn end_function(&mut self) -> UniqueFunction {
+        self.is_func = false;
+        self.var_manager.get_active_function()
+    }
+
+    pub fn get_func_call(&mut self, func_name: &String) -> UniqueFunction {
+        if self.is_func {
+            if func_name.clone() == self.var_manager.active_function().get_name() {
+                return self.var_manager.active_function().clone()
             }
         }
 
-        if is_sibling {
-            return child_node;
-        }
+        return self.func_manager.get_mut_function(func_name).clone();
+    }
+}
 
-        self.parent_node = Some(child_node.clone());
-        child_node
+#[derive(Clone)]
+pub struct InstTracker {
+    inst_number: usize,
+}
 
+impl InstTracker {
+    pub fn new() -> InstTracker {
+        InstTracker { inst_number: 0 }
     }
 
-    pub fn add_child_op(&mut self, parent_node: petgraph::graph::NodeIndex<u32>, child_op: Op) -> petgraph::graph::NodeIndex<u32> {
-        let child_node = self.op_graph.add_node(child_op);
-        self.op_graph.add_edge(parent_node,child_node.clone(), 1);
-
-        return child_node;
+    pub fn increment(&mut self) {
+        self.inst_number += 1;
     }
 
-    pub fn get_graph(&self) -> &Graph<Op, i32> {
-        &self.op_graph
+    pub fn get(&self) -> usize {
+        self.inst_number.clone()
+    }
+}
+
+#[derive(Clone)]
+pub struct BlockTracker {
+    block_number: usize,
+}
+
+impl BlockTracker {
+    pub fn new() -> BlockTracker {
+        BlockTracker { block_number: 0 }
+    }
+
+    pub fn increment(&mut self) {
+        self.block_number += 1;
+    }
+
+    pub fn get(&self) -> usize {
+        self.block_number.clone()
     }
 }

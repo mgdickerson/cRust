@@ -12,7 +12,7 @@ pub struct FuncIdent {
 
 impl FuncIdent {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut funcName;
+        let funcName;
         let mut funcParam = Option::None;
 
         match tc.peek_next_token_type() {

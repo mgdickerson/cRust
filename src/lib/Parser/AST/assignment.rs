@@ -3,8 +3,10 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::designator::Designator;
 use Parser::AST::expression::Expression;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{Rc,RefCell};
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 pub struct Assignment {
@@ -15,8 +17,8 @@ pub struct Assignment {
 
 impl Assignment {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut designator;
-        let mut expression;
+        let designator;
+        let expression;
 
         match tc.get_next_token().expect("Assignment Error").get_type() {
             TokenType::Assignment => {
@@ -81,12 +83,38 @@ impl Assignment {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
-        let (ident, expr) = self.designator.get_value();
+    pub fn to_ir(self, irgm : &mut IRGraphManager) {
+        let (result, expr_array) = self.designator.get_value();
 
-        if expr.is_empty() {
+        let expr_value = self.expression.to_ir(irgm).expect("Expected some expression with related Assignment Operation");
 
+        if expr_array.is_empty() {
+            let block_num = irgm.get_block_num();
+            let inst_num = irgm.get_inst_num();
+            // TODO : This is handy but not needed once it works.
+            match expr_value.get_value() {
+                ValTy::var(uniq) => {
+                    //println!("Value being assigned is just a variable, must be a, alias!\n {} : {:?}", result.get_value(), uniq);
+                }
+                others => {
+                    //println!("Non-alias values\n {} : {:?}", result.get_value(), others);
+                },
+            }
+            irgm.variable_manager().make_unique_variable(result.get_value(), expr_value.clone(), block_num, inst_num);
+        } else {
+            let val_array = expr_array.iter()
+                .filter_map(|expr| {
+                    expr.to_owned().to_ir(irgm)
+                }).collect::<Vec<Value>>();
+
+            let uniq_arr = irgm.array_manager().get_array_ref(result.get_value()).clone();
+
+            let ret_val = irgm.build_array_inst(uniq_arr, val_array, Some(expr_value));
         }
+    }
 
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        self.designator.scan_globals(irgm);
+        self.expression.scan_globals(irgm);
     }
 }

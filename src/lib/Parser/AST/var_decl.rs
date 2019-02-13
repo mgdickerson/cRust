@@ -3,8 +3,9 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::var::Var;
 use Parser::AST::array::Array;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 pub struct VarDecl {
@@ -46,10 +47,10 @@ impl VarDecl {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager, is_global: bool, func_name: Option<String>) {
+    pub fn to_ir(self, irgm: &mut IRGraphManager, is_global: bool, func_name: Option<String>) {
         match self.var {
             Some(var) => {
-                var.to_ir(graph,current_node,irm,is_global.clone(),func_name.clone());
+                var.to_ir(irgm,is_global.clone(),func_name.clone());
             },
             None => {
                 // None present, fall through
@@ -58,7 +59,7 @@ impl VarDecl {
 
         match self.array {
             Some(array) => {
-                array.to_ir(graph,current_node,irm,is_global,func_name);
+                array.to_ir(irgm,is_global,func_name);
             },
             None => {
                 // None present, fall through

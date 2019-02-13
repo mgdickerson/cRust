@@ -29,6 +29,7 @@ procedure ClearData;
 var i;
 {
   let i <- 0;
+  let i <- Rule;
   while i < ColCount + 2 do
     let Data[i] <- 0;
     let i <- i + 1

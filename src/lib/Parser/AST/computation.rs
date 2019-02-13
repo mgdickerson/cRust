@@ -5,8 +5,10 @@ use Parser::AST::var_decl::VarDecl;
 use Parser::AST::func_decl::FuncDecl;
 use Parser::AST::func_body::FuncBody;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeType, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Graph::graph_manager::GraphManager;
+use lib::Utility::display;
 
 #[derive(Debug,Clone)]
 pub struct Comp {
@@ -20,14 +22,14 @@ impl Comp {
     pub fn new(tc: &mut TokenCollection) -> Self {
         let mut varDecl = vec!();
         let mut funcDecl = vec!();
-        let mut funcBody;
+        let funcBody;
 
         while let Some(next_token) = tc.peek_next_token_type() {
             match next_token {
                 TokenType::Comment => {
                     tc.get_next_token();
                 },
-                notComment => {
+                _ => {
                     break;
                 }
             }
@@ -144,23 +146,37 @@ impl Comp {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self) {
-        // TODO : All of this.
-        let mut graph : Graph<Node, i32> = Graph::new();
-        let mut irManager = IRManager::new();
-
-        let mut initial_node = Node::new(&mut irManager);
+    pub fn to_ir(self) -> IRGraphManager {
+        // This graph is directed.
+        let mut ir_graph_manager = IRGraphManager::new();
 
         for var in self.varDecl {
             // These are the global variable declarations.
             // Build the variable tracker here, and give unique tags.
-            var.to_ir(&mut graph, &mut initial_node, &mut irManager, true, None);
+            var.to_ir(&mut ir_graph_manager, true, None);
         }
 
         for func in self.funcDecl {
-            func.to_ir(&mut graph, &mut initial_node, &mut irManager);
+            func.to_ir(&mut ir_graph_manager);
         }
 
-        println!("{:?}", irManager.get_var_manager_mut_ref());
+        ir_graph_manager.new_node(String::from("Main"), NodeType::main_node);
+        self.funcBody.to_ir(&mut ir_graph_manager);
+
+        //println!("{:?}", ir_graph_manager.variable_manager().clone().get_var_map());
+        //graph_manager.add_current_node_to_graph();
+        //let clone = ir_graph_manager.variable_manager();
+        //println!("{:?}", clone);
+
+        ir_graph_manager
+        /*
+        println!("{:?}", irgm.get_var_manager().get_var_map());
+        let (nodes, edges) = graph_manager.get_graph().into_nodes_edges();
+        for node in nodes {
+            for op in node.weight.get_data().get() {
+                println!("{}", op.get_inst_block());
+            }
+        }
+        */
     }
 }

@@ -5,6 +5,11 @@ use Parser::AST::number::Number;
 use Parser::AST::func_call::FuncCall;
 use Parser::AST::expression::Expression;
 
+use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
+use super::Graph;
+use super::{Rc,RefCell};
+use lib::Graph::graph_manager::GraphManager;
+
 #[derive(Debug,Clone)]
 pub enum FactorType {
     desig(Designator),
@@ -22,7 +27,7 @@ pub struct Factor {
 impl Factor {
     pub fn new(tc: &mut TokenCollection) -> Self {
         let mut factor = None;
-        let mut node_type = TokenType::None;
+        let node_type = TokenType::None;
 
         match tc.peek_next_token_type() {
             Some(TokenType::Ident) => {
@@ -75,4 +80,61 @@ impl Factor {
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
     }
+
+    pub fn to_ir(self, irgm : &mut IRGraphManager) -> Option<Value> {
+        match self.factor {
+            Some(FactorType::desig(desig)) => {
+                let (result, expr_array) = desig.get_value();
+
+                if expr_array.is_empty() {
+                    return Some(Value::new(ValTy::var(irgm.get_current_unique(&result.get_value()))));
+                }
+
+                let val_array = expr_array.iter()
+                    .filter_map(|expr| {
+                        expr.to_owned().to_ir(irgm)
+                    }).collect::<Vec<Value>>();
+
+                let uniq_arr = irgm.array_manager().get_array_ref(result.get_value()).clone();
+                let ret_val = irgm.build_array_inst(uniq_arr, val_array, None);
+
+                return Some(ret_val);
+            },
+            Some(FactorType::num(num)) => {
+                let result = num.get_value();
+                return Some(Value::new(ValTy::con(result)));
+            },
+            Some(FactorType::func_call(func)) => {
+                return func.to_ir(irgm);
+            },
+            Some(FactorType::expr(expr)) => {
+                return expr.to_ir(irgm);
+            },
+            None => {
+                panic!()
+            }
+        }
+
+        // This should be an error as it should never reach this point.
+        // Though currently func_call will fall through to this.
+        None
+    }
+
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        match &self.factor {
+            Some(FactorType::desig(desig)) => {
+                desig.scan_globals(irgm);
+            },
+            Some(FactorType::expr(expr)) => {
+                expr.scan_globals(irgm);
+            }
+            Some(FactorType::func_call(func)) => {
+                func.scan_globals(irgm);
+            }
+            _ => {
+                // nothing else would produce a variable
+            }
+        }
+    }
+
 }

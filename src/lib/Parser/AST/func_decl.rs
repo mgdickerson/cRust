@@ -4,8 +4,10 @@ use Parser::AST::func_ident::FuncIdent;
 use Parser::AST::func_body::FuncBody;
 use Parser::AST::var_decl::VarDecl;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeType, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{Rc,RefCell};
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 pub struct FuncDecl {
@@ -17,9 +19,9 @@ pub struct FuncDecl {
 
 impl FuncDecl {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut funcName;
+        let funcName;
         let mut varDecl = vec!();
-        let mut funcBody;
+        let funcBody;
 
         match tc.get_next_token().expect("FuncDecl Error").get_type() {
             TokenType::FuncDecl => {
@@ -134,33 +136,69 @@ impl FuncDecl {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, graph: &mut Graph<Node, i32>, current_node: &mut Node, irm: &mut IRManager) {
+    pub fn to_ir(self, irgm : &mut IRGraphManager) {
         let (func_name, func_param) = self.funcName.get_value();
-        let func_name_string = String::from("f_") + &func_name.get_value();
 
-        irm.get_var_manager_mut_ref().add_variable(func_name_string.clone());
+        let func_index = irgm.new_node(func_name.get_value(), NodeType::function_head).clone();
+        irgm.new_function(func_name.get_value(), &func_index);
+
+        // Scan function for globals used within
+        self.funcBody.scan_globals(irgm);
+
         match func_param {
-            Some(param) => {
-                for p in param.get_value() {
-                    let param_ident = String::from("param_") + &p.get_value();
-                    if irm.get_var_manager_mut_ref().is_valid_variable(param_ident.clone()) {
-                        // this variable is already a global variable, send error.
-                        panic!("{} local variable {} is already a global variable.", func_name_string.clone(), param_ident.clone());
-                    }
-
-                    let func_param_name = func_name_string.clone() + "_" + &param_ident;
-                    irm.get_var_manager_mut_ref().add_variable(func_param_name);
-                }
+            Some(parameters) => {
+                parameters.get_value().iter().for_each(|variable| {
+                    irgm.variable_manager().active_function().add_parameter(&variable.get_value());
+                    irgm.variable_manager().add_variable(variable.get_value(), 0, 0);
+                });
             },
             None => {
-                // Fall through
+                // Pass through
             },
         }
 
         for var in self.varDecl {
-            var.to_ir(graph, current_node,irm,false,Some(func_name_string.clone()));
+            var.to_ir(irgm, false, Some(func_name.get_value()));
         }
 
+        // Load all global values
+        for global in irgm.variable_manager().active_function().load_globals_list() {
+            let global_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
+            let var_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(&global, 4)));
 
+            let adda_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
+            let adda_val = irgm.graph_manager().add_instruction(adda_inst);
+
+            let inst = irgm.build_op_y(adda_val, InstTy::load);
+            let inst_val = irgm.graph_manager().add_instruction(inst);
+
+            let block_num = irgm.get_block_num();
+            let inst_num = irgm.get_inst_num();
+
+            irgm.variable_manager().make_unique_variable(global, inst_val, block_num, inst_num);
+        }
+
+        // Load all param values
+        for param in irgm.variable_manager().active_function().load_param_list() {
+            let frame_pointer_addr = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+            let var_addr = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(&param, 4)));
+
+            let adda_inst = irgm.build_op_x_y(frame_pointer_addr, var_addr, InstTy::add);
+            let adda_val = irgm.graph_manager().add_instruction(adda_inst);
+
+            let inst = irgm.build_op_y(adda_val, InstTy::load);
+            let inst_val = irgm.graph_manager().add_instruction(inst);
+
+            let block_num = irgm.get_block_num();
+            let inst_num = irgm.get_inst_num();
+
+            irgm.variable_manager().make_unique_variable(param, inst_val, block_num, inst_num);
+        }
+
+        // After loading all necessary variables, convert func_body to IR
+        self.funcBody.to_ir(irgm);
+
+        let uniq_func = irgm.end_function();
+        irgm.function_manager().add_func_to_manager(uniq_func);
     }
 }

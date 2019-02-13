@@ -3,8 +3,10 @@ use lib::Lexer::token::TokenType;
 use Parser::AST::relation::Relation;
 use Parser::AST::func_body::FuncBody;
 
-use super::{Node, NodeId, NodeData, IRManager, Value, ValTy, Op, InstTy};
+use super::{Node, NodeId, NodeType, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{Rc,RefCell};
+use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
 pub struct WhileStmt {
@@ -15,8 +17,8 @@ pub struct WhileStmt {
 
 impl WhileStmt {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut relation;
-        let mut body;
+        let relation;
+        let body;
 
         match tc.get_next_token().expect("While Statement Error").get_type() {
             TokenType::WhileStatement => {
@@ -80,11 +82,72 @@ impl WhileStmt {
         WhileStmt { node_type: TokenType::WhileStatement, relation, body }
     }
 
-    pub fn get_value(&self) -> (Relation, FuncBody)  {
+    pub fn get_value(&self) -> (Relation, FuncBody) {
         return (self.relation.clone(), self.body.clone())
     }
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
+    }
+
+    pub fn to_ir(self, irgm : &mut IRGraphManager) {
+        /// General Order:
+        /// - enters on "Main Node"
+        /// - generate loop-node
+        /// - connect loop head to main-node
+        /// - go through loop-body, generate loop-bottom
+        /// - connect loop-bottom to main-node
+        /// - generate phi-node
+        /// - connect main-node to phi
+        /// - phi node is new "Main Node"
+
+        // Make copy of main node
+        let main_node = irgm.graph_manager().clone_node_index();
+
+        // Make loop header
+        irgm.new_node(String::from("While_Header"), NodeType::loop_header);
+        // Handy for return instruction later
+        self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
+        let loop_header = irgm.graph_manager().clone_node_index();
+        irgm.graph_manager().add_edge(main_node, loop_header);
+        let main_vars = irgm.variable_manager().var_checkpoint();
+
+        // Generate loop-body head
+        irgm.new_node(String::from("Loop_Head"), NodeType::while_node);
+        let loop_node_top = irgm.graph_manager().clone_node_index();
+        // Connect main_node to loop_node_top
+        irgm.graph_manager().add_edge(loop_header,loop_node_top);
+
+        // Go through loop body
+        self.body.to_ir(irgm);
+        // Add return branch instruction to "new main node"
+        let bra_return = irgm.build_op_y(Value::new(ValTy::con(-1)),InstTy::bra);
+        irgm.graph_manager().add_instruction(bra_return);
+        let loop_vars = irgm.variable_manager().var_checkpoint();
+
+        irgm.variable_manager().restore_vars(main_vars.clone());
+
+        // Generate new loop bottom node
+        let loop_node_bottom = irgm.graph_manager().clone_node_index();
+
+        // Generate phi node
+        irgm.new_node(String::from("Phi_Node"), NodeType::phi_node);
+        let branch_node = irgm.graph_manager().clone_node_index();
+
+        irgm.graph_manager().add_edge(loop_header,branch_node);
+        irgm.graph_manager().add_edge(loop_node_bottom,loop_header);
+
+        // Insert Phi Inst to Loop Header
+        irgm.graph_manager().switch_current_node_index(loop_header);
+
+        let changed_vars = irgm.insert_phi_inst(loop_vars, main_vars);
+        let uses_to_remove = irgm.loop_variable_correction(changed_vars);
+
+        irgm.graph_manager().switch_current_node_index(branch_node);
+    }
+
+    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+        self.relation.scan_globals(irgm);
+        self.body.scan_globals(irgm);
     }
 }
