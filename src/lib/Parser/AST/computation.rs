@@ -163,7 +163,7 @@ impl Comp {
         ir_graph_manager.new_node(String::from("Main"), NodeType::main_node);
         self.funcBody.to_ir(&mut ir_graph_manager);
 
-        //println!("{:?}", irgmanager.get_var_manager_mut_ref());
+        //println!("{:?}", ir_graph_manager.variable_manager().clone().get_var_map());
         //graph_manager.add_current_node_to_graph();
         //let clone = ir_graph_manager.variable_manager();
         //println!("{:?}", clone);

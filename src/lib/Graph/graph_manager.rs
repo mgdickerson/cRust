@@ -1,9 +1,12 @@
 use lib::IR::ir::{Value,ValTy,Op,InstTy};
 use lib::Graph::node::{Node, NodeId, NodeType, NodeData};
 use lib::IR::ir_manager::{InstTracker, BlockTracker};
+use lib::IR::temp_value_manager::TempValManager;
 extern crate petgraph;
 use petgraph::graph::Graph;
 use petgraph::prelude::NodeIndex;
+
+use super::{Rc,RefCell};
 
 #[derive(Clone)]
 pub struct GraphManager {
@@ -73,17 +76,21 @@ impl GraphManager {
     // -- Convenience Feature for adding inst -- //
 
     pub fn add_instruction(&mut self, inst: Op) -> Value {
+        let inst_ref = Rc::new(RefCell::new(inst));
         self.graph.node_weight_mut(self.current_node_index)
             .expect("Expected Node to have weight, none was found while adding instruction.")
             .get_mut_data_ref()
-            .add_instruction(inst.clone());
-        Value::new(ValTy::op(inst))
+            .add_instruction(Rc::clone(&inst_ref));
+        Value::new(ValTy::op(Rc::clone(&inst_ref)))
     }
 
-    pub fn insert_instruction(&mut self, position: usize, inst: Op) {
+    pub fn insert_instruction(&mut self, position: usize, inst: Op) -> Value {
+        let inst_ref = Rc::new(RefCell::new(inst));
         self.graph.node_weight_mut(self.current_node_index)
             .expect("Expected Node to have weight when inserting, found none.")
             .get_mut_data_ref()
-            .insert_instruction(position, inst);
+            .insert_instruction(position, Rc::clone(&inst_ref));
+
+        Value::new(ValTy::op(Rc::clone(&inst_ref)))
     }
 }

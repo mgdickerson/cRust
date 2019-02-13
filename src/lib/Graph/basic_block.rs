@@ -1,9 +1,11 @@
 use lib::IR::ir_manager::InstTracker;
 use lib::IR::ir::{Op, InstTy};
 
+use super::{Rc,RefCell};
+
 #[derive(Clone)]
 pub struct BasicBlock {
-    inst: Vec<Op>,
+    inst: Vec<Rc<RefCell<Op>>>,
 }
 
 impl BasicBlock {
@@ -12,27 +14,27 @@ impl BasicBlock {
         BasicBlock{ inst: Vec::new() }
     }
 
-    pub fn add_instruction(&mut self, op: Op) {
+    pub fn add_instruction(&mut self, op: Rc<RefCell<Op>>) {
         self.inst.push(op);
     }
 
-    pub fn insert_instruction(&mut self, position: usize, op: Op) {
+    pub fn insert_instruction(&mut self, position: usize, op: Rc<RefCell<Op>>) {
         self.inst.insert(position, op);
     }
 
-    pub fn to_iter(self) -> std::vec::IntoIter<Op> {
+    pub fn to_iter(self) -> std::vec::IntoIter<Rc<RefCell<Op>>> {
         self.inst.into_iter()
     }
 
-    pub fn get(self) -> Vec<Op> {
+    pub fn get(self) -> Vec<Rc<RefCell<Op>>> {
         self.inst
     }
 
-    pub fn get_mut_ref(&mut self) -> &mut Vec<Op> {
+    pub fn get_mut_ref(&mut self) -> &mut Vec<Rc<RefCell<Op>>> {
         &mut self.inst
     }
 
-    pub fn update(&mut self, instruction_set: Vec<Op>) {
+    pub fn update(&mut self, instruction_set: Vec<Rc<RefCell<Op>>>) {
         self.inst = instruction_set;
     }
 }
@@ -40,7 +42,7 @@ impl BasicBlock {
 impl std::fmt::Debug for BasicBlock {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         for inst in self.inst.clone() {
-            write!(f, "{:?}", inst);
+            write!(f, "{:?}", inst.borrow());
         }
 
         write!(f, "")

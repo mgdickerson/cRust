@@ -5,6 +5,7 @@ use Parser::AST::func_body::FuncBody;
 
 use super::{Node, NodeId, NodeType, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{Rc,RefCell};
 use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]

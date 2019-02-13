@@ -5,6 +5,7 @@ use Parser::AST::expression::Expression;
 
 use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{Rc,RefCell};
 use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]

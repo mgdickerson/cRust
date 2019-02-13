@@ -7,6 +7,7 @@ use Parser::AST::expression::Expression;
 
 use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{Rc,RefCell};
 use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
@@ -86,10 +87,7 @@ impl Factor {
                 let (result, expr_array) = desig.get_value();
 
                 if expr_array.is_empty() {
-                    let block_num = irgm.get_block_num();
-                    let inst_num = irgm.get_inst_num() + 1;
-                    return Some(Value::new(
-                        ValTy::var(irgm.get_current_unique(&result.get_value()).clone())));
+                    return Some(Value::new(ValTy::var(irgm.get_current_unique(&result.get_value()))));
                 }
 
                 let val_array = expr_array.iter()
@@ -98,13 +96,7 @@ impl Factor {
                     }).collect::<Vec<Value>>();
 
                 let uniq_arr = irgm.array_manager().get_array_ref(result.get_value()).clone();
-                let inst_list = irgm.build_array_inst(uniq_arr, val_array, None);
-
-                let ret_val = Value::new(ValTy::op(inst_list.last().expect("There should be a final Op.").clone()));
-
-                for inst in inst_list {
-                    irgm.graph_manager().add_instruction(inst);
-                }
+                let ret_val = irgm.build_array_inst(uniq_arr, val_array, None);
 
                 return Some(ret_val);
             },

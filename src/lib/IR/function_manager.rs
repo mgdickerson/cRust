@@ -2,6 +2,8 @@ use lib::IR::variable_manager::{VariableManager, UniqueVariable};
 use std::collections::HashMap;
 use petgraph::prelude::NodeIndex;
 
+use super::{Rc,RefCell};
+
 #[derive(Debug, Clone)]
 pub struct FunctionManager {
     func_manager: HashMap<String,UniqueFunction>,
@@ -33,7 +35,7 @@ impl FunctionManager {
 pub struct UniqueFunction {
     func_name: String,
     func_index: NodeIndex,
-    recovery_point: Option<(HashMap<String, Vec<UniqueVariable>>, HashMap<String, UniqueVariable>)>,
+    recovery_point: Option<(HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>, HashMap<String, Rc<RefCell<UniqueVariable>>>)>,
     params_to_load: Vec<String>,
     affected_globals: Vec<String>,
     has_return: bool,
@@ -83,11 +85,11 @@ impl UniqueFunction {
         self.affected_globals.clone()
     }
 
-    pub fn add_checkpoint(&mut self, checkpoint: (HashMap<String, Vec<UniqueVariable>>, HashMap<String, UniqueVariable>)) {
+    pub fn add_checkpoint(&mut self, checkpoint: (HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>, HashMap<String, Rc<RefCell<UniqueVariable>>>)) {
         self.recovery_point = Some(checkpoint);
     }
 
-    pub fn recover_checkpoint(&self) -> (HashMap<String, Vec<UniqueVariable>>, HashMap<String, UniqueVariable>) {
+    pub fn recover_checkpoint(&self) -> (HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>, HashMap<String, Rc<RefCell<UniqueVariable>>>) {
         self.recovery_point.clone().expect("Should have a recovery point before requesting one.")
     }
 

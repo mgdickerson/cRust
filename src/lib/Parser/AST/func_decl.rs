@@ -6,6 +6,7 @@ use Parser::AST::var_decl::VarDecl;
 
 use super::{Node, NodeType, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{Rc,RefCell};
 use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]

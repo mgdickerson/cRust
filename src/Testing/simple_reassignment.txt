@@ -1,17 +1,17 @@
 main
-var i, j, k, l;
+var z, j, k, l;
 {
-	let i <- 0;
+	let z <- 0;
 	let k <- 1;
 	let j <- 2;
 	let l <- 3;
 
-	while i < 1000 do
+	while z < 1000 do
 		let l <- l + 1;
 
         let k <- j;
         let j <- l;
 
-        let i <- i + 1;
+        let z <- z + 1;
 	od
 }.

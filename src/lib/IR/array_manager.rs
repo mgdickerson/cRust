@@ -5,6 +5,8 @@ use lib::IR::ir_manager::IRGraphManager;
 use lib::IR::address_manager::UniqueAddress;
 use lib::IR::function_manager::{FunctionManager,UniqueFunction};
 
+use super::{Rc,RefCell};
+
 #[derive(Debug, Clone)]
 pub struct ArrayManager {
     array_manager: HashMap<String, UniqueArray>,
@@ -47,8 +49,7 @@ impl ArrayManager {
         }
     }
 
-    pub fn build_inst(irgm: &mut IRGraphManager, uniq_arr: UniqueArray, val_vec: Vec<Value>, value_to_assign: Option<Value>) -> Vec<Op> {
-        let mut inst_vec = Vec::new();
+    pub fn build_inst(irgm: &mut IRGraphManager, uniq_arr: UniqueArray, val_vec: Vec<Value>, value_to_assign: Option<Value>) -> Value {
         let mut last_offset_inst : Option<Value> = None;
 
         val_vec.iter()
@@ -56,30 +57,31 @@ impl ArrayManager {
             .for_each(|(adjust, val)| {
                 // adjust needs +1 because when storing space for the array, the first element is not counted for adjustment
                 // The 4 is for byte size of i32 (standard size for this project)
-                let adjustment = Value::new(ValTy::con(4 * uniq_arr.generate_adjustment(adjust + 1)));
+                let adjustment =
+                        Value::new(
+                            ValTy::con(4 * uniq_arr.generate_adjustment(adjust + 1))
+                        );
 
                 // Generate Offset for Array
                 let mul_inst = irgm.build_op_x_y(val.clone(), adjustment, InstTy::mul);
-                inst_vec.push(mul_inst.clone());
+                let mul_val = irgm.graph_manager().add_instruction(mul_inst);
 
                 match last_offset_inst.clone() {
                     Some(last_inst) => {
-                        let mul_val = Value::new(ValTy::op(mul_inst));
                         let offset_inst = irgm.build_op_x_y(last_inst, mul_val, InstTy::add);
-                        inst_vec.push(offset_inst.clone());
-                        last_offset_inst = Some(Value::new(ValTy::op(offset_inst)));
+                        let last_offset_val = irgm.graph_manager().add_instruction(offset_inst);
+                        last_offset_inst = Some(last_offset_val);
                     },
                     None => {
-                        last_offset_inst = Some(Value::new(ValTy::op(mul_inst)));
+                        last_offset_inst = Some(mul_val);
                     },
                 }
 
         });
 
-        let last_mul_inst = inst_vec.last().expect("Should be at least one instruction.").clone();
+        let final_offset = last_offset_inst.expect("Should be at least one instruction.");
 
         // Find Array home register
-        // TODO : I believe this is the spot to change.
         let ref_register;
         if irgm.array_manager().is_global(&uniq_arr.base_ident) {
             ref_register = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
@@ -88,28 +90,26 @@ impl ArrayManager {
         }
         let arr_reg = Value::new(ValTy::adr(uniq_arr.clone_addr()));
         let add_inst = irgm.build_op_x_y(ref_register, arr_reg, InstTy::add);
-        inst_vec.push(add_inst.clone());
+        let array_reg_value = irgm.graph_manager().add_instruction(add_inst);
 
         // Adda offset to home register
-        let offset_val = Value::new(ValTy::op(last_mul_inst));
-        let arr_reg_val = Value::new(ValTy::op(add_inst));
-        let adda_inst = irgm.build_op_x_y(offset_val, arr_reg_val, InstTy::adda);
-        inst_vec.push(adda_inst.clone());
+        let adda_inst = irgm.build_op_x_y(final_offset, array_reg_value, InstTy::adda);
+        let adda_val = irgm.graph_manager().add_instruction(adda_inst);
 
-        let adda_val = Value::new(ValTy::op(adda_inst));
+        let ret_val;
         // if there is a value to assign, store, otherwise load.
         match &value_to_assign {
             Some(val) => {
                 let store_inst = irgm.build_op_x_y(adda_val, val.clone(), InstTy::store);
-                inst_vec.push(store_inst.clone());
+                ret_val = irgm.graph_manager().add_instruction(store_inst);
             },
             None => {
                 let load_inst = irgm.build_op_y(adda_val, InstTy::load);
-                inst_vec.push(load_inst);
+                ret_val = irgm.graph_manager().add_instruction(load_inst);
             },
         }
 
-        inst_vec
+        ret_val
     }
 }
 

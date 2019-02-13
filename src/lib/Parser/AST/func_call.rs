@@ -6,6 +6,7 @@ use Parser::AST::expression::Expression;
 use lib::IR::ret_register::RetRegister;
 use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{Rc,RefCell};
 
 #[derive(Debug,Clone)]
 pub struct FuncCall {

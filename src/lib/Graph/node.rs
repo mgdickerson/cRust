@@ -1,5 +1,5 @@
 use std;
-use lib::IR::basic_block::BasicBlock;
+use lib::Graph::basic_block::BasicBlock;
 use lib::IR::ir_manager::{InstTracker, BlockTracker};
 
 #[derive(Clone)]

@@ -5,6 +5,7 @@ use Parser::AST::expression::Expression;
 
 use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{Rc,RefCell};
 use lib::Graph::graph_manager::GraphManager;
 
 #[derive(Debug,Clone)]
@@ -90,6 +91,15 @@ impl Assignment {
         if expr_array.is_empty() {
             let block_num = irgm.get_block_num();
             let inst_num = irgm.get_inst_num();
+            // TODO : This is handy but not needed once it works.
+            match expr_value.get_value() {
+                ValTy::var(uniq) => {
+                    //println!("Value being assigned is just a variable, must be a, alias!\n {} : {:?}", result.get_value(), uniq);
+                }
+                others => {
+                    //println!("Non-alias values\n {} : {:?}", result.get_value(), others);
+                },
+            }
             irgm.variable_manager().make_unique_variable(result.get_value(), expr_value.clone(), block_num, inst_num);
         } else {
             let val_array = expr_array.iter()
@@ -98,13 +108,8 @@ impl Assignment {
                 }).collect::<Vec<Value>>();
 
             let uniq_arr = irgm.array_manager().get_array_ref(result.get_value()).clone();
-            let inst_list = irgm.build_array_inst(uniq_arr, val_array, Some(expr_value));
 
-            let ret_val = Value::new(ValTy::op(inst_list.last().expect("There should be a final Op.").clone()));
-
-            for inst in inst_list {
-                irgm.graph_manager().add_instruction(inst);
-            }
+            let ret_val = irgm.build_array_inst(uniq_arr, val_array, Some(expr_value));
         }
     }
 
