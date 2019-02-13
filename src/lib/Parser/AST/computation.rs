@@ -160,7 +160,8 @@ impl Comp {
             func.to_ir(&mut ir_graph_manager);
         }
 
-        ir_graph_manager.new_node(String::from("Main"), NodeType::main_node);
+        let main_index = ir_graph_manager.new_node(String::from("Main"), NodeType::main_node).clone();
+        ir_graph_manager.graph_manager().set_main_node(main_index);
         self.funcBody.to_ir(&mut ir_graph_manager);
 
         //println!("{:?}", ir_graph_manager.variable_manager().clone().get_var_map());

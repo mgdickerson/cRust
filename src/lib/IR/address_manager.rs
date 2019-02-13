@@ -26,6 +26,10 @@ impl AddressManager {
         UniqueAddress::new(String::from("globalReg"), self.global_addr.clone())
     }
 
+    pub fn get_stack_pointer(&self) -> UniqueAddress {
+        UniqueAddress::new(String::from("SP"), self.stack_pointer.clone())
+    }
+
     pub fn get_frame_pointer(&self) -> UniqueAddress {
         UniqueAddress::new(String::from("FP"), self.frame_pointer.clone())
     }

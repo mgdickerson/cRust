@@ -193,7 +193,7 @@ impl Op {
         match self.x_val.clone() {
             Some(val) => {
                 if val == var_to_clean {
-                    println!("Clean cycle reaches x_val replacement for {}.", var_to_clean.get_value().to_string());
+                    //println!("Clean cycle reaches x_val replacement for {}.", var_to_clean.get_value().to_string());
                     self.x_val = Some(replacement_var.clone());
                 }
             },
@@ -206,7 +206,7 @@ impl Op {
         match self.y_val.clone() {
             Some(val) => {
                 if val == var_to_clean {
-                    println!("Clean cycle reaches y_val replacement for {}.", var_to_clean.get_value().to_string());
+                    //println!("Clean cycle reaches y_val replacement for {}.", var_to_clean.get_value().to_string());
                     self.y_val = Some(replacement_var.clone());
                 }
             },

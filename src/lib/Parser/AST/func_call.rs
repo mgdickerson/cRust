@@ -122,6 +122,8 @@ impl FuncCall {
             func_name => {
                 let uniq_func = irgm.get_func_call(&String::from(func_name));
 
+                //println!("{} : \tGlobals {:?}\n\tParams: {:?}", func_name, &uniq_func.load_globals_list(), &uniq_func.load_param_list());
+
                 // Store all global parameters affected.
                 for global in &uniq_func.load_globals_list() {
                     let global_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
@@ -161,7 +163,23 @@ impl FuncCall {
                 let inst = irgm.build_spec_op(&func_name.to_string(), InstTy::call);
                 irgm.graph_manager().add_instruction(inst);
 
-                //println!("Called function {} has return: {}", func_name, uniq_func.has_return());
+                // Then I need to load back all the affected globals.
+                for global in &uniq_func.load_assigned_globals() {
+                    let global_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
+                    let var_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(global, 4)));
+
+                    let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
+                    let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
+
+                    let inst = irgm.build_op_y(add_reg_val, InstTy::load);
+                    let new_global_val = irgm.graph_manager().add_instruction(inst);
+
+                    let block_num = irgm.get_block_num();
+                    let inst_num = irgm.get_inst_num() + 1;
+                    irgm.variable_manager().make_unique_variable(global.clone(), new_global_val, block_num, inst_num);
+                }
+
+                // println!("Called function {} has return: {}", func_name, uniq_func.has_return());
                 if uniq_func.has_return() {
                     return Some(Value::new(ValTy::ret(RetRegister::new())));
                 }
@@ -189,9 +207,15 @@ impl FuncCall {
             "OutputNum" => {},
             "OutputNewLine" => {},
             func_name => {
+                //println!("{} calls {}", func_name, irgm.function_manager().get_mut_function())
                 let affected_globals = irgm.function_manager().get_mut_function(&self.funcName.get_value()).load_globals_list();
                 for global in affected_globals {
-                    irgm.function_manager().get_mut_function(&self.funcName.get_value()).add_global(&global);
+                    irgm.variable_manager().active_function().add_global(&global);
+                }
+
+                let assigned_globals = irgm.function_manager().get_mut_function(&self.funcName.get_value()).load_assigned_globals();
+                for assigned_global in assigned_globals {
+                    irgm.variable_manager().active_function().add_assigned_global(&assigned_global);
                 }
             },
         }

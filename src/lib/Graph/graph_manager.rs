@@ -12,13 +12,14 @@ use super::{Rc,RefCell};
 pub struct GraphManager {
     graph: Graph<Node, i32>,
     current_node_index: NodeIndex,
+    main_node_index: Option<NodeIndex>,
 }
 
 impl GraphManager {
     pub fn new(mut graph: Graph<Node,i32>, it: &mut InstTracker, bt: &mut BlockTracker) -> Self {
         let current_node = Node::new(String::from("Test_Node"), it, bt, NodeType::main_node);
         let current_node_index = graph.add_node(current_node);
-        GraphManager { graph, current_node_index }
+        GraphManager { graph, current_node_index, main_node_index: None }
     }
 
     // -- Node Related Functions -- //
@@ -38,6 +39,10 @@ impl GraphManager {
     }
 
     pub fn clone_node_index(&self) -> NodeIndex { self.current_node_index.clone() }
+
+    pub fn set_main_node(&mut self, main_index: NodeIndex) { self.main_node_index = Some(main_index); }
+
+    pub fn get_main_node(&self) -> NodeIndex { self.main_node_index.unwrap().clone() }
 
     pub fn get_mut_ref_current_node_index(&mut self) -> &mut NodeIndex {
         &mut self.current_node_index

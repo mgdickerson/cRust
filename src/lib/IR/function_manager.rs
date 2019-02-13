@@ -38,6 +38,7 @@ pub struct UniqueFunction {
     recovery_point: Option<(HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>, HashMap<String, Rc<RefCell<UniqueVariable>>>)>,
     params_to_load: Vec<String>,
     affected_globals: Vec<String>,
+    assigned_globals: Vec<String>,
     has_return: bool,
 }
 
@@ -48,6 +49,7 @@ impl UniqueFunction {
             func_index: func_index.clone(),
             params_to_load: Vec::new(),
             affected_globals: Vec::new(),
+            assigned_globals: Vec::new(),
             has_return: false,
         }
     }
@@ -70,7 +72,14 @@ impl UniqueFunction {
         }
 
         self.affected_globals.push(global_base.clone());
-        //self.variables_to_load.push(global_base.clone());
+    }
+
+    pub fn add_assigned_global(&mut self, global_base: &String) {
+        if self.assigned_globals.contains(global_base) {
+            return
+        }
+
+        self.assigned_globals.push(global_base.clone());
     }
 
     pub fn load_param_list(&self) -> Vec<String> {
@@ -83,6 +92,10 @@ impl UniqueFunction {
 
     pub fn load_globals_list(&self) -> Vec<String> {
         self.affected_globals.clone()
+    }
+
+    pub fn load_assigned_globals(&self) -> Vec<String> {
+        self.assigned_globals.clone()
     }
 
     pub fn add_checkpoint(&mut self, checkpoint: (HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>, HashMap<String, Rc<RefCell<UniqueVariable>>>)) {

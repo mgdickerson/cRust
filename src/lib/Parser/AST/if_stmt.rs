@@ -141,6 +141,9 @@ impl IfStmt {
 
         // Go through if-body, generate if-bottom
         self.funcIfBody.to_ir(irgm);
+        let if_branch = irgm.build_op_y(Value::new(ValTy::con(-1)), InstTy::bra);
+        irgm.graph_manager().add_instruction(if_branch);
+
         let if_node_bottom = irgm.graph_manager().clone_node_index();
 
         let if_checkpoint = irgm.variable_manager().var_checkpoint();

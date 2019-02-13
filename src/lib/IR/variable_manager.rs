@@ -131,7 +131,7 @@ impl VariableManager {
                         match val_comp {
                             ValTy::var(uniq_var) => {
                                 if old_var == uniq_var {
-                                    println!("Found a match~! [{:?}] == [{:?}]", old_var, uniq);
+                                    //println!("Found a match~! [{:?}] == [{:?}]", old_var, uniq);
                                     uniq.borrow_mut().update_value(new_val.clone());
                                 }
                             },

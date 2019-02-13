@@ -135,7 +135,7 @@ impl IRGraphManager {
 
             //println!("Current Node Id: {}\tPhi Inst: {}", node_starting_point.clone(), phi_inst);
             for (block_num, inst_num) in uses {
-                println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.borrow().get_ident(), block_num, inst_num);
+                //println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.borrow().get_ident(), block_num, inst_num);
                 if block_num >= node_starting_point {
                     remove_use_vec.push((Rc::clone(uniq),block_num,inst_num));
                     vars_to_correct.push(Rc::clone(uniq));
@@ -211,21 +211,6 @@ impl IRGraphManager {
         let mut inst_num = self.get_inst_num() + 1;
         self.var_manager.get_current_unique(ident.clone())
     }
-
-    /*
-     * temp removing this function so i can get rid of get_mut_uniq_var()
-    pub fn remove_uses(&mut self, uses_to_remove: Vec<(UniqueVariable,usize,usize)>) {
-        for (uniq, block_num, inst_num) in uses_to_remove {
-            let mut uniq_result = self.var_manager.get_mut_uniq_var(uniq);
-            match uniq_result {
-                Ok(mut_uniq) => {
-                    mut_uniq.remove_use(block_num, inst_num);
-                },
-                Err(e) => panic!(e),
-            }
-        }
-    }
-    */
 
     pub fn insert_phi_inst(&mut self, left_set: HashMap<String, Rc<RefCell<UniqueVariable>>>, right_set: HashMap<String, Rc<RefCell<UniqueVariable>>>)
         -> Vec<(Rc<RefCell<UniqueVariable>>, usize)> {
