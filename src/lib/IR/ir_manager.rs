@@ -53,6 +53,7 @@ impl IRGraphManager {
 
         let graph_manager = GraphManager::new(graph, &mut it, &mut bt);
 
+
         IRGraphManager {
             bt,
             it,

@@ -57,10 +57,31 @@ impl ArrayManager {
             .for_each(|(adjust, val)| {
                 // adjust needs +1 because when storing space for the array, the first element is not counted for adjustment
                 // The 4 is for byte size of i32 (standard size for this project)
+                let adj_size = 4 * uniq_arr.generate_adjustment(adjust + 1);
+
+                if let ValTy::con(val_con) = val.get_value().clone() {
+                    let new_adjust = val_con * adj_size;
+                    match last_offset_inst.clone() {
+                        Some(last_inst) => {
+                            if let ValTy::con(last_con) = last_inst.get_value() {
+                                last_offset_inst = Some(Value::new(ValTy::con(last_con + new_adjust)));
+                            }
+
+                            // TODO : A little more here
+
+                        },
+                        None => {
+                            last_offset_inst = Some(Value::new(ValTy::con(new_adjust)));
+                        }
+                    }
+
+                    continue
+                }
+
                 let adjustment =
-                        Value::new(
-                            ValTy::con(4 * uniq_arr.generate_adjustment(adjust + 1))
-                        );
+                    Value::new(
+                        ValTy::con(adj_size.clone())
+                    );
 
                 // Generate Offset for Array
                 let mul_inst = irgm.build_op_x_y(val.clone(), adjustment, InstTy::mul);

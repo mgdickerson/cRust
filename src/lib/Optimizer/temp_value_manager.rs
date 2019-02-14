@@ -1,15 +1,17 @@
-use super::{Rc,RefCell};
-use lib::IR::ir::Op;
+use super::{Rc,RefCell,HashMap};
+use lib::IR::ir::{Value,Op};
 
 // This will be the new handler for inst_number by taking size of vec (will start at 0)
 pub struct TempValManager {
     temp_vec: Vec<Rc<RefCell<Op>>>,
+    op_hash: HashMap<usize,Rc<RefCell<Op>>>,
 }
 
 impl TempValManager {
     pub fn new() -> Self {
         TempValManager {
             temp_vec: Vec::new(),
+            op_hash: HashMap::new(),
         }
     }
 

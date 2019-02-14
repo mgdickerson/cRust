@@ -82,7 +82,11 @@ impl Designator {
 
         if expr_array.is_empty() {
             if irgm.variable_manager().is_global(&ident.get_value()) {
-                irgm.variable_manager().active_function().add_global(&ident.get_value());
+                if !irgm.variable_manager().active_function().load_param_list().contains(&ident.get_value()) {
+                    irgm.variable_manager().active_function().add_global(&ident.get_value());
+                } else {
+                    //println!("Global var {} is being overwritten by local param.", ident.get_value());
+                }
             }
         }
     }

@@ -64,6 +64,14 @@ impl Term {
                     match current_math_op {
                         Some(TokenType::MulOp) => {
                             let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
+
+                            if let ValTy::con(prev_con) = previous_term.unwrap().get_value() {
+                                if let ValTy::con(curr_con) = current_term.get_value() {
+                                    previous_term = Some(Value::new(ValTy::con(prev_con * curr_con)));
+                                    continue
+                                }
+                            }
+
                             let inst = irgm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::mul);
 
                             let inst_val = irgm.graph_manager().add_instruction(inst);
@@ -71,6 +79,14 @@ impl Term {
                         },
                         Some(TokenType::DivOp) => {
                             let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
+
+                            if let ValTy::con(prev_con) = previous_term.unwrap().get_value() {
+                                if let ValTy::con(curr_con) = current_term.get_value() {
+                                    previous_term = Some(Value::new(ValTy::con(prev_con / curr_con)));
+                                    continue
+                                }
+                            }
+
                             let inst = irgm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::div);
 
                             let inst_val = irgm.graph_manager().add_instruction(inst);

@@ -142,9 +142,6 @@ impl FuncDecl {
         let func_index = irgm.new_node(func_name.get_value(), NodeType::function_head).clone();
         irgm.new_function(func_name.get_value(), &func_index);
 
-        // Scan function for globals used within
-        self.funcBody.scan_globals(irgm);
-
         match func_param {
             Some(parameters) => {
                 parameters.get_value().iter().for_each(|variable| {
@@ -156,6 +153,9 @@ impl FuncDecl {
                 // Pass through
             },
         }
+
+        // Scan function for globals used within
+        self.funcBody.scan_globals(irgm);
 
         for var in self.varDecl {
             var.to_ir(irgm, false, Some(func_name.get_value()));
@@ -198,23 +198,25 @@ impl FuncDecl {
         // After loading all necessary variables, convert func_body to IR
         self.funcBody.to_ir(irgm);
 
-        // Store back all affected globals
-        for global in irgm.variable_manager().active_function().load_assigned_globals() {
-            let global_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
+        if !irgm.variable_manager().active_function().has_return() {
+            // Store back all affected globals
+            for global in irgm.variable_manager().active_function().load_assigned_globals() {
+                let global_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
 
-            let uniq_var_val = Value::new(ValTy::var(irgm.get_current_unique(&global).clone()));
-            let var_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(&global, 4)));
+                let uniq_var_val = Value::new(ValTy::var(irgm.get_current_unique(&global).clone()));
+                let var_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(&global, 4)));
 
-            let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
-            let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
+                let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
+                let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
 
-            let inst = irgm.build_op_x_y(add_reg_val, uniq_var_val, InstTy::store);
-            let new_global_val = irgm.graph_manager().add_instruction(inst);
+                let inst = irgm.build_op_x_y(add_reg_val, uniq_var_val, InstTy::store);
+                let new_global_val = irgm.graph_manager().add_instruction(inst);
+            }
+
+            let stack_pointer = Value::new(ValTy::adr(irgm.address_manager().get_stack_pointer()));
+            let bra_inst = irgm.build_op_y(stack_pointer, InstTy::bra);
+            irgm.graph_manager().add_instruction(bra_inst);
         }
-
-        let stack_pointer = Value::new(ValTy::adr(irgm.address_manager().get_stack_pointer()));
-        let bra_inst = irgm.build_op_y(stack_pointer, InstTy::bra);
-        irgm.graph_manager().add_instruction(bra_inst);
 
         let uniq_func = irgm.end_function();
         irgm.function_manager().add_func_to_manager(uniq_func);

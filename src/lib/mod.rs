@@ -6,6 +6,7 @@ pub mod Parser;
 pub mod Utility;
 pub mod IR;
 pub mod Graph;
+pub mod Optimizer;
 
 #[cfg(test)]
 mod tests {

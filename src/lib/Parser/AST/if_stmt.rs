@@ -141,8 +141,7 @@ impl IfStmt {
 
         // Go through if-body, generate if-bottom
         self.funcIfBody.to_ir(irgm);
-        let if_branch = irgm.build_op_y(Value::new(ValTy::con(-1)), InstTy::bra);
-        irgm.graph_manager().add_instruction(if_branch);
+
 
         let if_node_bottom = irgm.graph_manager().clone_node_index();
 
@@ -150,6 +149,10 @@ impl IfStmt {
 
         match self.funcElseBody {
             Some(funcElseBody) => {
+                // There is an else branch, so it is important to add the branch to the if node.
+                let if_branch = irgm.build_op_y(Value::new(ValTy::con(-1)), InstTy::bra);
+                irgm.graph_manager().add_instruction(if_branch);
+
                 // TODO : Issue being run in to here. Now that the new Phi value is the "latest" that is being added instead of the correctly reset value from the "main" node. Need to use restore more intelligently.
                 irgm.variable_manager().restore_vars(main_checkpoint.clone());
 

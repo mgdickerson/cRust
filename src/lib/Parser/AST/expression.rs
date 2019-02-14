@@ -65,6 +65,14 @@ impl Expression {
                     match current_math_op {
                         Some(TokenType::AddOp) => {
                             let current_expr = term.to_ir(irgm).expect("Expected Valid Value, found None.");
+
+                            if let ValTy::con(prev_con) = previous_expr.unwrap().get_value() {
+                                if let ValTy::con(curr_con) = current_expr.get_value() {
+                                    previous_expr = Some(Value::new(ValTy::con(prev_con + curr_con)));
+                                    continue
+                                }
+                            }
+
                             let inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::add);
 
                             let inst_val = irgm.graph_manager().add_instruction(inst);
@@ -72,6 +80,14 @@ impl Expression {
                         },
                         Some(TokenType::SubOp) => {
                             let current_expr = term.to_ir(irgm).expect("Expected Valid Value, found None.");
+
+                            if let ValTy::con(prev_con) = previous_expr.unwrap().get_value() {
+                                if let ValTy::con(curr_con) = current_expr.get_value() {
+                                    previous_expr = Some(Value::new(ValTy::con(prev_con - curr_con)));
+                                    continue
+                                }
+                            }
+
                             let inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::sub);
 
                             let inst_val = irgm.graph_manager().add_instruction(inst);

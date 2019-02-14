@@ -173,6 +173,22 @@ impl Op {
         p_command
     }
 
+    pub fn get_values(&self) -> (Option<Value>, Option<Value>, Option<String>) {
+        (self.x_val.clone(), self.y_val.clone(), self.special_val.clone())
+    }
+
+    pub fn update_x_val(&mut self, new_val: Value) {
+        self.x_val = Some(new_val);
+    }
+
+    pub fn update_y_val(&mut self, new_val: Value) {
+        self.y_val = Some(new_val);
+    }
+
+    pub fn update_special_val(&mut self, new_val: String) {
+        self.special_val = Some(new_val);
+    }
+
     pub fn get_return_value(&self) -> String {
         let string = String::from("(") + &self.inst_number.to_string() + ")";
         string

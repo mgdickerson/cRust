@@ -86,7 +86,15 @@ impl Assignment {
     pub fn to_ir(self, irgm : &mut IRGraphManager) {
         let (result, expr_array) = self.designator.get_value();
 
-        let expr_value = self.expression.to_ir(irgm).expect("Expected some expression with related Assignment Operation");
+        let mut expr_value = self.expression.to_ir(irgm).expect("Expected some expression with related Assignment Operation");
+
+        match expr_value.get_value().clone() {
+            ValTy::con(con) => {
+                let const_add_inst = irgm.build_op_x_y(Value::new(ValTy::con(0)), expr_value.clone(), InstTy::add);
+                expr_value = irgm.graph_manager().add_instruction(const_add_inst);
+            },
+            _ => {},
+        }
 
         if expr_array.is_empty() {
             let block_num = irgm.get_block_num();
@@ -109,7 +117,12 @@ impl Assignment {
         let (ident, arr) = self.designator.get_value();
         if arr.is_empty() {
             if irgm.variable_manager().is_global(&ident.get_value()) {
-                irgm.variable_manager().active_function().add_assigned_global(&ident.get_value());
+                if !irgm.variable_manager().active_function().load_param_list().contains(&ident.get_value()) {
+                    irgm.variable_manager().active_function().add_assigned_global(&ident.get_value());
+                }
+                else {
+                    //println!("Global var {} is being overwritten by local param.", ident.get_value());
+                }
                 //println!("Function: {}\tAssigned variable: {}", irgm.variable_manager().active_function().get_name(), ident.get_value());
             }
         }
