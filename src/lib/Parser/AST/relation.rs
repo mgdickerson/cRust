@@ -51,10 +51,20 @@ impl Relation {
     }
 
     pub fn to_ir(self, irgm: &mut IRGraphManager, branch_location: Value) -> Value {
-        let leftCompVal = self.leftExp.to_ir(irgm).
+        let mut leftCompVal = self.leftExp.to_ir(irgm).
             expect("Expected Left Comp Op, none found");
-        let rightCompVal = self.rightExp.to_ir(irgm).
+        let mut rightCompVal = self.rightExp.to_ir(irgm).
             expect("Expected Right Comp Op, none found");
+
+        if let ValTy::con(left_con) = leftCompVal.get_value().clone() {
+            let const_split = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(left_con)), InstTy::add);
+            leftCompVal = irgm.graph_manager().add_instruction(const_split);
+        }
+
+        if let ValTy::con(right_con) = rightCompVal.get_value().clone() {
+            let const_split = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(right_con)), InstTy::add);
+            rightCompVal = irgm.graph_manager().add_instruction(const_split);
+        }
 
         let inst = irgm.build_op_x_y(leftCompVal,rightCompVal,InstTy::cmp);
         let inst_val = irgm.graph_manager().add_instruction(inst);

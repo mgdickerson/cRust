@@ -29,14 +29,12 @@ use lib::IR::ir;
 use lib::IR::ir_manager::IRGraphManager;
 use lib::IR::ir::{Value,ValTy,Op,InstTy};
 use lib::Graph::node::{Node,NodeId};
-//use lib::Graph::arena::Arena;
 use lib::Utility::display;
 
 /// External Lib
 
 extern crate petgraph;
 
-use petgraph::visit::{Visitable,VisitMap};
 use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators::simple_fast;
 
@@ -46,6 +44,10 @@ use petgraph::dot::{Dot,Config};
 use petgraph::algo::DfsSpace;
 
 fn main() {
+    // TODO : Start building command line tool.
+
+    // No longer need to call run, now I can call test and have the failures shown for the specific test (and all still run, how cool!)
+    /*
     println!("Hello, Lexer test!");
 
     //  Some notes for migration later:
@@ -139,4 +141,5 @@ fn main() {
         println!();
 
     }
+    */
 }

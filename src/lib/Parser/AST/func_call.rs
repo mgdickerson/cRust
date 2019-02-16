@@ -7,6 +7,7 @@ use lib::IR::ret_register::RetRegister;
 use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
 use super::{Rc,RefCell};
+use lib::Parser::AST::factor::FactorType::expr;
 
 #[derive(Debug,Clone)]
 pub struct FuncCall {
@@ -45,7 +46,7 @@ impl FuncCall {
                                             tc.get_next_token();
                                             variables.push(Expression::new(tc));
                                         },
-                                        expr => {
+                                        exprs => {
                                             //get next expression
                                             variables.push(Expression::new(tc));
                                         },
@@ -110,7 +111,11 @@ impl FuncCall {
                     panic!("There should only be 1 variable in OutputNum.");
                 }
 
-                let expr_val = self.variables.last().expect("There should be at least one argument.").to_owned().to_ir(irgm).expect("Should contain return value.");
+                let mut expr_val = self.variables.last().expect("There should be at least one argument.").to_owned().to_ir(irgm).expect("Should contain return value.");
+                if let ValTy::con(con) = expr_val.get_value().clone() {
+                    let add_inst = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(con)), InstTy::add);
+                    expr_val = irgm.graph_manager().add_instruction(add_inst);
+                }
                 let inst = irgm.build_op_x(expr_val, InstTy::write);
                 return Some(irgm.graph_manager().add_instruction(inst));
             },
@@ -208,8 +213,8 @@ impl FuncCall {
         let recursive_call = irgm.variable_manager().active_function().get_name();
 
         if self.funcName.get_value() == recursive_call {
-            for expr in &self.variables {
-                expr.scan_globals(irgm);
+            for expr_var in &self.variables {
+                expr_var.scan_globals(irgm);
             }
 
             // There are no further global items this should call
@@ -234,8 +239,8 @@ impl FuncCall {
             },
         }
 
-        for expr in &self.variables {
-            expr.scan_globals(irgm);
+        for expr_var in &self.variables {
+            expr_var.scan_globals(irgm);
         }
     }
 }

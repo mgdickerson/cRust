@@ -65,11 +65,10 @@ impl Term {
                         Some(TokenType::MulOp) => {
                             let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
 
-                            if let ValTy::con(prev_con) = previous_term.clone().unwrap().get_value() {
-                                if let ValTy::con(curr_con) = current_term.get_value() {
-                                    previous_term = Some(Value::new(ValTy::con(prev_con * curr_con)));
-                                    continue
-                                }
+                            // Would be nice to at least make all instructions at least 1 constant at most.
+                            if let ValTy::con(prev_con) = previous_term.clone().unwrap().get_value().clone() {
+                                let const_split = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(prev_con)), InstTy::add);
+                                previous_term = Some(irgm.graph_manager().add_instruction(const_split));
                             }
 
                             let inst = irgm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::mul);
@@ -80,11 +79,10 @@ impl Term {
                         Some(TokenType::DivOp) => {
                             let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
 
-                            if let ValTy::con(prev_con) = previous_term.clone().unwrap().get_value() {
-                                if let ValTy::con(curr_con) = current_term.get_value() {
-                                    previous_term = Some(Value::new(ValTy::con(prev_con / curr_con)));
-                                    continue
-                                }
+                            // Would be nice to at least make all instructions at least 1 constant at most.
+                            if let ValTy::con(prev_con) = previous_term.clone().unwrap().get_value().clone() {
+                                let const_split = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(prev_con)), InstTy::add);
+                                previous_term = Some(irgm.graph_manager().add_instruction(const_split));
                             }
 
                             let inst = irgm.build_op_x_y(previous_term.unwrap(), current_term, InstTy::div);
