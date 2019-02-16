@@ -35,8 +35,15 @@ use lib::Utility::display;
 /// External Lib
 
 extern crate petgraph;
-use petgraph::graph::Graph;
+
+use petgraph::visit::{Visitable,VisitMap};
+use petgraph::algo::dominators::Dominators;
+use petgraph::algo::dominators::simple_fast;
+
+use petgraph::Graph;
+use petgraph::visit::Dfs;
 use petgraph::dot::{Dot,Config};
+use petgraph::algo::DfsSpace;
 
 fn main() {
     println!("Hello, Lexer test!");
@@ -98,11 +105,30 @@ fn main() {
         let comp = Parser::AST::computation::Comp::new(&mut tc);
         let mut irgmanager = comp.to_ir();
 
+        /// TEST SPACE FOR Dominators
+        ///
+        /// It works!
+
+        let root = irgmanager.graph_manager().get_main_node();
+        let graph = irgmanager.graph_manager().get_mut_ref_graph().clone();
+        let dom_space = simple_fast(&graph,root);
+        //println!("{:?}", dom_space);
+        for node in graph.node_indices() {
+            match dom_space.immediate_dominator(node) {
+                Some(parent_node) => {
+                    irgmanager.graph_manager().add_dominance_edge(node, parent_node);
+                },
+                None => {},
+            }
+        }
+
+        /// END TEST SPACE ///
+
         let mut dot_graph_path = entry.file_name();
         let mut file_name = path.to_str().unwrap().to_owned() + "/" + dot_graph_path.to_str().unwrap().trim_end_matches(".txt") + ".dot";
 
         let mut output = String::new();
-        write!(output, "{:?}", display::Dot::with_config(&irgmanager.graph_manager().get_mut_ref_graph().clone(), &[display::Config::EdgeNoLabel]));
+        write!(output, "{:?}", display::Dot::with_config(&irgmanager.graph_manager().get_mut_ref_graph().clone(), &[display::Config::EdgeColor]));
         fs::write(file_name, output);
         //write!(file_name, "{:?}", display::Dot::with_config(&irgmanager.get_graph(), &[display::Config::EdgeNoLabel]) as [u8]).expect("File already existed");
 

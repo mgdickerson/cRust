@@ -90,7 +90,12 @@ impl Assignment {
 
         match expr_value.get_value().clone() {
             ValTy::con(con) => {
-                let const_add_inst = irgm.build_op_x_y(Value::new(ValTy::con(0)), expr_value.clone(), InstTy::add);
+                let const_add_inst;
+                if con < 0 {
+                    const_add_inst = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(-con)), InstTy::sub);
+                } else {
+                    const_add_inst = irgm.build_op_x_y(Value::new(ValTy::con(0)), expr_value.clone(), InstTy::add);
+                }
                 expr_value = irgm.graph_manager().add_instruction(const_add_inst);
             },
             _ => {},

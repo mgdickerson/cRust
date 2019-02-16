@@ -19,6 +19,17 @@ impl Value {
         &self.val
     }
 
+    pub fn get_var_base(&self) -> ValTy {
+        let ret;
+        if let ValTy::var(var) = self.clone_value() {
+            ret = var.borrow().get_value().to_owned().clone().get_var_base()
+        } else {
+            ret = self.clone_value()
+        }
+
+        ret
+    }
+
     pub fn clone_value(&self) -> ValTy {
         self.val.clone()
     }

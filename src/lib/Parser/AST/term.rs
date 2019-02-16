@@ -55,7 +55,7 @@ impl Term {
     }
 
     pub fn to_ir(self, irgm: &mut IRGraphManager) -> Option<Value> {
-        let mut previous_term = None;
+        let mut previous_term : Option<Value> = None;
         let mut current_math_op = None;
 
         for term in self.term_list {
@@ -65,7 +65,7 @@ impl Term {
                         Some(TokenType::MulOp) => {
                             let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
 
-                            if let ValTy::con(prev_con) = previous_term.unwrap().get_value() {
+                            if let ValTy::con(prev_con) = previous_term.clone().unwrap().get_value() {
                                 if let ValTy::con(curr_con) = current_term.get_value() {
                                     previous_term = Some(Value::new(ValTy::con(prev_con * curr_con)));
                                     continue
@@ -80,7 +80,7 @@ impl Term {
                         Some(TokenType::DivOp) => {
                             let current_term = factor.to_ir(irgm).expect("Expected Valid Value, found None.");
 
-                            if let ValTy::con(prev_con) = previous_term.unwrap().get_value() {
+                            if let ValTy::con(prev_con) = previous_term.clone().unwrap().get_value() {
                                 if let ValTy::con(curr_con) = current_term.get_value() {
                                     previous_term = Some(Value::new(ValTy::con(prev_con / curr_con)));
                                     continue

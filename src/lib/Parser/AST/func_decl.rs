@@ -209,7 +209,14 @@ impl FuncDecl {
                 let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
                 let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
 
-                let inst = irgm.build_op_x_y(add_reg_val, uniq_var_val, InstTy::store);
+                let inst;
+                if let ValTy::con(con_val) = uniq_var_val.clone().get_var_base().clone() {
+                    let add_inst = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(con_val)), InstTy::add);
+                    let add_val = irgm.graph_manager().add_instruction(add_inst);
+                    inst = irgm.build_op_x_y(add_reg_val, add_val, InstTy::store);
+                } else {
+                    inst = irgm.build_op_x_y(add_reg_val, uniq_var_val, InstTy::store);
+                }
                 let new_global_val = irgm.graph_manager().add_instruction(inst);
             }
 

@@ -11,7 +11,6 @@ use super::variable_manager::{VariableManager, UniqueVariable};
 use super::array_manager::{ArrayManager,UniqueArray};
 use super::address_manager::{AddressManager,UniqueAddress};
 use super::function_manager::{FunctionManager,UniqueFunction};
-use super::operator_dominator::{OpDomHandler,OpNode,OpGraph};
 use petgraph::graph::NodeIndex;
 use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators;
@@ -27,7 +26,6 @@ pub struct IRGraphManager {
     // Combining the two would allow assignment
     // and possibly assign temp variables for outputs.
     it: InstTracker,
-    op_dom_handler: OpDomHandler,
 
     // User made Variable Tracker
     var_manager: VariableManager,
@@ -47,11 +45,12 @@ pub struct IRGraphManager {
 
 impl IRGraphManager {
     pub fn new() -> Self {
-        let graph : Graph<Node, i32> = Graph::new();
+        let graph = Graph::new();
         let mut it = InstTracker::new();
         let mut bt = BlockTracker::new();
 
-        let graph_manager = GraphManager::new(graph, &mut it, &mut bt);
+        let graph_manager = GraphManager::
+        new(graph, &mut it, &mut bt);
 
 
         IRGraphManager {
@@ -62,7 +61,6 @@ impl IRGraphManager {
             addr_manager: AddressManager::new(),
             func_manager: FunctionManager::new(),
             is_func: false,
-            op_dom_handler: OpDomHandler::new(),
             graph_manager,
         }
     }

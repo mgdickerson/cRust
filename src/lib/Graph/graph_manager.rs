@@ -6,16 +6,17 @@ use petgraph::graph::Graph;
 use petgraph::prelude::NodeIndex;
 
 use super::{Rc,RefCell};
+use petgraph::Directed;
 
 #[derive(Clone)]
 pub struct GraphManager {
-    graph: Graph<Node, i32>,
+    graph: Graph<Node, String, Directed, u32>,
     current_node_index: NodeIndex,
     main_node_index: NodeIndex,
 }
 
 impl GraphManager {
-    pub fn new(mut graph: Graph<Node,i32>, it: &mut InstTracker, bt: &mut BlockTracker) -> Self {
+    pub fn new(mut graph: Graph<Node, String, Directed, u32>, it: &mut InstTracker, bt: &mut BlockTracker) -> Self {
         let current_node = Node::new(String::from("Main_Node"), it, bt, NodeType::main_node);
         let current_node_index = graph.add_node(current_node);
         let main_node_index = current_node_index.clone();
@@ -42,6 +43,10 @@ impl GraphManager {
 
     pub fn set_main_node(&mut self) { self.current_node_index = self.main_node_index.clone() }
 
+    pub fn get_main_node(&self) -> NodeIndex {
+        self.main_node_index.clone()
+    }
+
     pub fn get_mut_ref_current_node_index(&mut self) -> &mut NodeIndex {
         &mut self.current_node_index
     }
@@ -63,16 +68,20 @@ impl GraphManager {
     */
 
     pub fn add_edge(&mut self, parent: NodeIndex, child: NodeIndex) {
-        self.graph.add_edge(parent, child, 1);
+        self.graph.add_edge(parent, child, String::from("black"));
+    }
+
+    pub fn add_dominance_edge(&mut self, parent: NodeIndex, child: NodeIndex) {
+        self.graph.add_edge(parent, child, String::from("red"));
     }
 
     // -- Graph Related Functions -- //
 
-    pub fn get_mut_ref_graph(&mut self) -> &mut Graph<Node, i32> {
+    pub fn get_mut_ref_graph(&mut self) -> &mut Graph<Node, String, Directed, u32> {
         &mut self.graph
     }
 
-    pub fn get_graph(self) -> Graph<Node, i32> {
+    pub fn get_graph(self) -> Graph<Node, String, Directed, u32> {
         self.graph
     }
 

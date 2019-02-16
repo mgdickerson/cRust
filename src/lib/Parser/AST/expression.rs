@@ -56,7 +56,7 @@ impl Expression {
     }
 
     pub fn to_ir(self, irgm : &mut IRGraphManager) -> Option<Value> {
-        let mut previous_expr = None;
+        let mut previous_expr : Option<Value> = None;
         let mut current_math_op = None;
 
         for expr in self.exp_list {
@@ -65,30 +65,62 @@ impl Expression {
                     match current_math_op {
                         Some(TokenType::AddOp) => {
                             let current_expr = term.to_ir(irgm).expect("Expected Valid Value, found None.");
+                            let inst;
 
-                            if let ValTy::con(prev_con) = previous_expr.unwrap().get_value() {
+                            if let ValTy::con(prev_con) = previous_expr.clone().unwrap().get_value().clone() {
                                 if let ValTy::con(curr_con) = current_expr.get_value() {
                                     previous_expr = Some(Value::new(ValTy::con(prev_con + curr_con)));
                                     continue
                                 }
-                            }
 
-                            let inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::add);
+                                if prev_con < 0 {
+                                    inst = irgm.build_op_x_y(current_expr, Value::new(ValTy::con(-prev_con)), InstTy::sub);
+                                } else {
+                                    inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::add);
+                                }
+                            } else {
+                                if let ValTy::con(curr_con) = current_expr.get_value().clone() {
+                                    if curr_con < 0 {
+                                        inst = irgm.build_op_x_y(previous_expr.unwrap(), Value::new(ValTy::con(-curr_con)), InstTy::sub);
+                                    } else {
+                                        inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::add);
+                                    }
+                                } else {
+                                    inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::add);
+                                }
+                            }
 
                             let inst_val = irgm.graph_manager().add_instruction(inst);
                             previous_expr = Some(inst_val);
                         },
                         Some(TokenType::SubOp) => {
                             let current_expr = term.to_ir(irgm).expect("Expected Valid Value, found None.");
+                            let inst;
 
-                            if let ValTy::con(prev_con) = previous_expr.unwrap().get_value() {
+                            if let ValTy::con(prev_con) = previous_expr.clone().unwrap().get_value().clone() {
                                 if let ValTy::con(curr_con) = current_expr.get_value() {
                                     previous_expr = Some(Value::new(ValTy::con(prev_con - curr_con)));
                                     continue
                                 }
-                            }
 
-                            let inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::sub);
+                                if prev_con < 0 {
+                                    let sign_change_inst = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(-prev_con)), InstTy::sub);
+                                    let val = irgm.graph_manager().add_instruction(sign_change_inst);
+                                    inst = irgm.build_op_x_y(val, current_expr, InstTy::sub);
+                                } else {
+                                    inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::sub);
+                                }
+                            } else {
+                                if let ValTy::con(curr_con) = current_expr.clone().get_value().clone() {
+                                    if curr_con < 0 {
+                                        inst = irgm.build_op_x_y(previous_expr.unwrap(), Value::new(ValTy::con(-curr_con)), InstTy::add);
+                                    } else {
+                                        inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::sub);
+                                    }
+                                } else {
+                                    inst = irgm.build_op_x_y(previous_expr.unwrap(), current_expr, InstTy::sub);
+                                }
+                            }
 
                             let inst_val = irgm.graph_manager().add_instruction(inst);
                             previous_expr = Some(inst_val);
