@@ -56,15 +56,16 @@ impl Relation {
         let mut rightCompVal = self.rightExp.to_ir(irgm).
             expect("Expected Right Comp Op, none found");
 
+        // Technically only the left value cant be a const, as the right value can be const with cmpi
         if let ValTy::con(left_con) = leftCompVal.get_value().clone() {
             let const_split = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(left_con)), InstTy::add);
             leftCompVal = irgm.graph_manager().add_instruction(const_split);
         }
 
-        if let ValTy::con(right_con) = rightCompVal.get_value().clone() {
+        /*if let ValTy::con(right_con) = rightCompVal.get_value().clone() {
             let const_split = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(right_con)), InstTy::add);
             rightCompVal = irgm.graph_manager().add_instruction(const_split);
-        }
+        }*/
 
         let inst = irgm.build_op_x_y(leftCompVal,rightCompVal,InstTy::cmp);
         let inst_val = irgm.graph_manager().add_instruction(inst);
