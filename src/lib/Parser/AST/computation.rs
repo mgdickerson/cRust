@@ -164,6 +164,9 @@ impl Comp {
         ir_graph_manager.graph_manager().set_main_node();
         self.funcBody.to_ir(&mut ir_graph_manager);
 
+        let ret_0 = ir_graph_manager.build_op_x(Value::new(ValTy::con(0)), InstTy::ret);
+        ir_graph_manager.graph_manager().add_instruction(ret_0);
+
         //println!("{:?}", ir_graph_manager.variable_manager().clone().get_var_map());
         //graph_manager.add_current_node_to_graph();
         //let clone = ir_graph_manager.variable_manager();

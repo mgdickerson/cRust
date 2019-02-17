@@ -30,6 +30,7 @@ use lib::IR::ir_manager::IRGraphManager;
 use lib::IR::ir::{Value,ValTy,Op,InstTy};
 use lib::Graph::node::{Node,NodeId};
 use lib::Utility::display;
+use lib::Optimizer;
 
 /// External Lib
 
@@ -47,7 +48,6 @@ fn main() {
     // TODO : Start building command line tool.
 
     // No longer need to call run, now I can call test and have the failures shown for the specific test (and all still run, how cool!)
-    /*
     println!("Hello, Lexer test!");
 
     //  Some notes for migration later:
@@ -107,6 +107,9 @@ fn main() {
         let comp = Parser::AST::computation::Comp::new(&mut tc);
         let mut irgmanager = comp.to_ir();
 
+        Optimizer::constant_evaluation::eval_program_constants(&mut irgmanager);
+
+
         /// TEST SPACE FOR Dominators
         ///
         /// It works!
@@ -141,5 +144,4 @@ fn main() {
         println!();
 
     }
-    */
 }

@@ -38,6 +38,7 @@ impl Value {
 #[derive(Debug,Clone, PartialEq)]
 pub enum ValTy {
     op(Rc<RefCell<Op>>),
+    node_id(usize),
     con(i32),
     var(Rc<RefCell<UniqueVariable>>),
     adr(UniqueAddress),
@@ -49,6 +50,9 @@ impl ValTy {
     pub fn to_string(&self) -> String {
         match &self {
             ValTy::op(op) => op.borrow().get_return_value(),
+            ValTy::node_id(id) => {
+                String::from("[") + &id.to_string() + "]"
+            },
             ValTy::con(con) => {
                 String::from("#") + &con.to_string()
             },
@@ -198,6 +202,23 @@ impl Op {
 
     pub fn update_special_val(&mut self, new_val: String) {
         self.special_val = Some(new_val);
+    }
+
+    /// Grabs the base value of variables and sets that as the new value of x or y val
+    pub fn update_base_values(&mut self) {
+        if let Some(x_val) = self.x_val.clone() {
+            //println!("Value x is currently: {:?}", self.x_val.clone().unwrap());
+            let val_ty = x_val.get_var_base();
+            self.x_val = Some(Value::new(val_ty));
+            //println!("Adding value {:?} to x", self.x_val.clone().unwrap())
+        }
+
+        if let Some(y_val) = self.y_val.clone() {
+            //println!("Value y is currently: {:?}", self.y_val.clone().unwrap());
+            let val_ty = y_val.get_var_base();
+            self.y_val = Some(Value::new(val_ty));
+            //println!("Adding value {:?} to y", self.y_val.clone().unwrap())
+        }
     }
 
     pub fn get_return_value(&self) -> String {

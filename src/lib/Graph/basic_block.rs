@@ -30,7 +30,7 @@ impl BasicBlock {
         self.inst
     }
 
-    pub fn get_mut_ref(&mut self) -> &mut Vec<Rc<RefCell<Op>>> {
+    pub fn get_inst_list_ref(&mut self) -> &mut Vec<Rc<RefCell<Op>>> {
         &mut self.inst
     }
 

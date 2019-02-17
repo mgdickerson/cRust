@@ -14,6 +14,7 @@ use petgraph::graph;
 
 use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators::simple_fast;
+use lib::IR::ir_manager::IRGraphManager;
 
 pub mod Lexer;
 pub mod Parser;
@@ -230,6 +231,10 @@ pub fn run_file(file_name: String) {
     let comp = Parser::AST::computation::Comp::new(&mut tc);
     let mut irgmanager = comp.to_ir();
 
+    clean_graph(&mut irgmanager);
+
+    Optimizer::constant_evaluation::eval_program_constants(&mut irgmanager);
+
     /// TEST SPACE FOR Dominators
     ///
     /// It works!
@@ -258,7 +263,12 @@ pub fn run_file(file_name: String) {
     println!();
     println!();
     println!();
+}
 
-
-
+pub fn clean_graph(irgm: &mut IRGraphManager) {
+    for node in irgm.graph_manager().get_mut_ref_graph().node_weights_mut() {
+        for inst in node.get_mut_data_ref().get_inst_list_ref() {
+            inst.borrow_mut().update_base_values();
+        }
+    }
 }
