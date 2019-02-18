@@ -107,7 +107,13 @@ fn main() {
         let comp = Parser::AST::computation::Comp::new(&mut tc);
         let mut irgmanager = comp.to_ir();
 
+        lib::clean_graph(&mut irgmanager);
+
         Optimizer::constant_evaluation::eval_program_constants(&mut irgmanager);
+
+        let mut temp_val_manager = Optimizer::temp_value_manager::TempValManager::new();
+        let main_node = irgmanager.graph_manager().get_main_node();
+        temp_val_manager.pull_temp_values(irgmanager.graph_manager(), main_node);
 
 
         /// TEST SPACE FOR Dominators

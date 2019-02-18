@@ -22,6 +22,10 @@ impl Node {
         self.node_data.get_mut_ref()
     }
 
+    pub fn get_data_ref(&self) -> & BasicBlock {
+        self.node_data.get_ref()
+    }
+
     pub fn get_data(self) -> BasicBlock {
         self.node_data.get()
     }

@@ -81,6 +81,10 @@ impl GraphManager {
         &mut self.graph
     }
 
+    pub fn get_ref_graph(&self) -> &Graph<Node, String, Directed, u32> {
+        &self.graph
+    }
+
     pub fn get_graph(self) -> Graph<Node, String, Directed, u32> {
         self.graph
     }

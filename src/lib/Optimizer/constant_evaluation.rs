@@ -36,7 +36,7 @@ impl ConstEval {
             //println!("Node: {}", node_weight.get_node_id());
 
             // Perform const eval
-            for inst in node_weight.get_mut_data_ref().get_inst_list_ref() {
+            for inst in node_weight.get_mut_data_ref().get_mut_inst_list_ref() {
                 let inst_id = inst.borrow().get_inst_num();
                 let inst_ty = inst.borrow().inst_type().clone();
 

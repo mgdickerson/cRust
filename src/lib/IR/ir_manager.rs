@@ -139,7 +139,7 @@ impl IRGraphManager {
                     remove_use_vec.push((Rc::clone(uniq),block_num,inst_num));
                     vars_to_correct.push(Rc::clone(uniq));
                     let node = graph_map.get_mut(&block_num).expect("Block number should exist");
-                    for inst in node.get_mut_data_ref().get_inst_list_ref() {
+                    for inst in node.get_mut_data_ref().get_mut_inst_list_ref() {
                         if inst.borrow().get_inst_num() != phi_inst.clone() {
                             let uniq_base = uniq.borrow().get_base_ident();
                             let old_val = Value::new(ValTy::var(Rc::clone(uniq)));
