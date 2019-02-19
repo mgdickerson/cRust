@@ -29,6 +29,12 @@ impl FunctionManager {
     pub fn get_function(&self, func_name: &String) -> UniqueFunction {
         self.func_manager.get(func_name).expect("Attempted to get non-existent function.").clone()
     }
+
+    pub fn list_functions(&self) -> Vec<(String, NodeIndex)> {
+        self.func_manager.iter().map(|(func_name, uniq_func)| {
+            (func_name.clone(), uniq_func.clone_index())
+        }).collect::<Vec<_>>()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -56,6 +62,10 @@ impl UniqueFunction {
 
     pub fn get_name(&self) -> String {
         self.func_name.clone()
+    }
+
+    pub fn clone_index(&self) -> NodeIndex {
+        self.func_index.clone()
     }
 
     pub fn add_parameter(&mut self, param: &String) {

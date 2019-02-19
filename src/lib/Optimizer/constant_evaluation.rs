@@ -1,19 +1,61 @@
-use super::{Graph,GraphManager,Value,ValTy,InstTy, Node};
+use super::{Graph,GraphManager,Value,ValTy,InstTy, Node, TempValManager};
 use super::IRGraphManager;
 use std::collections::HashMap;
 use petgraph::prelude::NodeIndex;
 use lib::Lexer::token::TokenType::Var;
 
-pub fn eval_program_constants(irgm: &mut IRGraphManager) {
-    let main_node = irgm.graph_manager().get_main_node();
+pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut TempValManager) {
+    // Get mutable reference to the graph manager
     let mut graph = irgm.graph_manager();
 
-    let mut instruction_replacement_map : HashMap<usize, Value> = HashMap::new();
-    let mut remove_vec : Vec<usize> = Vec::new();
+    // Get traversal order from temp_manager
+    let traversal_order = temp_manager.clone_visit_order();
 
-    // Start by walking main node
-    let mut main_eval = ConstEval::new(main_node);
-    main_eval.recurse_graph(main_node, graph);
+    // For removing instructions, the plan is to use the number of uses in temp_manager.
+    // For functions that are not vital to control flow or operation, once the
+    // number of uses drops to 0, it will be marked no longer in use and then
+    // cleaned up by a cleaner function.
+
+    let mut instruction_replacement_map : HashMap<usize, Value> = HashMap::new();
+
+    for node in traversal_order.iter() {
+        for inst in graph.get_mut_ref_graph().node_weight_mut(node.clone()).unwrap().get_mut_data_ref().get_inst_list_ref().iter() {
+            let inst_id = inst.borrow().get_inst_num();
+            let inst_ty = inst.borrow().inst_type().clone();
+
+            // Only some of the instructions are affected by constants being evaluated.
+            // Main ones that need to be addressed are (add, sub, mul, div, cmp -> bra),
+            // where branch is only affected if the cmp is removed from the evaluation.
+            // While Phi could change, Phis will be handled by the cleanup function.
+
+            match inst_ty {
+                InstTy::add => {
+                    // TODO : This.
+
+                },
+                InstTy::sub => {
+                    // TODO : This.
+
+                },
+                InstTy::mul => {
+                    // TODO : This.
+
+                },
+                InstTy::div => {
+                    // TODO : This.
+
+                },
+                InstTy::cmp => {
+                    // TODO : This.
+
+                },
+                _ => {
+                    // Nothing to do here, these are all the unaffected instructions
+                },
+            }
+        }
+    }
+
 
 
 }

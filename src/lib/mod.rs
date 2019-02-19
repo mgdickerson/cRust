@@ -231,9 +231,13 @@ pub fn run_file(file_name: String) {
     let comp = Parser::AST::computation::Comp::new(&mut tc);
     let mut irgmanager = comp.to_ir();
 
-    clean_graph(&mut irgmanager);
+    let mut optimizer = Optimizer::Optimizer::new(irgmanager);
+    optimizer.pass_0();
 
-    Optimizer::constant_evaluation::eval_program_constants(&mut irgmanager);
+    //clean_graph(&mut irgmanager);
+    //Optimizer::constant_evaluation::eval_program_constants(&mut irgmanager);
+
+    let mut irgmanager = optimizer.get_irgm();
 
     /// TEST SPACE FOR Dominators
     ///

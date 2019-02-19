@@ -10,6 +10,7 @@ use std::fmt::Debug;
 pub struct TempValManager {
     temp_vec: Vec<Rc<RefCell<TempVal>>>,
     op_hash: HashMap<usize,Rc<RefCell<TempVal>>>,
+    graph_visit_order: Vec<NodeIndex>,
 }
 
 impl TempValManager {
@@ -17,7 +18,12 @@ impl TempValManager {
         TempValManager {
             temp_vec: Vec::new(),
             op_hash: HashMap::new(),
+            graph_visit_order: Vec::new(),
         }
+    }
+
+    pub fn clone_visit_order(&self) -> Vec<NodeIndex> {
+        self.graph_visit_order.clone()
     }
 
     pub fn pull_temp_values(&mut self, graph_manager: &GraphManager, entry_node: NodeIndex) {
@@ -31,6 +37,7 @@ impl TempValManager {
         }
 
         graph_visitor.reverse();
+        self.graph_visit_order = graph_visitor.clone();
         //println!("{:?}", graph_visitor);
 
         // Will have to make a second loop for the Phi statements of whiles (because the Phi instructions will not have access to all
