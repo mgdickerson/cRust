@@ -4,13 +4,18 @@ use super::IRGraphManager;
 use std::collections::HashMap;
 
 use petgraph::prelude::NodeIndex;
+use petgraph::{Outgoing,Incoming, Directed};
 use lib::Lexer::token::TokenType::Var;
+
+use petgraph::algo::dominators::Dominators;
+use petgraph::algo::dominators::simple_fast;
 
 pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut TempValManager) -> Result<(), String> {
     println!("Program Eval is being called.");
 
     // Get mutable reference to the graph manager
     let mut graph = irgm.graph_manager();
+    let mut walkable_graph = graph.get_ref_graph().clone();
 
     // Get traversal order from temp_manager
     let traversal_order = temp_manager.clone_visit_order();
@@ -22,6 +27,7 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
 
     let mut value_sub_map : HashMap<usize, i32> = HashMap::new();
     let mut instruction_replacement_map : HashMap<usize, Value> = HashMap::new();
+    let mut removed_nodes: Vec<NodeIndex> = Vec::new();
 
     for node in traversal_order.iter() {
         for inst in graph.get_mut_ref_graph().node_weight_mut(node.clone()).unwrap().get_mut_data_ref().get_inst_list_ref().iter() {
@@ -468,7 +474,6 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
                     }
                 },
                 InstTy::cmp => {
-                    // TODO : This.
                     // Compare the values, if it is solvable at compile time this will remove
                     // unnecessary paths that are not achievable.
                     let mut x_value = 0;
@@ -483,46 +488,121 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
                             let y_inst_id = y_op.borrow().get_inst_num();
                             if let Some(y_val) = value_sub_map.get(&y_inst_id) {
                                 y_value = y_val.clone();
+
+                                // This value has been solved for, and the comp will be solved as well.
+                                // Remove use of y_op.
+                                temp_manager.borrow_mut_inst(&y_inst_id).borrow_mut().remove_use(&inst_id);
                             } else {
                                 println!("Continued on Cmp: {}", inst_id);
+                                println!("Value map at point of continue: {:?}", value_sub_map);
                                 continue
                             }
 
-                            // TODO : I am Here.
+                            x_value = x_val;
                         },
                         (Some(ValTy::op(x_op)), Some(ValTy::con(y_val))) => {
+                            let x_inst_id = x_op.borrow().get_inst_num();
+                            if let Some(x_val) = value_sub_map.get(&x_inst_id) {
+                                x_value = x_val.clone();
 
+                                // This value has been solved for, and the comp will be solved as well.
+                                // Remove use of y_op.
+                                temp_manager.borrow_mut_inst(&x_inst_id).borrow_mut().remove_use(&inst_id);
+                            } else {
+                                println!("Continued on Cmp: {}", inst_id);
+                                println!("Value map at point of continue: {:?}", value_sub_map);
+
+                                continue
+                            }
+
+                            y_value = y_val;
                         },
                         (Some(ValTy::op(x_op)), Some(ValTy::op(y_op))) => {
+                            let x_inst_id = x_op.borrow().get_inst_num();
+                            let y_inst_id = y_op.borrow().get_inst_num();
+                            if let (Some(x_val),Some(y_val)) = (value_sub_map.get(&x_inst_id), value_sub_map.get(&y_inst_id)) {
+                                x_value = x_val.clone();
+                                y_value = y_val.clone();
 
+                                temp_manager.borrow_mut_inst(&x_inst_id).borrow_mut().remove_use(&inst_id);
+                                temp_manager.borrow_mut_inst(&y_inst_id).borrow_mut().remove_use(&inst_id);
+                            } else {
+                                println!("Continued on Cmp: {}", inst_id);
+                                println!("Value map at point of continue: {:?}", value_sub_map);
+
+                                continue
+                            }
                         },
                         _ => {
                             println!("Continued on Cmp: {}", inst_id);
+                            println!("Value map at point of continue: {:?}", value_sub_map);
+
                             continue
                         },
                     }
 
                     println!("Fell through on Cmp: {}", inst_id);
-                    let comp_type = temp_manager.borrow_mut_inst(&inst_id)
+                    let comp_inst = temp_manager.borrow_mut_inst(&inst_id)
                         .borrow().active_uses().last()
                         .expect("All comparisons should be used at least once by the immediately following branch instruction")
                         .clone();
-                    let branch_id = comp_type.borrow().inst_num();
-                    let branch_type = comp_type.borrow().inst_type();
-                    match branch_type.clone() {
-                        InstTy::bne => {
+                    let branch_id = comp_inst.borrow().inst_num();
+                    let branch_type = comp_inst.borrow().inst_type();
+                    let y_val = comp_inst.borrow().y_val();
 
-                        },
-                        InstTy::beq => {  },
-                        InstTy::ble => {  },
-                        InstTy::blt => {  },
-                        InstTy::bge => {  },
-                        InstTy::bgt => {  },
-                        _ => {
-                            return Err(
-                                format!("Comparison should not be reference by any type other than branch. Incorrect reference by {:?}",
-                                               branch_type))
-                        },
+                    // The branch_id is the branch that will be taken if branch type is true.
+                    if let ValTy::node_id(branch_id) = y_val.unwrap().clone_value() {
+                        // This variable will keep track of which path to eliminate.
+                        let mut non_branch_id = branch_id.clone();
+
+                        // Walk the two child nodes and get the alternate branch.
+                        let mut neighbor_walker = walkable_graph.neighbors_directed(node.clone(), Outgoing).detach();
+                        while let Some(possible_id) = neighbor_walker.next_node(&walkable_graph) {
+                            if branch_id != possible_id {
+                                non_branch_id = possible_id;
+                            }
+                        }
+
+                        let mut eliminate_branch = branch_id;
+                        match branch_type.clone() {
+                            InstTy::bne => {
+                                if x_value != y_value {
+                                    eliminate_branch = non_branch_id;
+                                }
+                            },
+                            InstTy::beq => {
+                                if x_value == y_value {
+                                    eliminate_branch = non_branch_id;
+                                }
+                            },
+                            InstTy::ble => {
+                                if x_value <= y_value {
+                                    eliminate_branch = non_branch_id;
+                                }
+                            },
+                            InstTy::blt => {
+                                if x_value < y_value {
+                                    eliminate_branch = non_branch_id;
+                                }
+                            },
+                            InstTy::bge => {
+                                if x_value >= y_value {
+                                    eliminate_branch = non_branch_id;
+                                }
+                            },
+                            InstTy::bgt => {
+                                if x_value > y_value {
+                                    eliminate_branch = non_branch_id;
+                                }
+                            },
+                            _ => {
+                                return Err(
+                                    format!("Comparison should not be reference by any type other than branch. Incorrect reference by {:?}",
+                                            branch_type))
+                            },
+                        }
+
+                        mark_dead_nodes(&walkable_graph, node.clone(), eliminate_branch, &mut removed_nodes)
                     }
                 },
                 _ => {
@@ -536,38 +616,12 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
     Ok(())
 }
 
-pub struct ConstEval {
-    replacement_map: HashMap<usize, Value>,
-    visited: Vec<usize>,
-    inst_remove: Vec<usize>,
-}
+fn mark_dead_nodes(walkable_graph: & Graph<Node, String, Directed, u32>, starting_node: NodeIndex, eliminate_node: NodeIndex, node_removal_vec: &mut Vec<NodeIndex>) {
+    // The first node that is passed in should be marked for removal
+    node_removal_vec.push(starting_node.clone());
 
-impl ConstEval {
-    pub fn new(main_node: NodeIndex) -> Self {
-        ConstEval { replacement_map: HashMap::new(), visited: Vec::new(), inst_remove: Vec::new() }
-    }
-
-    pub fn recurse_graph(&mut self, index: NodeIndex, graph_manager: &mut GraphManager) {
-        // solve cosnt_expr for current node
-        if let Some(node_weight) = graph_manager.get_mut_ref_graph().node_weight_mut(index.clone()) {
-            self.visited.push(node_weight.get_node_id());
-            //println!("Node: {}", node_weight.get_node_id());
-
-            // Perform const eval
-            for inst in node_weight.get_mut_data_ref().get_mut_inst_list_ref() {
-                let inst_id = inst.borrow().get_inst_num();
-                let inst_ty = inst.borrow().inst_type().clone();
-
-                // TODO : Continue with performing constant eval
-            }
-        }
-
-        // check child nodes recursively
-        for child in graph_manager.get_mut_ref_graph().clone().neighbors(index) {
-            if self.visited.contains(&graph_manager.get_node_id(child)) {
-                continue
-            }
-            self.recurse_graph(child, graph_manager);
-        }
-    }
+    // Make a dominance graph, to make sure only nodes that are dominated are getting removed.
+    let root = starting_node;
+    let dom_space = simple_fast(&walkable_graph,root);
+    println!("{:?}", dom_space);
 }

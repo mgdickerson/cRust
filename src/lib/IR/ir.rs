@@ -4,6 +4,7 @@ use lib::IR::address_manager::UniqueAddress;
 use lib::IR::ret_register::RetRegister;
 
 use super::{Rc,RefCell};
+use petgraph::graph::NodeIndex;
 
 #[derive(Debug,Clone,PartialEq)]
 pub struct Value {
@@ -38,7 +39,7 @@ impl Value {
 #[derive(Debug,Clone, PartialEq)]
 pub enum ValTy {
     op(Rc<RefCell<Op>>),
-    node_id(usize),
+    node_id(NodeIndex),
     con(i32),
     var(Rc<RefCell<UniqueVariable>>),
     adr(UniqueAddress),
@@ -51,7 +52,7 @@ impl ValTy {
         match &self {
             ValTy::op(op) => op.borrow().get_return_value(),
             ValTy::node_id(id) => {
-                String::from("[") + &id.to_string() + "]"
+                String::from("[") + &id.index().to_string() + "]"
             },
             ValTy::con(con) => {
                 String::from("#") + &con.to_string()
@@ -260,6 +261,10 @@ impl Op {
     }
 
     pub fn get_inst_num(&self) -> usize { self.inst_number.clone() }
+
+    pub fn update_inst_num(&mut self, new_inst_num: & usize) {
+        self.inst_number = new_inst_num.clone();
+    }
 
     pub fn inst_type(&self) -> &InstTy {
         &self.inst_type

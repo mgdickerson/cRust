@@ -104,18 +104,19 @@ impl WhileStmt {
         // Make copy of main node
         let main_node = irgm.graph_manager().clone_node_index();
 
-        // Generate phi node
-        irgm.new_node(String::from("Bra_Node"), NodeType::phi_node);
-        let branch_node = irgm.graph_manager().clone_node_index();
-        let branch_id = irgm.graph_manager().get_node_id(branch_node);
-
         // Make loop header
         irgm.new_node(String::from("While_Header"), NodeType::loop_header);
         let loop_header = irgm.graph_manager().clone_node_index();
-        let loop_id = irgm.graph_manager().get_node_id(loop_header);
+        //let loop_id = irgm.graph_manager().get_node_id(loop_header);
+
+        // Generate phi node
+        irgm.new_node(String::from("Bra_Node"), NodeType::phi_node);
+        let branch_node = irgm.graph_manager().clone_node_index();
+        //let branch_id = irgm.graph_manager().get_node_id(branch_node);
 
         // Handy for return instruction later
-        self.relation.to_ir(irgm, Value::new(ValTy::node_id(branch_id)));
+        irgm.graph_manager().switch_current_node_index(loop_header.clone());
+        self.relation.to_ir(irgm, Value::new(ValTy::node_id(branch_node.clone())));
 
         irgm.graph_manager().add_edge(main_node, loop_header);
         let main_vars = irgm.variable_manager().var_checkpoint();
@@ -129,7 +130,7 @@ impl WhileStmt {
         // Go through loop body
         self.body.to_ir(irgm);
         // Add return branch instruction to "new main node"
-        let bra_return = irgm.build_op_y(Value::new(ValTy::node_id(loop_id)),InstTy::bra);
+        let bra_return = irgm.build_op_y(Value::new(ValTy::node_id(loop_header.clone())),InstTy::bra);
         irgm.graph_manager().add_instruction(bra_return);
         let loop_vars = irgm.variable_manager().var_checkpoint();
 

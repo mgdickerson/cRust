@@ -186,8 +186,8 @@ impl IfStmt {
         match else_node_bottom {
             Some(node) => {
                 irgm.graph_manager().switch_current_node_index(loop_header);
-                let else_id = irgm.graph_manager().get_node_id(else_node_top.unwrap());
-                self.relation.to_ir(irgm, Value::new(ValTy::node_id(else_id)));
+                //let else_id = irgm.graph_manager().get_node_id(else_node_top.unwrap());
+                self.relation.to_ir(irgm, Value::new(ValTy::node_id(else_node_top.unwrap())));
                 irgm.graph_manager().switch_current_node_index(phi_node);
 
                 // Connect else-bottom to phi
@@ -202,8 +202,8 @@ impl IfStmt {
             },
             None => {
                 irgm.graph_manager().switch_current_node_index(loop_header);
-                let phi_id = irgm.graph_manager().get_node_id(phi_node.clone());
-                self.relation.to_ir(irgm, Value::new(ValTy::node_id(phi_id)));
+                //let phi_id = irgm.graph_manager().get_node_id(phi_node.clone());
+                self.relation.to_ir(irgm, Value::new(ValTy::node_id(phi_node.clone())));
                 irgm.graph_manager().switch_current_node_index(phi_node);
 
                 // no else body, connect main directly to phi
