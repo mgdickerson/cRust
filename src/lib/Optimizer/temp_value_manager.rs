@@ -5,6 +5,7 @@ use lib::Graph::graph_manager::GraphManager;
 use petgraph::prelude::NodeIndex;
 use petgraph::visit::DfsPostOrder;
 use std::fmt::Debug;
+use lib::IR::ir::InstTy;
 
 #[derive(Clone)]
 pub struct TempValManager {
@@ -112,6 +113,10 @@ impl TempValManager {
         // Also add to the temp_vec
         self.temp_vec.push(Rc::clone(&ref_temp));
     }
+
+    pub fn borrow_mut_inst(&mut self, inst_id: & usize) -> &mut Rc<RefCell<TempVal>> {
+        self.op_hash.get_mut(inst_id).expect("Attempted to mutably borrow non-existent instruction.")
+    }
 }
 
 #[derive(Clone)]
@@ -124,7 +129,7 @@ pub struct TempVal {
     inst_num: usize,
 
     // where value is used
-    used: Vec<Rc<RefCell<TempVal>>>,
+    used: HashMap<usize, Rc<RefCell<TempVal>>>,
 
     // operands
     x_val: Option<Value>,
@@ -142,7 +147,7 @@ impl TempVal {
             op_val: Rc::clone(inst),
             block_num,
             inst_num,
-            used: Vec::new(),
+            used: HashMap::new(),
             x_val,
             y_val,
             is_active: true,
@@ -151,6 +156,10 @@ impl TempVal {
 
     pub fn inst_val(&self) -> Rc<RefCell<Op>> {
         Rc::clone(&self.op_val)
+    }
+
+    pub fn inst_type(&self) -> InstTy {
+        self.op_val.borrow().inst_type().clone()
     }
 
     pub fn x_val(&self) -> Option<Value> {
@@ -170,7 +179,8 @@ impl TempVal {
     }
 
     pub fn add_use(&mut self, temp_val_clone: Rc<RefCell<TempVal>>) {
-        self.used.push(temp_val_clone);
+        let temp_id = temp_val_clone.borrow().inst_num();
+        self.used.insert(temp_id, temp_val_clone);
     }
 
     pub fn is_used(&self) -> bool {
@@ -178,11 +188,27 @@ impl TempVal {
     }
 
     pub fn active_uses(&self) -> Vec<Rc<RefCell<TempVal>>> {
-        self.used.iter().filter(|temp_val| {
+        self.used.values().filter(|temp_val| {
             temp_val.borrow().is_active()
         }).map(|temp_val| {
             Rc::clone(temp_val)
         }).collect::<Vec<_>>()
+    }
+
+    pub fn remove_use(&mut self, remove_id: & usize) -> bool {
+        if let Some(value) = self.used.remove(remove_id) {
+            // After successfully removing a use from this temp_val,
+            // if it was the last use mark it as no longer active.
+            if self.used.is_empty() {
+                self.is_active = false;
+            }
+
+            // Removed Valid use
+            true
+        } else {
+            // Attempted to remove invalid use
+            false
+        }
     }
 
     pub fn is_active(&self) -> bool {

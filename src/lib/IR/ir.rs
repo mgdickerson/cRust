@@ -188,8 +188,37 @@ impl Op {
         p_command
     }
 
+    pub fn update_inst_ty(&mut self, new_inst_ty: InstTy) {
+        self.inst_type = new_inst_ty;
+    }
+
     pub fn get_values(&self) -> (Option<Value>, Option<Value>, Option<String>) {
         (self.x_val.clone(), self.y_val.clone(), self.special_val.clone())
+    }
+
+    pub fn get_val_ty(&self) -> (Option<ValTy>, Option<ValTy>) {
+        let x_val;
+        let y_val;
+
+        match &self.x_val {
+            Some(x_value) => {
+                x_val = Some(x_value.get_value().clone());
+            },
+            None => {
+                x_val = None;
+            },
+        }
+
+        match &self.y_val {
+            Some(y_value) => {
+                y_val = Some(y_value.get_value().clone());
+            },
+            None => {
+                y_val = None;
+            },
+        }
+
+        (x_val, y_val)
     }
 
     pub fn update_x_val(&mut self, new_val: Value) {
@@ -287,7 +316,7 @@ impl PartialEq for Op {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum InstTy {
     /// Op ///
     read,

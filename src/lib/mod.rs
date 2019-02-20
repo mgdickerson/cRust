@@ -180,6 +180,10 @@ pub mod tests {
         run_file(String::from("test025"));
     }
     #[test]
+    fn test_025_a() {
+        run_file(String::from("test025_a"));
+    }
+    #[test]
     fn test_026() {
         run_file(String::from("test026"));
     }
@@ -233,6 +237,7 @@ pub fn run_file(file_name: String) {
 
     let mut optimizer = Optimizer::Optimizer::new(irgmanager);
     optimizer.pass_0();
+    optimizer.pass_1();
 
     //clean_graph(&mut irgmanager);
     //Optimizer::constant_evaluation::eval_program_constants(&mut irgmanager);

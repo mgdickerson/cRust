@@ -109,6 +109,7 @@ fn main() {
 
         let mut optimizer = Optimizer::Optimizer::new(irgmanager);
         optimizer.pass_0();
+        optimizer.pass_1();
 
         /* // All of this is now handled by optimizer pass_0
         lib::clean_graph(&mut irgmanager);
