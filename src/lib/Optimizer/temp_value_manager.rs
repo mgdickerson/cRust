@@ -211,6 +211,10 @@ impl TempVal {
         }
     }
 
+    pub fn deactivate_instruction(&mut self) {
+        self.is_active = false;
+    }
+
     pub fn is_active(&self) -> bool {
         self.is_active.clone()
     }

@@ -1,7 +1,9 @@
-use super::{Graph,GraphManager,Value,ValTy,InstTy, Node, TempValManager};
+use super::{Graph,GraphManager,Value,ValTy,InstTy, Node, TempValManager, Op};
 use super::IRGraphManager;
 
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use petgraph::prelude::NodeIndex;
 use petgraph::{Outgoing,Incoming, Directed};
@@ -9,13 +11,17 @@ use lib::Lexer::token::TokenType::Var;
 
 use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators::simple_fast;
+use petgraph::algo::has_path_connecting;
+
+use lib::Utility::display;
 
 pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut TempValManager) -> Result<(), String> {
     println!("Program Eval is being called.");
 
     // Get mutable reference to the graph manager
-    let mut graph = irgm.graph_manager();
-    let mut walkable_graph = graph.get_ref_graph().clone();
+    let mut graph_manager = irgm.graph_manager();
+    let mut walkable_graph = graph_manager.get_ref_graph().clone();
+    let mut inst_graph = graph_manager.get_ref_graph().clone();
 
     // Get traversal order from temp_manager
     let traversal_order = temp_manager.clone_visit_order();
@@ -30,7 +36,11 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
     let mut removed_nodes: Vec<NodeIndex> = Vec::new();
 
     for node in traversal_order.iter() {
-        for inst in graph.get_mut_ref_graph().node_weight_mut(node.clone()).unwrap().get_mut_data_ref().get_inst_list_ref().iter() {
+        if removed_nodes.contains(node) {
+            continue
+        }
+        for inst in inst_graph.node_weight_mut(node.clone()).unwrap().get_mut_data_ref().get_inst_list_ref().iter() {
+            //generic_type_eval(InstTy::phi, inst, temp_manager, walkable_graph);
             let inst_id = inst.borrow().get_inst_num();
             let inst_ty = inst.borrow().inst_type().clone();
 
@@ -493,8 +503,8 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
                                 // Remove use of y_op.
                                 temp_manager.borrow_mut_inst(&y_inst_id).borrow_mut().remove_use(&inst_id);
                             } else {
-                                println!("Continued on Cmp: {}", inst_id);
-                                println!("Value map at point of continue: {:?}", value_sub_map);
+                                //println!("Continued on Cmp: {}", inst_id);
+                                //println!("Value map at point of continue: {:?}", value_sub_map);
                                 continue
                             }
 
@@ -509,8 +519,8 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
                                 // Remove use of y_op.
                                 temp_manager.borrow_mut_inst(&x_inst_id).borrow_mut().remove_use(&inst_id);
                             } else {
-                                println!("Continued on Cmp: {}", inst_id);
-                                println!("Value map at point of continue: {:?}", value_sub_map);
+                                //println!("Continued on Cmp: {}", inst_id);
+                                //println!("Value map at point of continue: {:?}", value_sub_map);
 
                                 continue
                             }
@@ -527,28 +537,32 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
                                 temp_manager.borrow_mut_inst(&x_inst_id).borrow_mut().remove_use(&inst_id);
                                 temp_manager.borrow_mut_inst(&y_inst_id).borrow_mut().remove_use(&inst_id);
                             } else {
-                                println!("Continued on Cmp: {}", inst_id);
-                                println!("Value map at point of continue: {:?}", value_sub_map);
+                                //println!("Continued on Cmp: {}", inst_id);
+                                //println!("Value map at point of continue: {:?}", value_sub_map);
 
                                 continue
                             }
                         },
                         _ => {
-                            println!("Continued on Cmp: {}", inst_id);
-                            println!("Value map at point of continue: {:?}", value_sub_map);
+                            //println!("Continued on Cmp: {}", inst_id);
+                            //println!("Value map at point of continue: {:?}", value_sub_map);
 
                             continue
                         },
                     }
 
-                    println!("Fell through on Cmp: {}", inst_id);
-                    let comp_inst = temp_manager.borrow_mut_inst(&inst_id)
+                    //println!("Fell through on Cmp: {}", inst_id);
+                    let mut comp_inst = temp_manager.borrow_mut_inst(&inst_id)
                         .borrow().active_uses().last()
                         .expect("All comparisons should be used at least once by the immediately following branch instruction")
                         .clone();
                     let branch_id = comp_inst.borrow().inst_num();
                     let branch_type = comp_inst.borrow().inst_type();
                     let y_val = comp_inst.borrow().y_val();
+
+                    // Deactivate both the comparison instruction AND the branch instruction.
+                    comp_inst.borrow_mut().deactivate_instruction();
+                    temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
 
                     // The branch_id is the branch that will be taken if branch type is true.
                     if let ValTy::node_id(branch_id) = y_val.unwrap().clone_value() {
@@ -602,8 +616,16 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
                             },
                         }
 
-                        mark_dead_nodes(&walkable_graph, node.clone(), eliminate_branch, &mut removed_nodes)
+                        mark_dead_nodes(graph_manager.get_mut_ref_graph(),
+                                        node.clone(),
+                                        eliminate_branch,
+                                        & traversal_order,
+                                        &mut removed_nodes,
+                                        temp_manager);
                     }
+                },
+                InstTy::phi => {
+
                 },
                 _ => {
                     // Nothing to do here, these are all the unaffected instructions
@@ -616,12 +638,75 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
     Ok(())
 }
 
-fn mark_dead_nodes(walkable_graph: & Graph<Node, String, Directed, u32>, starting_node: NodeIndex, eliminate_node: NodeIndex, node_removal_vec: &mut Vec<NodeIndex>) {
-    // The first node that is passed in should be marked for removal
-    node_removal_vec.push(starting_node.clone());
+fn generic_type_eval(inst_ty: InstTy,
+                     inst: & Rc<RefCell<Op>>,
+                     temp_manager: &mut TempValManager,
+                     walkable_graph: Graph<Node, String, Directed, u32>) {
+    //let mut sum;
+    match inst.borrow().get_val_ty() {
+        (Some(ValTy::con(x_val)),Some(ValTy::con(y_val))) => {
 
-    // Make a dominance graph, to make sure only nodes that are dominated are getting removed.
-    let root = starting_node;
-    let dom_space = simple_fast(&walkable_graph,root);
-    println!("{:?}", dom_space);
+        },
+        // x_val is const, y_val is an Op
+        (Some(ValTy::con(x_val)), Some(ValTy::op(y_op))) => {
+
+        },
+        // x_val is an Op, y_val is const
+        (Some(ValTy::op(x_op)), Some(ValTy::con(y_val))) => {
+
+        },
+        // x_val is an Op, y_val is an Op
+        (Some(ValTy::op(x_op)), Some(ValTy::op(y_op))) => {
+
+        },
+        // All remaining cases
+        _ => {},
+    }
+}
+
+fn mark_dead_nodes(mut_graph: &mut Graph<Node, String, Directed, u32>,
+                   starting_node: NodeIndex,
+                   eliminate_node: NodeIndex,
+                   traversal_order: & Vec<NodeIndex>,
+                   node_removal: &mut Vec<NodeIndex>,
+                   temp_manager: &mut TempValManager ) {
+    // The first node that is passed in should be marked for removal
+    //node_removal_vec.push(starting_node.clone());
+
+
+    // Visit tracker
+    let mut visited : Vec<NodeIndex> = Vec::new();
+    //let mut walk_path = Vec::new();
+
+    // How this will function:
+    // Start with first node to eliminate,
+    // check to see if it is a phi node from an
+    // if statement by checking its incoming edges,
+    // and see if they are dominated by the
+
+    let initial_edge = mut_graph.find_edge(starting_node, eliminate_node);
+    //println!("Finding Edge between {:?} and {:?} -> Edge : {:?}", starting_node, eliminate_node, initial_edge);
+    //println!("Checking if this is the error!");
+    mut_graph.remove_edge(initial_edge.unwrap());
+    let main_node = traversal_order[0].clone();
+
+    let walkable_graph = mut_graph.clone();
+
+    //println!("Which node is labeled Main Node? {:?}", main_node);
+
+    for node_index in traversal_order.iter() {
+        if !has_path_connecting(&walkable_graph, main_node, node_index.clone(), None) {
+            if !node_removal.contains(node_index) {
+                println!("Removing node {:?} from graph.", node_index);
+                node_removal.push(node_index.clone());
+            }
+
+            for inst in mut_graph.node_weight_mut(node_index.clone()).unwrap().get_mut_data_ref().get_inst_list_ref() {
+                let inst_num = inst.borrow().get_inst_num();
+                temp_manager.borrow_mut_inst(&inst_num).borrow_mut().deactivate_instruction();
+            }
+            // Need to save this for a clean up routine apparently.
+            //mut_graph.remove_node(node_index.clone());
+        }
+    }
 }
