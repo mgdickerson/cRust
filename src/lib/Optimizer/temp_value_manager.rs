@@ -141,7 +141,7 @@ impl TempValManager {
         if let Some(x_value) = temp_val.borrow().x_val() {
             match x_value.clone_value() {
                 ValTy::op(x_op) => {
-                    println!("x_op: {:?} is_active: {}", x_op, x_op.borrow().is_active());
+                    //println!("x_op: {:?} is_active: {}", x_op, x_op.borrow().is_active());
                     x_valid = x_op.borrow().is_active();
                 },
                 _ => {
@@ -153,7 +153,7 @@ impl TempValManager {
         if let Some(y_value) = temp_val.borrow().y_val() {
             match y_value.clone_value() {
                 ValTy::op(y_op) => {
-                    println!("x_op: {:?} is_active: {}", y_op, y_op.borrow().is_active());
+                    //println!("x_op: {:?} is_active: {}", y_op, y_op.borrow().is_active());
                     y_valid = y_op.borrow().is_active();
                 },
                 _ => {

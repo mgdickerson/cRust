@@ -275,7 +275,7 @@ pub fn run_file(file_name: String) {
     println!();
 }
 
-pub fn clean_graph(irgm: &mut IRGraphManager) {
+pub fn clean_base_values(irgm: &mut IRGraphManager) {
     for node in irgm.graph_manager().get_mut_ref_graph().node_weights_mut() {
         for inst in node.get_mut_data_ref().get_mut_inst_list_ref() {
             inst.borrow_mut().update_base_values();

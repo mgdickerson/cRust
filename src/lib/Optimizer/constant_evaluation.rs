@@ -16,7 +16,7 @@ use petgraph::algo::has_path_connecting;
 use lib::Utility::display;
 
 pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut TempValManager) -> Result<(), String> {
-    println!("Program Eval is being called.");
+    //println!("Program Eval is being called.");
 
     // Get mutable reference to the graph manager
     let mut graph_manager = irgm.graph_manager();
@@ -49,7 +49,7 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
 
                 if !temp_manager.borrow_mut_inst(&inst_id).borrow().is_active() {
                     // This instruction is no longer active, skip it.
-                    println!("Test this gets called.");
+                    //println!("Test this gets called.");
                     continue;
                 }
 
@@ -75,9 +75,9 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
         }
 
         //println!("Inactive instructions after single round: ");
-        for inst in temp_manager.get_inactive_list() {
-            println!("Inactive Instruction: {:?}", inst);
-        }
+        //for inst in temp_manager.get_inactive_list() {
+            //println!("Inactive Instruction: {:?}", inst);
+        //}
 
         println!("Finished round {} of eval.", rounds);
         rounds += 1;
@@ -453,7 +453,7 @@ fn phi_handler(inst_ty: InstTy,
     let inst_id = inst.borrow().get_inst_num();
     let active_values = temp_manager.check_active_values(&inst_id);
     let traversal_order = temp_manager.clone_visit_order();
-    println!("Attemping to resolve Phi: {:?}", inst);
+    //println!("Attemping to resolve Phi: {:?}", inst);
     match active_values {
         (true, true) => {
             return Ok(false);
@@ -467,7 +467,7 @@ fn phi_handler(inst_ty: InstTy,
                 .map(|temp_val| {
                     temp_val.borrow().inst_val()
             }).collect::<Vec<Rc<RefCell<Op>>>>();
-            println!("Active x uses: {:?}", active_uses);
+            //println!("Active x uses: {:?}", active_uses);
             for op in active_uses {
                 op.borrow_mut().op_cleanup(inst_id.clone(), active_x_val.clone());
                 //op.borrow_mut().var_cleanup(old_phi_value.clone(), active_x_val.clone());
@@ -490,7 +490,7 @@ fn phi_handler(inst_ty: InstTy,
                 .map(|temp_val| {
                     temp_val.borrow().inst_val()
                 }).collect::<Vec<Rc<RefCell<Op>>>>();
-            println!("Active y uses: {:?}", active_uses);
+            //println!("Active y uses: {:?}", active_uses);
             for op in active_uses {
                 op.borrow_mut().op_cleanup(inst_id.clone(), active_y_val.clone());
                 //op.borrow_mut().var_cleanup(old_phi_value.clone(), active_y_val.clone());

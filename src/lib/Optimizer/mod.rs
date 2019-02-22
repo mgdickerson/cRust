@@ -6,6 +6,7 @@ pub mod constant_evaluation;
 pub mod node_remover;
 pub mod temp_value_manager;
 pub mod operator_dominator;
+pub mod cleaner;
 
 use lib::IR::ir_manager::{IRGraphManager, InstTracker, BlockTracker};
 use lib::IR::variable_manager::{UniqueVariable,VariableManager};
@@ -18,13 +19,18 @@ use lib::IR::ir::{Op,Value,ValTy,InstTy};
 use lib::Graph::graph_manager::GraphManager;
 use lib::Graph::basic_block::BasicBlock;
 use lib::Graph::node::{Node,NodeId,NodeData,NodeType};
-use lib::clean_graph;
+use lib::clean_base_values;
 
 use super::petgraph::Graph;
 use super::{petgraph,graph};
 use self::temp_value_manager::TempValManager;
 use petgraph::prelude::NodeIndex;
+use lib::Optimizer::cleaner::clean_graph;
 
+pub enum PassId {
+    pass_0,
+    pass_1,
+}
 
 pub struct Optimizer {
     irgm: IRGraphManager,
@@ -60,7 +66,7 @@ impl Optimizer {
 
     pub fn pass_0(&mut self) {
         // First clean graph
-        clean_graph(self.get_irgm_mut_ref());
+        clean_base_values(self.get_irgm_mut_ref());
 
         // Create locals for easier access to them without worrying about borrowing
         let mut local_main_manager = self.get_main_manager();
@@ -88,5 +94,8 @@ impl Optimizer {
         // For testing I will just use the main branch (later the rest will be added).
         let mut local_temp_manager = self.main_temp_val_manager.clone();
         constant_evaluation::eval_program_constants(&mut self.irgm, &mut local_temp_manager);
+
+        let root_node = self.irgm.graph_manager().get_main_node();
+        clean_graph(&mut self.irgm, root_node, &mut local_temp_manager);
     }
 }
