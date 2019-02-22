@@ -6,6 +6,7 @@ use petgraph::prelude::NodeIndex;
 use petgraph::visit::DfsPostOrder;
 use std::fmt::Debug;
 use lib::IR::ir::InstTy;
+use lib::Optimizer::Optimizer;
 
 #[derive(Clone)]
 pub struct TempValManager {
@@ -117,6 +118,52 @@ impl TempValManager {
     pub fn borrow_mut_inst(&mut self, inst_id: & usize) -> &mut Rc<RefCell<TempVal>> {
         self.op_hash.get_mut(inst_id).expect("Attempted to mutably borrow non-existent instruction.")
     }
+
+    pub fn borrow_inst(&self, inst_id: &usize) -> & Rc<RefCell<TempVal>> {
+        self.op_hash.get(inst_id).expect("Attempted to borrow non-existent instruction.")
+    }
+
+    pub fn update_inst_uses(&self, inst_id: &usize, new_val: Value) {
+        self.op_hash.get(&inst_id).unwrap().borrow().update_use_values(new_val);
+    }
+
+    pub fn get_inactive_list(&self) -> Vec<&Rc<RefCell<TempVal>>> {
+        self.op_hash.values().filter(|value| {
+            !value.borrow().is_active()
+        }).collect::<Vec<_>>()
+    }
+
+    pub fn check_active_values(&self, inst_id: & usize) -> (bool, bool) {
+        let temp_val = self.op_hash.get(inst_id).expect("Values attempting to be checked should be valid");
+        let mut x_valid = false;
+        let mut y_valid = false;
+
+        if let Some(x_value) = temp_val.borrow().x_val() {
+            match x_value.clone_value() {
+                ValTy::op(x_op) => {
+                    println!("x_op: {:?} is_active: {}", x_op, x_op.borrow().is_active());
+                    x_valid = x_op.borrow().is_active();
+                },
+                _ => {
+                    x_valid = true;
+                },
+            }
+        }
+
+        if let Some(y_value) = temp_val.borrow().y_val() {
+            match y_value.clone_value() {
+                ValTy::op(y_op) => {
+                    println!("x_op: {:?} is_active: {}", y_op, y_op.borrow().is_active());
+                    y_valid = y_op.borrow().is_active();
+                },
+                _ => {
+                    y_valid = true;
+                },
+            }
+        }
+
+        (x_valid, y_valid)
+    }
 }
 
 #[derive(Clone)]
@@ -134,9 +181,6 @@ pub struct TempVal {
     // operands
     x_val: Option<Value>,
     y_val: Option<Value>,
-
-    // is value still active in graph
-    is_active: bool,
 }
 
 impl TempVal {
@@ -150,7 +194,6 @@ impl TempVal {
             used: HashMap::new(),
             x_val,
             y_val,
-            is_active: true,
         }
     }
 
@@ -162,12 +205,16 @@ impl TempVal {
         self.op_val.borrow().inst_type().clone()
     }
 
+    pub fn x_y_val(&self) -> (Option<Value>, Option<Value>) {
+        (self.op_val.borrow().clone_x_val(), self.op_val.borrow().clone_y_val())
+    }
+
     pub fn x_val(&self) -> Option<Value> {
-        self.x_val.clone()
+        self.op_val.borrow().clone_x_val()
     }
 
     pub fn y_val(&self) -> Option<Value> {
-        self.y_val.clone()
+        self.op_val.borrow().clone_y_val()
     }
 
     pub fn block_num(&self) -> usize {
@@ -176,6 +223,15 @@ impl TempVal {
 
     pub fn inst_num(&self) -> usize {
         self.inst_num.clone()
+    }
+
+    pub fn update_use_values(&self, new_val: Value) {
+        let old_val = Value::new(ValTy::op(self.op_val.clone()));
+        for active_use in self.active_uses().iter() {
+            let use_op = active_use.borrow().inst_val();
+            println!("Failure on active use: {}", use_op.borrow().get_inst_num());
+            use_op.borrow_mut().var_cleanup(old_val.clone(), new_val.clone());
+        }
     }
 
     pub fn add_use(&mut self, temp_val_clone: Rc<RefCell<TempVal>>) {
@@ -200,7 +256,7 @@ impl TempVal {
             // After successfully removing a use from this temp_val,
             // if it was the last use mark it as no longer active.
             if self.used.is_empty() {
-                self.is_active = false;
+                self.op_val.borrow_mut().deactivate();
             }
 
             // Removed Valid use
@@ -212,11 +268,11 @@ impl TempVal {
     }
 
     pub fn deactivate_instruction(&mut self) {
-        self.is_active = false;
+        self.op_val.borrow_mut().deactivate();
     }
 
     pub fn is_active(&self) -> bool {
-        self.is_active.clone()
+        self.op_val.borrow().is_active()
     }
 }
 

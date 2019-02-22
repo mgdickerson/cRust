@@ -20,6 +20,10 @@ impl Value {
         &self.val
     }
 
+    pub fn update_value(&mut self, new_val_ty: ValTy) {
+        self.val = new_val_ty;
+    }
+
     pub fn get_var_base(&self) -> ValTy {
         let ret;
         if let ValTy::var(var) = self.clone_value() {
@@ -80,6 +84,7 @@ pub struct Op {
     inst_number: usize,
     block_number: usize,
     inst_type: InstTy,
+    is_active: bool,
 
     // Useful for debugging or printing
     p_command: String,
@@ -95,7 +100,7 @@ impl Op {
     {
         let mut p_command = String::new();
 
-        Op { x_val , y_val , special_val, inst_number, block_number, inst_type, p_command }
+        Op { x_val , y_val , special_val, inst_number, block_number, inst_type, is_active: true, p_command }
     }
 
     pub fn build_op(x_val: Option<Value>,
@@ -193,6 +198,14 @@ impl Op {
         self.inst_type = new_inst_ty;
     }
 
+    pub fn is_active(&self) -> bool {
+        self.is_active.clone()
+    }
+
+    pub fn deactivate(&mut self) {
+        self.is_active = false;
+    }
+
     pub fn get_values(&self) -> (Option<Value>, Option<Value>, Option<String>) {
         (self.x_val.clone(), self.y_val.clone(), self.special_val.clone())
     }
@@ -222,8 +235,16 @@ impl Op {
         (x_val, y_val)
     }
 
+    pub fn clone_x_val(&self) -> Option<Value> {
+        self.x_val.clone()
+    }
+
     pub fn update_x_val(&mut self, new_val: Value) {
         self.x_val = Some(new_val);
+    }
+
+    pub fn clone_y_val(&self) -> Option<Value> {
+        self.y_val.clone()
     }
 
     pub fn update_y_val(&mut self, new_val: Value) {
@@ -268,6 +289,32 @@ impl Op {
 
     pub fn inst_type(&self) -> &InstTy {
         &self.inst_type
+    }
+
+    pub fn op_cleanup(&mut self, var_to_clean: usize, replacement_op: Value) {
+        match self.x_val.clone() {
+            Some(val) => {
+                if let ValTy::op(op) = val.clone_value() {
+                    let op_id = op.borrow().get_inst_num();
+                    if op_id == var_to_clean {
+                        self.x_val = Some(replacement_op.clone());
+                    }
+                }
+            }
+            None => {}
+        }
+
+        match self.y_val.clone() {
+            Some(val) => {
+                if let ValTy::op(op) = val.clone_value() {
+                    let op_id = op.borrow().get_inst_num();
+                    if op_id == var_to_clean {
+                        self.y_val = Some(replacement_op.clone());
+                    }
+                }
+            }
+            None => {}
+        }
     }
 
     pub fn var_cleanup(&mut self, var_to_clean: Value, replacement_var: Value) {
