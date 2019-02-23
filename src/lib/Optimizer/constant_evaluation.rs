@@ -1,6 +1,8 @@
 use super::{Graph,GraphManager,Value,ValTy,InstTy, Node, TempValManager, Op};
 use super::IRGraphManager;
 
+use lib::Graph::node::NodeType;
+
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -75,22 +77,11 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
             }
         }
 
-        //println!("Inactive instructions after single round: ");
-        //for inst in temp_manager.get_inactive_list() {
-            //println!("Inactive Instruction: {:?}", inst);
-        //}
+
 
         println!("Finished round {} of eval.", rounds);
         rounds += 1;
-
-        // test purpose
-        /*if rounds > 2 {
-            needs_evaluation = false;
-        }*/
-        //println!("Needs evaluation: {}", needs_evaluation);
     }
-
-
 
     Ok(())
 }
@@ -106,10 +97,6 @@ fn generic_type_eval(inst_ty: InstTy,
                      graph_visitor: & Vec<NodeIndex> ) -> Result<bool, String> {
     if inst_ty == InstTy::cmp {
         return cmp_eval(inst_ty, inst, current_node, graph_manager, temp_manager, walkable_graph, value_sub_map, removed_nodes, graph_visitor);
-    }
-
-    if inst_ty == InstTy::phi {
-        return phi_handler(inst_ty, inst, current_node, graph_manager, temp_manager, walkable_graph, value_sub_map, removed_nodes, graph_visitor);
     }
 
     let inst_id = inst.borrow().get_inst_num();
@@ -352,46 +339,56 @@ fn cmp_eval(inst_ty: InstTy,
     // The branch_id is the branch that will be taken if branch type is true.
     if let ValTy::node_id(branch_id) = y_val.unwrap().clone_value() {
         // This variable will keep track of which path to eliminate.
-        let mut non_branch_id = branch_id.clone();
+
+        let mut children = Vec::new();
+        //println!("Children of node: {:?}", node.clone());
+        for child_id in graph_manager.get_ref_graph().neighbors(node.clone()) {
+            children.push(child_id);
+            //println!("Child node: {:?}", child_id);
+        }
+
+        let right_path = children[0].clone();
+        let left_path = children[1].clone();
 
         // Walk the two child nodes and get the alternate branch.
-        let mut neighbor_walker = walkable_graph.neighbors_directed(node.clone(), Outgoing).detach();
+        /*let mut neighbor_walker = walkable_graph.neighbors_directed(node.clone(), Outgoing).detach();
         while let Some(possible_id) = neighbor_walker.next_node(&walkable_graph) {
+            println!("{:?}", possible_id);
             if branch_id != possible_id {
                 non_branch_id = possible_id;
             }
-        }
+        }*/
 
-        let mut eliminate_branch = branch_id;
+        let mut eliminate_branch = left_path;
         match branch_type.clone() {
             InstTy::bne => {
                 if x_value != y_value {
-                    eliminate_branch = non_branch_id;
+                    eliminate_branch = right_path;
                 }
             },
             InstTy::beq => {
                 if x_value == y_value {
-                    eliminate_branch = non_branch_id;
+                    eliminate_branch = right_path;
                 }
             },
             InstTy::ble => {
                 if x_value <= y_value {
-                    eliminate_branch = non_branch_id;
+                    eliminate_branch = right_path;
                 }
             },
             InstTy::blt => {
                 if x_value < y_value {
-                    eliminate_branch = non_branch_id;
+                    eliminate_branch = right_path;
                 }
             },
             InstTy::bge => {
                 if x_value >= y_value {
-                    eliminate_branch = non_branch_id;
+                    eliminate_branch = right_path;
                 }
             },
             InstTy::bgt => {
                 if x_value > y_value {
-                    eliminate_branch = non_branch_id;
+                    eliminate_branch = right_path;
                 }
             },
             _ => {
@@ -407,7 +404,6 @@ fn cmp_eval(inst_ty: InstTy,
                         temp_manager);
     }
 
-    //println!("Marking for another round of eval.");
     Ok(true)
 }
 
@@ -445,99 +441,62 @@ fn mark_dead_nodes(graph_manager: &mut GraphManager,
                 graph_manager.add_temp_dominance_edge(node_index.clone(), previous_node, String::from("blue"));
 
                 for inst in graph_manager.get_mut_ref_graph().node_weight_mut(node_index.clone()).unwrap().get_mut_data_ref().get_inst_list_ref() {
-                    let inst_num = inst.borrow().get_inst_num();
-                    temp_manager.borrow_mut_inst(&inst_num).borrow_mut().deactivate_instruction();
+                    let inst_id = inst.borrow().get_inst_num();
+                    //temp_manager.deactivate_instruction(&inst_id);
+                    temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
                 }
             }
 
             previous_node = node_index.clone();
         } else {
             // This is the first node reached that DOES have a connecting path, thus it is likely the phi node from initial removal
-            println!("Phi node: {}", node_index.index());
+            //println!("Phi node: {}", node_index.index());
+            let inst_list = graph_manager.get_mut_ref_graph().node_weight_mut(node_index.clone()).unwrap().get_mut_data_ref().get_inst_list_ref().clone();
+            for inst in inst_list {
+                match inst.borrow().inst_type().clone() {
+                    InstTy::phi => {
+
+                    },
+                    _ => {
+                        continue
+                    },
+                }
+                phi_handler(&inst, &previous_node, node_index, graph_manager, temp_manager);
+            }
             break;
         }
     }
-
-    /*let root = eliminate_node;
-    let graph = graph_manager.get_mut_ref_graph().clone();
-    let dom_space = simple_fast(&graph,root);*/
-
-    /*println!("Dominance graph after removing connection between starting and eliminated node: \n{:?}", dom_space);
-    for node in graph.node_indices() {
-        match dom_space.immediate_dominator(node) {
-            Some(parent_node) => {
-                graph_manager.add_temp_dominance_edge(node, parent_node, String::from("blue"));
-            },
-            None => {},
-        }
-    }
-*/
-
-
-    //println!("Which node is labeled Main Node? {:?}", main_node);
-
-
-
-    /*for node_index in traversal_order.iter() {
-        if !has_path_connecting(&walkable_graph, main_node, node_index.clone(), None) {
-            if !node_removal.contains(node_index) {
-                //println!("Removing node {:?} from graph.", node_index);
-                node_removal.push(node_index.clone());
-            }
-
-            for inst in mut_graph.node_weight_mut(node_index.clone()).unwrap().get_mut_data_ref().get_inst_list_ref() {
-                let inst_num = inst.borrow().get_inst_num();
-                temp_manager.borrow_mut_inst(&inst_num).borrow_mut().deactivate_instruction();
-            }
-        }
-    }*/
 }
 
-fn phi_handler(inst_ty: InstTy,
-               inst: & Rc<RefCell<Op>>,
+fn phi_handler(inst: & Rc<RefCell<Op>>,
+               parent_node: & NodeIndex,
                current_node: & NodeIndex,
                graph_manager: &mut GraphManager,
-               temp_manager: &mut TempValManager,
-               walkable_graph: & Graph<Node, String, Directed, u32>,
-               value_sub_map: &mut HashMap<usize, i32>,
-               removed_nodes: &mut Vec<NodeIndex>,
-               graph_visitor: & Vec<NodeIndex> ) -> Result<bool, String> {
+               temp_manager: &mut TempValManager) -> Result<bool, String> {
     let inst_id = inst.borrow().get_inst_num();
-    let active_values = temp_manager.check_active_values(&inst_id);
-    let traversal_order = graph_visitor.clone();
-    //println!("Attemping to resolve Phi: {:?}", inst);
+    println!("Attemping to resolve Phi: {:?}", inst);
+    let active_uses = temp_manager.borrow_mut_inst(&inst_id)
+        .borrow().active_uses()
+        .iter()
+        .map(|temp_val| {
+            temp_val.borrow().inst_val()
+        }).collect::<Vec<Rc<RefCell<Op>>>>();
+    println!("Active uses: {:?}", active_uses);
 
     // TODO : When deactivating Phi, traverse up each operand and remove use.
 
-    match active_values {
-        (true, true) => {
-            return Ok(false);
-        },
-        (true, false) => {
-            let active_x_val = temp_manager.borrow_inst(&inst_id).borrow().x_val().unwrap();
+    let node_type = graph_manager.get_ref_graph().node_weight(current_node.clone()).unwrap().get_node_type();
 
-            let active_uses = temp_manager.borrow_mut_inst(&inst_id)
-                .borrow().active_uses()
-                .iter()
-                .map(|temp_val| {
-                    temp_val.borrow().inst_val()
-            }).collect::<Vec<Rc<RefCell<Op>>>>();
-            //println!("Active x uses: {:?}", active_uses);
-            for op in active_uses {
-                op.borrow_mut().op_cleanup(inst_id.clone(), active_x_val.clone());
-                //op.borrow_mut().var_cleanup(old_phi_value.clone(), active_x_val.clone());
-            }
-            //temp_manager.update_inst_uses(&inst_id, active_x_val.clone().unwrap());
-            /*for active_use in temp_manager.borrow_inst(&inst_id).borrow().active_uses() {
-                let inst_val = active_use.borrow().inst_val();
-                inst_val.borrow_mut().var_cleanup(Value::new(ValTy::op(Rc::clone(inst))), active_x_val.clone().unwrap());
-            }
-            println!("Changing phi use values, then marking phi inactive.");*/
-            inst.borrow_mut().deactivate();
-            //temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
-        },
-        (false, true) => {
+    match node_type {
+        NodeType::loop_header => {
+            // If this case is reached, it means the path followed was through a
+            // loop, thus the left value is no longer "valid" and thus should be
+            // replaced with the value on the right.
             let active_y_val = Value::new(temp_manager.borrow_inst(&inst_id).borrow().y_val().unwrap().clone_value());
+            let mut y_inst_id : usize = 0;
+            if let ValTy::op(y_op) = temp_manager.borrow_inst(&inst_id).borrow().y_val().unwrap().get_value() {
+                y_inst_id = y_op.borrow().get_inst_num();
+            }
 
             let active_uses = temp_manager.borrow_mut_inst(&inst_id)
                 .borrow().active_uses()
@@ -545,25 +504,134 @@ fn phi_handler(inst_ty: InstTy,
                 .map(|temp_val| {
                     temp_val.borrow().inst_val()
                 }).collect::<Vec<Rc<RefCell<Op>>>>();
-            //println!("Active y uses: {:?}", active_uses);
             for op in active_uses {
+                // First clean up the old Phi value at instruction site
                 op.borrow_mut().op_cleanup(inst_id.clone(), active_y_val.clone());
-                //op.borrow_mut().var_cleanup(old_phi_value.clone(), active_y_val.clone());
+
+                // Get instruction id
+                let op_id = op.borrow().get_inst_num();
+                // Get inst value ref to add to y_inst temp
+                let op_temp = temp_manager.borrow_inst(&op_id).clone();
+
+                // Add new use to value used to replace.
+                let temp_val = temp_manager.borrow_mut_inst(&y_inst_id);
+                temp_val.borrow_mut().add_use(op_temp);
             }
-            //temp_manager.update_inst_uses(&inst_id, active_y_val.unwrap());
-            /*for active_use in temp_manager.borrow_inst(&inst_id).borrow().active_uses() {
-                let inst_val = active_use.borrow().inst_val();
-                inst_val.borrow_mut().var_cleanup(Value::new(ValTy::op(Rc::clone(inst))), active_y_val.clone().unwrap());
+            temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
+            temp_manager.clean_instruction_uses(&inst_id);
+        },
+        NodeType::phi_node => {
+            // On Phi nodes, it is important to track which path entered the node.
+            // If it was the right path, it will be [0] of the parents, left will
+            // be the [1].
+            //println!("Parents of node: {:?}", current_node.clone());
+            let mut inc_dir = 2;
+            for (direction, child_id) in graph_manager.get_ref_graph().neighbors_directed(current_node.clone(), Incoming).enumerate() {
+                //println!("Parent node: {:?}", child_id);
+                if child_id == parent_node.clone() {
+                    inc_dir = direction;
+                }
             }
-            println!("Changing phi use values, then marking phi inactive.");*/
-            inst.borrow_mut().deactivate();
-            //temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
+
+            match inc_dir {
+                0 => {
+                    // The incoming direction is from the right.
+                    // Thus, the right value is no longer valid.
+                    let active_x_val = temp_manager.borrow_inst(&inst_id).borrow().x_val().unwrap();
+                    let mut x_inst_id : usize = 0;
+                    if let ValTy::op(x_op) = temp_manager.borrow_inst(&inst_id).borrow().x_val().unwrap().get_value() {
+                        x_inst_id = x_op.borrow().get_inst_num();
+                    }
+
+                    let active_uses = temp_manager.borrow_mut_inst(&inst_id)
+                        .borrow().active_uses()
+                        .iter()
+                        .map(|temp_val| {
+                            temp_val.borrow().inst_val()
+                        }).collect::<Vec<Rc<RefCell<Op>>>>();
+                    for op in active_uses {
+                        // First clean up the old Phi value at instruction site
+                        op.borrow_mut().op_cleanup(inst_id.clone(), active_x_val.clone());
+
+                        // Get instruction id
+                        let op_id = op.borrow().get_inst_num();
+                        // Get inst value ref to add to y_inst temp
+                        let op_temp = temp_manager.borrow_inst(&op_id).clone();
+
+                        // Add new use to value used to replace.
+                        let temp_val = temp_manager.borrow_mut_inst(&x_inst_id);
+                        temp_val.borrow_mut().add_use(op_temp);
+                    }
+                    temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
+                    temp_manager.clean_instruction_uses(&inst_id);
+                },
+                1 => {
+                    // The incoming direction is from the left.
+                    // Thus, the left value is no longer valid, just like with the while loops.
+                    let active_y_val = Value::new(temp_manager.borrow_inst(&inst_id).borrow().y_val().unwrap().clone_value());
+                    let mut y_inst_id : usize = 0;
+                    if let ValTy::op(y_op) = temp_manager.borrow_inst(&inst_id).borrow().y_val().unwrap().get_value() {
+                        y_inst_id = y_op.borrow().get_inst_num();
+                    }
+
+                    let active_uses = temp_manager.borrow_mut_inst(&inst_id)
+                        .borrow().active_uses()
+                        .iter()
+                        .map(|temp_val| {
+                            temp_val.borrow().inst_val()
+                        }).collect::<Vec<Rc<RefCell<Op>>>>();
+                    for op in active_uses {
+                        // First clean up the old Phi value at instruction site
+                        op.borrow_mut().op_cleanup(inst_id.clone(), active_y_val.clone());
+
+                        // Get instruction id
+                        let op_id = op.borrow().get_inst_num();
+                        // Get inst value ref to add to y_inst temp
+                        let op_temp = temp_manager.borrow_inst(&op_id).clone();
+
+                        // Add new use to value used to replace.
+                        let temp_val = temp_manager.borrow_mut_inst(&y_inst_id);
+                        temp_val.borrow_mut().add_use(op_temp);
+                    }
+                    temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
+                    temp_manager.clean_instruction_uses(&inst_id);
+                },
+                Error => {
+                    // Assume this is a case in which the else branch was empty, thus the right side is invalid.
+                    let active_x_val = temp_manager.borrow_inst(&inst_id).borrow().x_val().unwrap();
+                    let mut x_inst_id : usize = 0;
+                    if let ValTy::op(x_op) = temp_manager.borrow_inst(&inst_id).borrow().x_val().unwrap().get_value() {
+                        x_inst_id = x_op.borrow().get_inst_num();
+                    }
+
+                    let active_uses = temp_manager.borrow_mut_inst(&inst_id)
+                        .borrow().active_uses()
+                        .iter()
+                        .map(|temp_val| {
+                            temp_val.borrow().inst_val()
+                        }).collect::<Vec<Rc<RefCell<Op>>>>();
+                    for op in active_uses {
+                        // First clean up the old Phi value at instruction site
+                        op.borrow_mut().op_cleanup(inst_id.clone(), active_x_val.clone());
+
+                        // Get instruction id
+                        let op_id = op.borrow().get_inst_num();
+                        // Get inst value ref to add to y_inst temp
+                        let op_temp = temp_manager.borrow_inst(&op_id).clone();
+
+                        // Add new use to value used to replace.
+                        let temp_val = temp_manager.borrow_mut_inst(&x_inst_id);
+                        temp_val.borrow_mut().add_use(op_temp);
+                    }
+                    temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
+                    temp_manager.clean_instruction_uses(&inst_id);
+                },
+            }
         },
-        (false, false) => {
-            // This should never happen and should be an error...
-            println!("Panic on Phi instruction: {}", inst_id);
-            //panic!("Should error out here, as these passes should never completely eliminate a Phi.");
-        },
+        _ => {
+            // Based on new approach, this should never be reached.
+            panic!("Somehow reached a phi statement outside of a loop_header or phi_node.");
+        }
     }
 
     Ok(false)

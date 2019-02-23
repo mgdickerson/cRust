@@ -35,6 +35,10 @@ impl Node {
         self.node_id.get()
     }
 
+    pub fn get_node_type(&self) -> NodeType {
+        self.node_type.clone()
+    }
+
     pub fn is_valid(&self) -> bool {
         self.node_valid.clone()
     }
@@ -50,7 +54,7 @@ impl std::fmt::Debug for Node {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone, PartialEq)]
 pub enum NodeType {
     function_head,
     main_node,

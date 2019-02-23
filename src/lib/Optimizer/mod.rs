@@ -100,6 +100,6 @@ impl Optimizer {
         constant_evaluation::eval_program_constants(&mut self.irgm, &mut local_temp_manager, &graph_visitor);
 
 
-        //clean_graph(&mut self.irgm, root_node, &mut local_temp_manager, &graph_visitor);
+        clean_graph(&mut self.irgm, root_node, &mut local_temp_manager, &graph_visitor);
     }
 }

@@ -66,6 +66,8 @@ impl TempValManager {
         // Make Rc<RefCell<_>> out of TempVal
         let ref_temp = Rc::new(RefCell::new(new_temp.clone()));
 
+        let static_temp = Rc::new(RefCell::new(new_temp.clone()));
+
         let inst_ty = inst.borrow().inst_type().clone();
         match inst_ty {
             InstTy::read | InstTy::add |
@@ -75,7 +77,9 @@ impl TempValManager {
             InstTy::load => {
                 inst.borrow_mut().deactivate();
             }
-            _ => {},
+            _ => {
+                ref_temp.borrow_mut().add_use(static_temp);
+            },
         }
 
         // Check to see if this value calls any other previously added values
@@ -161,6 +165,26 @@ impl TempValManager {
 
         (x_valid, y_valid)
     }
+
+    pub fn clean_instruction_uses(&mut self, inst_id: & usize) {
+        //println!("Are we panicing here?");
+
+        let mut local_handle = self.op_hash.get_mut(inst_id).unwrap().clone();
+
+        //println!("Are we panicing here2?");
+        let x_val = local_handle.borrow().x_val();
+        if let ValTy::op(x_op) = x_val.unwrap().get_value().clone() {
+            let x_inst_id = x_op.borrow().get_inst_num();
+            self.op_hash.get_mut(&x_inst_id).unwrap().borrow_mut().remove_use(inst_id);
+        }
+
+        //println!("Are we panicing here3?");
+        let y_val = local_handle.borrow().y_val();
+        if let ValTy::op(y_op) = y_val.unwrap().get_value().clone() {
+            let y_inst_id = y_op.borrow().get_inst_num();
+            self.op_hash.get_mut(&y_inst_id).unwrap().borrow_mut().remove_use(inst_id);
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -225,6 +249,7 @@ impl TempVal {
     }
 
     pub fn add_use(&mut self, temp_val_clone: Rc<RefCell<TempVal>>) {
+        self.op_val.borrow_mut().activate();
         let temp_id = temp_val_clone.borrow().inst_num();
         self.op_val.borrow_mut().activate();
         self.used.insert(temp_id, temp_val_clone);
