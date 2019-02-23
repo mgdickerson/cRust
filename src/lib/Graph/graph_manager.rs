@@ -1,9 +1,10 @@
 use lib::IR::ir::{Value,ValTy,Op,InstTy};
 use lib::Graph::node::{Node, NodeId, NodeType, NodeData};
 use lib::IR::ir_manager::{InstTracker, BlockTracker};
-extern crate petgraph;
+
 use petgraph::graph::Graph;
 use petgraph::prelude::NodeIndex;
+use petgraph::visit::DfsPostOrder;
 
 use super::{Rc,RefCell};
 use petgraph::Directed;
@@ -61,18 +62,16 @@ impl GraphManager {
             .get_node_id()
     }
 
-    /* Dont think i need this one.
-    pub fn add_node_to_graph(&mut self, node: Node) -> NodeIndex {
-        self.graph.add_node(node)
-    }
-    */
-
     pub fn add_edge(&mut self, parent: NodeIndex, child: NodeIndex) {
         self.graph.add_edge(parent, child, String::from("black"));
     }
 
     pub fn add_dominance_edge(&mut self, parent: NodeIndex, child: NodeIndex) {
         self.graph.add_edge(parent, child, String::from("red"));
+    }
+
+    pub fn add_temp_dominance_edge(&mut self, parent: NodeIndex, child: NodeIndex, color: String) {
+        self.graph.add_edge(parent, child, color);
     }
 
     // -- Graph Related Functions -- //
@@ -108,5 +107,25 @@ impl GraphManager {
             .insert_instruction(position, Rc::clone(&inst_ref));
 
         Value::new(ValTy::op(Rc::clone(&inst_ref)))
+    }
+
+    pub fn remove_inactive_inst(&mut self, inst_id: NodeIndex) {
+        self.graph.node_weight_mut(inst_id)
+            .expect("Node does not exist or has been removed, cannot remove inactive instructions.")
+            .get_mut_data_ref()
+            .remove_inactive_inst();
+    }
+
+    pub fn graph_visitor(&self, root_node: NodeIndex) -> Vec<NodeIndex> {
+        let mut dfs_post_order = DfsPostOrder::new(self.get_ref_graph(), root_node);
+        let mut graph_visitor = Vec::new();
+
+        // This gets a pretty good order of nodes to visit, though for some reason it still goes down the right path first.
+        while let Some(node_id) = dfs_post_order.next(self.get_ref_graph()) {
+            graph_visitor.push(node_id);
+        }
+
+        graph_visitor.reverse();
+        graph_visitor
     }
 }

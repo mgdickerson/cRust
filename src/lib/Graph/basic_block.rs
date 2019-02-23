@@ -22,6 +22,19 @@ impl BasicBlock {
         self.inst.insert(position, op);
     }
 
+    pub fn remove_inactive_inst(&mut self) {
+        // Iterate through list of instructions checking if they are still active
+        let active_inst = self.inst.iter()
+            .filter(|op| {
+                op.borrow().is_active()
+        }).map(|filtered_ops| {
+            Rc::clone(filtered_ops)
+        }).collect::<Vec<_>>();
+
+        // Replace instruction vector with active_inst vector
+        self.inst = active_inst;
+    }
+
     pub fn to_iter(self) -> std::vec::IntoIter<Rc<RefCell<Op>>> {
         self.inst.into_iter()
     }

@@ -202,6 +202,10 @@ impl Op {
         self.is_active.clone()
     }
 
+    pub fn activate(&mut self) {
+        self.is_active = true;
+    }
+
     pub fn deactivate(&mut self) {
         self.is_active = false;
     }

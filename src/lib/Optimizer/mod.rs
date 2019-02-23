@@ -93,9 +93,13 @@ impl Optimizer {
     pub fn pass_1(&mut self) {
         // For testing I will just use the main branch (later the rest will be added).
         let mut local_temp_manager = self.main_temp_val_manager.clone();
-        constant_evaluation::eval_program_constants(&mut self.irgm, &mut local_temp_manager);
-
         let root_node = self.irgm.graph_manager().get_main_node();
-        clean_graph(&mut self.irgm, root_node, &mut local_temp_manager);
+
+        let graph_visitor = self.irgm.graph_manager().graph_visitor(root_node);
+
+        constant_evaluation::eval_program_constants(&mut self.irgm, &mut local_temp_manager, &graph_visitor);
+
+
+        //clean_graph(&mut self.irgm, root_node, &mut local_temp_manager, &graph_visitor);
     }
 }

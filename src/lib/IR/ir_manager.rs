@@ -205,6 +205,24 @@ impl IRGraphManager {
         &mut self.var_manager
     }
 
+    pub fn add_global(&mut self, var: &String) {
+        let add_var_inst = self.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(0)), InstTy::add);
+        let init_val = self.graph_manager.add_instruction(add_var_inst);
+
+        let block_num = self.get_block_num();
+        let inst_num = self.get_inst_num();
+        self.var_manager.add_global(var, init_val, block_num, inst_num);
+    }
+
+    pub fn add_variable(&mut self, var: &String) {
+        let add_var_inst = self.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(0)), InstTy::add);
+        let init_val = self.graph_manager.add_instruction(add_var_inst);
+
+        let block_num = self.get_block_num();
+        let inst_num = self.get_inst_num();
+        self.var_manager.add_variable(var, init_val, block_num, inst_num);
+    }
+
     pub fn get_current_unique(&mut self, ident: & String) -> Rc<RefCell<UniqueVariable>> {
         let mut block_num = self.get_block_num();
         let mut inst_num = self.get_inst_num() + 1;

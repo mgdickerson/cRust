@@ -15,7 +15,7 @@ use petgraph::algo::has_path_connecting;
 
 use lib::Utility::display;
 
-pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut TempValManager) -> Result<(), String> {
+pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut TempValManager, graph_visitor: &Vec<NodeIndex>) -> Result<(), String> {
     //println!("Program Eval is being called.");
 
     // Get mutable reference to the graph manager
@@ -24,7 +24,7 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
     let mut inst_graph = graph_manager.get_ref_graph().clone();
 
     // Get traversal order from temp_manager
-    let traversal_order = temp_manager.clone_visit_order();
+    let traversal_order = graph_visitor.clone();
 
     // For removing instructions, the plan is to use the number of uses in temp_manager.
     // For functions that are not vital to control flow or operation, once the
@@ -61,7 +61,8 @@ pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut Temp
                                   temp_manager,
                                   & walkable_graph,
                                   &mut value_sub_map,
-                                  &mut removed_nodes) {
+                                  &mut removed_nodes,
+                                  &graph_visitor) {
                     Ok(graph_altered) => {
                         if graph_altered {
                             needs_evaluation = true;
@@ -101,13 +102,14 @@ fn generic_type_eval(inst_ty: InstTy,
                      temp_manager: &mut TempValManager,
                      walkable_graph: & Graph<Node, String, Directed, u32>,
                      value_sub_map: &mut HashMap<usize, i32>,
-                     removed_nodes: &mut Vec<NodeIndex>) -> Result<bool, String> {
+                     removed_nodes: &mut Vec<NodeIndex>,
+                     graph_visitor: & Vec<NodeIndex> ) -> Result<bool, String> {
     if inst_ty == InstTy::cmp {
-        return cmp_eval(inst_ty, inst, current_node, graph_manager, temp_manager, walkable_graph, value_sub_map, removed_nodes);
+        return cmp_eval(inst_ty, inst, current_node, graph_manager, temp_manager, walkable_graph, value_sub_map, removed_nodes, graph_visitor);
     }
 
     if inst_ty == InstTy::phi {
-        return phi_handler(inst_ty, inst, current_node, graph_manager, temp_manager, walkable_graph, value_sub_map, removed_nodes);
+        return phi_handler(inst_ty, inst, current_node, graph_manager, temp_manager, walkable_graph, value_sub_map, removed_nodes, graph_visitor);
     }
 
     let inst_id = inst.borrow().get_inst_num();
@@ -261,11 +263,12 @@ fn cmp_eval(inst_ty: InstTy,
             temp_manager: &mut TempValManager,
             walkable_graph: & Graph<Node, String, Directed, u32>,
             value_sub_map: &mut HashMap<usize, i32>,
-            removed_nodes: &mut Vec<NodeIndex>) -> Result<bool, String> {
+            removed_nodes: &mut Vec<NodeIndex>,
+            graph_visitor: & Vec<NodeIndex> ) -> Result<bool, String> {
     // Compare the values, if it is solvable at compile time this will remove
     // unnecessary paths that are not achievable.
     let inst_id = inst.borrow().get_inst_num();
-    let traversal_order = temp_manager.clone_visit_order();
+    let traversal_order = graph_visitor.clone();
     let node = current_node.clone();
 
     let mut x_value = 0;
@@ -396,7 +399,7 @@ fn cmp_eval(inst_ty: InstTy,
             },
         }
 
-        mark_dead_nodes(graph_manager.get_mut_ref_graph(),
+        mark_dead_nodes(graph_manager,
                         node.clone(),
                         eliminate_branch,
                         & traversal_order,
@@ -408,7 +411,7 @@ fn cmp_eval(inst_ty: InstTy,
     Ok(true)
 }
 
-fn mark_dead_nodes(mut_graph: &mut Graph<Node, String, Directed, u32>,
+fn mark_dead_nodes(graph_manager: &mut GraphManager,
                    starting_node: NodeIndex,
                    eliminate_node: NodeIndex,
                    traversal_order: & Vec<NodeIndex>,
@@ -417,17 +420,65 @@ fn mark_dead_nodes(mut_graph: &mut Graph<Node, String, Directed, u32>,
     // Visit tracker
     let mut visited : Vec<NodeIndex> = Vec::new();
 
-    let initial_edge = mut_graph.find_edge(starting_node, eliminate_node);
+    let initial_edge = graph_manager.get_mut_ref_graph().find_edge(starting_node, eliminate_node);
     //println!("Finding Edge between {:?} and {:?} -> Edge : {:?}", starting_node, eliminate_node, initial_edge);
     //println!("Checking if this is the error!");
-    mut_graph.remove_edge(initial_edge.unwrap());
+
+    // Remove the edge between block to be removed and the starting block
+    graph_manager.get_mut_ref_graph().remove_edge(initial_edge.unwrap());
+
+    // Make new traversal
+    let new_traversal_order = graph_manager.graph_visitor(eliminate_node.clone());
+
+    // Main node from original program
     let main_node = traversal_order[0].clone();
 
-    let walkable_graph = mut_graph.clone();
+    // Get mut graph and a clone for a walkable graph.
+    //let mut mut_graph = graph_manager.get_mut_ref_graph();
+    let walkable_graph = graph_manager.get_mut_ref_graph().clone();
+
+    let mut previous_node = new_traversal_order[0].clone();
+    for node_index in new_traversal_order.iter() {
+        if !has_path_connecting(&walkable_graph, main_node, node_index.clone(), None) {
+            if !node_removal.contains(node_index) {
+                node_removal.push(node_index.clone());
+                graph_manager.add_temp_dominance_edge(node_index.clone(), previous_node, String::from("blue"));
+
+                for inst in graph_manager.get_mut_ref_graph().node_weight_mut(node_index.clone()).unwrap().get_mut_data_ref().get_inst_list_ref() {
+                    let inst_num = inst.borrow().get_inst_num();
+                    temp_manager.borrow_mut_inst(&inst_num).borrow_mut().deactivate_instruction();
+                }
+            }
+
+            previous_node = node_index.clone();
+        } else {
+            // This is the first node reached that DOES have a connecting path, thus it is likely the phi node from initial removal
+            println!("Phi node: {}", node_index.index());
+            break;
+        }
+    }
+
+    /*let root = eliminate_node;
+    let graph = graph_manager.get_mut_ref_graph().clone();
+    let dom_space = simple_fast(&graph,root);*/
+
+    /*println!("Dominance graph after removing connection between starting and eliminated node: \n{:?}", dom_space);
+    for node in graph.node_indices() {
+        match dom_space.immediate_dominator(node) {
+            Some(parent_node) => {
+                graph_manager.add_temp_dominance_edge(node, parent_node, String::from("blue"));
+            },
+            None => {},
+        }
+    }
+*/
+
 
     //println!("Which node is labeled Main Node? {:?}", main_node);
 
-    for node_index in traversal_order.iter() {
+
+
+    /*for node_index in traversal_order.iter() {
         if !has_path_connecting(&walkable_graph, main_node, node_index.clone(), None) {
             if !node_removal.contains(node_index) {
                 //println!("Removing node {:?} from graph.", node_index);
@@ -439,7 +490,7 @@ fn mark_dead_nodes(mut_graph: &mut Graph<Node, String, Directed, u32>,
                 temp_manager.borrow_mut_inst(&inst_num).borrow_mut().deactivate_instruction();
             }
         }
-    }
+    }*/
 }
 
 fn phi_handler(inst_ty: InstTy,
@@ -449,11 +500,15 @@ fn phi_handler(inst_ty: InstTy,
                temp_manager: &mut TempValManager,
                walkable_graph: & Graph<Node, String, Directed, u32>,
                value_sub_map: &mut HashMap<usize, i32>,
-               removed_nodes: &mut Vec<NodeIndex>) -> Result<bool, String> {
+               removed_nodes: &mut Vec<NodeIndex>,
+               graph_visitor: & Vec<NodeIndex> ) -> Result<bool, String> {
     let inst_id = inst.borrow().get_inst_num();
     let active_values = temp_manager.check_active_values(&inst_id);
-    let traversal_order = temp_manager.clone_visit_order();
+    let traversal_order = graph_visitor.clone();
     //println!("Attemping to resolve Phi: {:?}", inst);
+
+    // TODO : When deactivating Phi, traverse up each operand and remove use.
+
     match active_values {
         (true, true) => {
             return Ok(false);

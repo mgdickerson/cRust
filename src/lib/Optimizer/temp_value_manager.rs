@@ -12,7 +12,6 @@ use lib::Optimizer::Optimizer;
 pub struct TempValManager {
     temp_vec: Vec<Rc<RefCell<TempVal>>>,
     op_hash: HashMap<usize,Rc<RefCell<TempVal>>>,
-    graph_visit_order: Vec<NodeIndex>,
 }
 
 impl TempValManager {
@@ -20,27 +19,13 @@ impl TempValManager {
         TempValManager {
             temp_vec: Vec::new(),
             op_hash: HashMap::new(),
-            graph_visit_order: Vec::new(),
         }
-    }
-
-    pub fn clone_visit_order(&self) -> Vec<NodeIndex> {
-        self.graph_visit_order.clone()
     }
 
     pub fn pull_temp_values(&mut self, graph_manager: &GraphManager, entry_node: NodeIndex) {
-        let mut dfs_post_order = DfsPostOrder::new(graph_manager.get_ref_graph(), entry_node);
-        let mut graph_visitor = Vec::new();
+        let graph_visitor = graph_manager.graph_visitor(entry_node);
+
         let mut revisit_inst = Vec::new();
-
-        // This gets a pretty good order of nodes to visit, though for some reason it still goes down the right path first.
-        while let Some(node_id) = dfs_post_order.next(graph_manager.get_ref_graph()) {
-            graph_visitor.push(node_id);
-        }
-
-        graph_visitor.reverse();
-        self.graph_visit_order = graph_visitor.clone();
-        //println!("{:?}", graph_visitor);
 
         // Will have to make a second loop for the Phi statements of whiles (because the Phi instructions will not have access to all
         // instructions as some will be called later in the cycle). Thus a clean up second cycle will be needed to finish adding
@@ -76,10 +61,22 @@ impl TempValManager {
     pub fn add_inst(&mut self, inst: &Rc<RefCell<Op>>, inst_revisit_vec: &mut Vec<(usize, Rc<RefCell<TempVal>>)>) {
         // Make a new TempVal using the passed inst
         let inst_num = inst.borrow().get_inst_num();
-        let new_temp = TempVal::new(inst, inst_num);
+        let mut new_temp = TempVal::new(inst, inst_num);
 
         // Make Rc<RefCell<_>> out of TempVal
         let ref_temp = Rc::new(RefCell::new(new_temp.clone()));
+
+        let inst_ty = inst.borrow().inst_type().clone();
+        match inst_ty {
+            InstTy::read | InstTy::add |
+            InstTy::sub | InstTy::mul |
+            InstTy::div | InstTy::cmp |
+            InstTy::adda | InstTy::phi |
+            InstTy::load => {
+                inst.borrow_mut().deactivate();
+            }
+            _ => {},
+        }
 
         // Check to see if this value calls any other previously added values
         if let Some(x_val) = new_temp.x_val() {
@@ -177,23 +174,16 @@ pub struct TempVal {
 
     // where value is used
     used: HashMap<usize, Rc<RefCell<TempVal>>>,
-
-    // operands
-    x_val: Option<Value>,
-    y_val: Option<Value>,
 }
 
 impl TempVal {
     pub fn new(inst: &Rc<RefCell<Op>>, inst_num: usize) -> Self {
-        let (x_val, y_val, _) = inst.borrow().get_values();
         let block_num = inst.borrow().get_inst_block();
         TempVal {
             op_val: Rc::clone(inst),
             block_num,
             inst_num,
             used: HashMap::new(),
-            x_val,
-            y_val,
         }
     }
 
@@ -236,6 +226,7 @@ impl TempVal {
 
     pub fn add_use(&mut self, temp_val_clone: Rc<RefCell<TempVal>>) {
         let temp_id = temp_val_clone.borrow().inst_num();
+        self.op_val.borrow_mut().activate();
         self.used.insert(temp_id, temp_val_clone);
     }
 
@@ -255,7 +246,11 @@ impl TempVal {
         if let Some(value) = self.used.remove(remove_id) {
             // After successfully removing a use from this temp_val,
             // if it was the last use mark it as no longer active.
-            if self.used.is_empty() {
+            let active_uses = self.used.values().filter(|temp_val| {
+                temp_val.borrow().is_active()
+            }).collect::<Vec<_>>();
+
+            if active_uses.is_empty() {
                 self.op_val.borrow_mut().deactivate();
             }
 

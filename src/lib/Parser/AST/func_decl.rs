@@ -146,7 +146,7 @@ impl FuncDecl {
             Some(parameters) => {
                 parameters.get_value().iter().for_each(|variable| {
                     irgm.variable_manager().active_function().add_parameter(&variable.get_value());
-                    irgm.variable_manager().add_variable(variable.get_value(), 0, 0);
+                    irgm.add_variable(&variable.get_value());
                 });
             },
             None => {
