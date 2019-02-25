@@ -128,4 +128,37 @@ impl GraphManager {
         graph_visitor.reverse();
         graph_visitor
     }
+
+    /// Function for checking that a node contains any instructions
+    /// (or if it only contains a branch instruction). Returns
+    /// true if node is valid, false if it is not and needs to be
+    /// removed.
+    pub fn check_node(&mut self, node_id: NodeIndex) -> bool {
+        let inst_vec = self.graph.node_weight_mut(node_id)
+            .expect("Attempted to check non-existent node").get_mut_data_ref()
+            .get_mut_inst_list_ref();
+
+        match inst_vec.len() {
+            0 => {
+                false
+            },
+            1 => {
+                let inst_ty = inst_vec[0].borrow().inst_type().clone();
+                match inst_ty {
+                    InstTy::bra | InstTy::blt | InstTy::ble |
+                    InstTy::bgt | InstTy::bge | InstTy::beq |
+                    InstTy::bne => {
+                        inst_vec[0].borrow_mut().deactivate();
+                        false
+                    },
+                    _ => {
+                        true
+                    },
+                }
+            },
+            _ => {
+                true
+            },
+        }
+    }
 }
