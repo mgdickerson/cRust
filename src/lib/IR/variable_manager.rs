@@ -131,7 +131,7 @@ impl VariableManager {
                         match val_comp {
                             ValTy::var(uniq_var) => {
                                 if old_var == uniq_var {
-                                    println!("Found a match~! [{:?}] == [{:?}]", old_var, uniq);
+                                    //println!("Found a match~! [{:?}] == [{:?}]", old_var, uniq);
                                     uniq.borrow_mut().update_value(new_val.clone());
                                 }
                             },
@@ -185,7 +185,7 @@ impl VariableManager {
         Rc::clone(latest_unique)
     }
 
-    pub fn add_variable(&mut self, var: String, block_num: usize, inst_num: usize) {
+    pub fn add_variable(&mut self, var: &String, value: Value, block_num: usize, inst_num: usize) {
         match &mut self.active_func {
             Some(active_func) => {
                 self.var_counter.insert(var.clone(), 0);
@@ -200,12 +200,12 @@ impl VariableManager {
         }
 
         self.var_manager.insert(var.clone(), Vec::new());
-        self.make_unique_variable(var, Value::new(ValTy::con(0)), block_num, inst_num);
+        self.make_unique_variable(var.clone(), value, block_num, inst_num);
     }
 
-    pub fn add_global(&mut self, var: &String) {
+    pub fn add_global(&mut self, var: &String, value: Value, block_num: usize, inst_num: usize) {
         self.global_vars.push(var.clone());
-        self.add_variable(var.clone(), 0, 0);
+        self.add_variable(var, value, block_num, inst_num);
     }
 
     // Make this a general add use?

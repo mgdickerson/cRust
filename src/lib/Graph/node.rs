@@ -8,6 +8,7 @@ pub struct Node {
     node_id: NodeId,
     node_data: NodeData,
     node_type: NodeType,
+    node_valid: bool,
 }
 
 impl Node {
@@ -15,11 +16,15 @@ impl Node {
         let node_data = NodeData::new(it);
         let node_id = NodeId::new(bt.get());
         bt.increment();
-        Node { node_tag, node_id, node_data, node_type }
+        Node { node_tag, node_id, node_data, node_type, node_valid: true }
     }
 
     pub fn get_mut_data_ref(&mut self) -> &mut BasicBlock {
         self.node_data.get_mut_ref()
+    }
+
+    pub fn get_data_ref(&self) -> & BasicBlock {
+        self.node_data.get_ref()
     }
 
     pub fn get_data(self) -> BasicBlock {
@@ -29,6 +34,18 @@ impl Node {
     pub fn get_node_id(&self) -> usize {
         self.node_id.get()
     }
+
+    pub fn get_node_type(&self) -> NodeType {
+        self.node_type.clone()
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.node_valid.clone()
+    }
+
+    pub fn mark_node_invalid(&mut self) {
+        self.node_valid = false;
+    }
 }
 
 impl std::fmt::Debug for Node {
@@ -37,7 +54,7 @@ impl std::fmt::Debug for Node {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone, PartialEq)]
 pub enum NodeType {
     function_head,
     main_node,

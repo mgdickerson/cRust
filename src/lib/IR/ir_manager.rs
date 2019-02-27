@@ -11,7 +11,6 @@ use super::variable_manager::{VariableManager, UniqueVariable};
 use super::array_manager::{ArrayManager,UniqueArray};
 use super::address_manager::{AddressManager,UniqueAddress};
 use super::function_manager::{FunctionManager,UniqueFunction};
-use super::operator_dominator::{OpDomHandler,OpNode,OpGraph};
 use petgraph::graph::NodeIndex;
 use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators;
@@ -27,7 +26,6 @@ pub struct IRGraphManager {
     // Combining the two would allow assignment
     // and possibly assign temp variables for outputs.
     it: InstTracker,
-    op_dom_handler: OpDomHandler,
 
     // User made Variable Tracker
     var_manager: VariableManager,
@@ -47,11 +45,13 @@ pub struct IRGraphManager {
 
 impl IRGraphManager {
     pub fn new() -> Self {
-        let graph : Graph<Node, i32> = Graph::new();
+        let graph = Graph::new();
         let mut it = InstTracker::new();
         let mut bt = BlockTracker::new();
 
-        let graph_manager = GraphManager::new(graph, &mut it, &mut bt);
+        let graph_manager = GraphManager::
+        new(graph, &mut it, &mut bt);
+
 
         IRGraphManager {
             bt,
@@ -61,7 +61,6 @@ impl IRGraphManager {
             addr_manager: AddressManager::new(),
             func_manager: FunctionManager::new(),
             is_func: false,
-            op_dom_handler: OpDomHandler::new(),
             graph_manager,
         }
     }
@@ -135,12 +134,12 @@ impl IRGraphManager {
 
             //println!("Current Node Id: {}\tPhi Inst: {}", node_starting_point.clone(), phi_inst);
             for (block_num, inst_num) in uses {
-                println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.borrow().get_ident(), block_num, inst_num);
+                //println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.borrow().get_ident(), block_num, inst_num);
                 if block_num >= node_starting_point {
                     remove_use_vec.push((Rc::clone(uniq),block_num,inst_num));
                     vars_to_correct.push(Rc::clone(uniq));
                     let node = graph_map.get_mut(&block_num).expect("Block number should exist");
-                    for inst in node.get_mut_data_ref().get_mut_ref() {
+                    for inst in node.get_mut_data_ref().get_mut_inst_list_ref() {
                         if inst.borrow().get_inst_num() != phi_inst.clone() {
                             let uniq_base = uniq.borrow().get_base_ident();
                             let old_val = Value::new(ValTy::var(Rc::clone(uniq)));
@@ -206,26 +205,29 @@ impl IRGraphManager {
         &mut self.var_manager
     }
 
+    pub fn add_global(&mut self, var: &String) {
+        let add_var_inst = self.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(0)), InstTy::add);
+        let init_val = self.graph_manager.add_instruction(add_var_inst);
+
+        let block_num = self.get_block_num();
+        let inst_num = self.get_inst_num();
+        self.var_manager.add_global(var, init_val, block_num, inst_num);
+    }
+
+    pub fn add_variable(&mut self, var: &String) {
+        let add_var_inst = self.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(0)), InstTy::add);
+        let init_val = self.graph_manager.add_instruction(add_var_inst);
+
+        let block_num = self.get_block_num();
+        let inst_num = self.get_inst_num();
+        self.var_manager.add_variable(var, init_val, block_num, inst_num);
+    }
+
     pub fn get_current_unique(&mut self, ident: & String) -> Rc<RefCell<UniqueVariable>> {
         let mut block_num = self.get_block_num();
         let mut inst_num = self.get_inst_num() + 1;
         self.var_manager.get_current_unique(ident.clone())
     }
-
-    /*
-     * temp removing this function so i can get rid of get_mut_uniq_var()
-    pub fn remove_uses(&mut self, uses_to_remove: Vec<(UniqueVariable,usize,usize)>) {
-        for (uniq, block_num, inst_num) in uses_to_remove {
-            let mut uniq_result = self.var_manager.get_mut_uniq_var(uniq);
-            match uniq_result {
-                Ok(mut_uniq) => {
-                    mut_uniq.remove_use(block_num, inst_num);
-                },
-                Err(e) => panic!(e),
-            }
-        }
-    }
-    */
 
     pub fn insert_phi_inst(&mut self, left_set: HashMap<String, Rc<RefCell<UniqueVariable>>>, right_set: HashMap<String, Rc<RefCell<UniqueVariable>>>)
         -> Vec<(Rc<RefCell<UniqueVariable>>, usize)> {

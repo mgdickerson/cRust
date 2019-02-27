@@ -80,12 +80,15 @@ pub enum Config {
     EdgeIndexLabel,
     /// Use no edge labels.
     EdgeNoLabel,
+    /// Arrow color indicator
+    EdgeColor,
     #[doc(hidden)]
     _Incomplete(()),
 }
 
 use petgraph::visit::{ IntoNodeReferences, NodeIndexable, IntoEdgeReferences, EdgeRef};
 use petgraph::visit::{ Data, NodeRef, GraphProp, };
+use petgraph::graph::edge_index;
 
 impl<'a, G> Dot<'a, G>
 {
@@ -122,7 +125,12 @@ impl<'a, G> Dot<'a, G>
                 try!(writeln!(f, ""));
             } else if self.config.contains(&Config::EdgeIndexLabel) {
                 try!(writeln!(f, " [label=\"{}\"]", i));
-            } else {
+            } else if self.config.contains(&Config::EdgeColor) {
+                try!(write!(f, " [color="));
+                try!(edge_fmt(edge.weight(), &mut |d| PassThrough(d).fmt(f)));
+                try!(writeln!(f, "]"));
+            }
+            else {
                 try!(write!(f, " [label=\""));
                 try!(edge_fmt(edge.weight(), &mut |d| Escaped(d).fmt(f)));
                 try!(writeln!(f, "\"]"));
@@ -192,6 +200,16 @@ impl<T> fmt::Display for Escaped<T>
         } else {
             write!(&mut Escaper(f), "{}", &self.0)
         }
+    }
+}
+
+struct PassThrough<T>(T);
+
+impl<T> fmt::Display for PassThrough<T>
+    where T: fmt::Display
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 

@@ -58,6 +58,27 @@ impl ReturnStmt {
     pub fn to_ir(self, irgm: &mut IRGraphManager) {
         let ret_val = self.expression.to_ir(irgm);
 
+        // Store back all affected globals
+        for global in irgm.variable_manager().active_function().load_assigned_globals() {
+            let global_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
+
+            let uniq_var_val = Value::new(ValTy::var(irgm.get_current_unique(&global).clone()));
+            let var_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_addr_assignment(&global, 4)));
+
+            let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
+            let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
+
+            let inst;
+            if let ValTy::con(con_val) = uniq_var_val.clone().get_var_base().clone() {
+                let add_inst = irgm.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(con_val)), InstTy::add);
+                let add_val = irgm.graph_manager().add_instruction(add_inst);
+                inst = irgm.build_op_x_y(add_reg_val, add_val, InstTy::store);
+            } else {
+                inst = irgm.build_op_x_y(add_reg_val, uniq_var_val, InstTy::store);
+            }
+            let new_global_val = irgm.graph_manager().add_instruction(inst);
+        }
+
         // This will be a special instruction that always returns values on register R27;
         let ret_inst = irgm.build_op_x(ret_val.expect("return calls should always return an expr"), InstTy::ret);
         irgm.graph_manager().add_instruction(ret_inst);

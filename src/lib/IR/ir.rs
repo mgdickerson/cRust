@@ -4,6 +4,7 @@ use lib::IR::address_manager::UniqueAddress;
 use lib::IR::ret_register::RetRegister;
 
 use super::{Rc,RefCell};
+use petgraph::graph::NodeIndex;
 
 #[derive(Debug,Clone,PartialEq)]
 pub struct Value {
@@ -19,6 +20,21 @@ impl Value {
         &self.val
     }
 
+    pub fn update_value(&mut self, new_val_ty: ValTy) {
+        self.val = new_val_ty;
+    }
+
+    pub fn get_var_base(&self) -> ValTy {
+        let ret;
+        if let ValTy::var(var) = self.clone_value() {
+            ret = var.borrow().get_value().to_owned().clone().get_var_base()
+        } else {
+            ret = self.clone_value()
+        }
+
+        ret
+    }
+
     pub fn clone_value(&self) -> ValTy {
         self.val.clone()
     }
@@ -27,6 +43,7 @@ impl Value {
 #[derive(Debug,Clone, PartialEq)]
 pub enum ValTy {
     op(Rc<RefCell<Op>>),
+    node_id(NodeIndex),
     con(i32),
     var(Rc<RefCell<UniqueVariable>>),
     adr(UniqueAddress),
@@ -38,6 +55,9 @@ impl ValTy {
     pub fn to_string(&self) -> String {
         match &self {
             ValTy::op(op) => op.borrow().get_return_value(),
+            ValTy::node_id(id) => {
+                String::from("[") + &id.index().to_string() + "]"
+            },
             ValTy::con(con) => {
                 String::from("#") + &con.to_string()
             },
@@ -64,6 +84,7 @@ pub struct Op {
     inst_number: usize,
     block_number: usize,
     inst_type: InstTy,
+    is_active: bool,
 
     // Useful for debugging or printing
     p_command: String,
@@ -79,7 +100,7 @@ impl Op {
     {
         let mut p_command = String::new();
 
-        Op { x_val , y_val , special_val, inst_number, block_number, inst_type, p_command }
+        Op { x_val , y_val , special_val, inst_number, block_number, inst_type, is_active: true, p_command }
     }
 
     pub fn build_op(x_val: Option<Value>,
@@ -173,6 +194,88 @@ impl Op {
         p_command
     }
 
+    pub fn update_inst_ty(&mut self, new_inst_ty: InstTy) {
+        self.inst_type = new_inst_ty;
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.is_active.clone()
+    }
+
+    pub fn activate(&mut self) {
+        self.is_active = true;
+    }
+
+    pub fn deactivate(&mut self) {
+        self.is_active = false;
+    }
+
+    pub fn get_values(&self) -> (Option<Value>, Option<Value>, Option<String>) {
+        (self.x_val.clone(), self.y_val.clone(), self.special_val.clone())
+    }
+
+    pub fn get_val_ty(&self) -> (Option<ValTy>, Option<ValTy>) {
+        let x_val;
+        let y_val;
+
+        match &self.x_val {
+            Some(x_value) => {
+                x_val = Some(x_value.get_value().clone());
+            },
+            None => {
+                x_val = None;
+            },
+        }
+
+        match &self.y_val {
+            Some(y_value) => {
+                y_val = Some(y_value.get_value().clone());
+            },
+            None => {
+                y_val = None;
+            },
+        }
+
+        (x_val, y_val)
+    }
+
+    pub fn clone_x_val(&self) -> Option<Value> {
+        self.x_val.clone()
+    }
+
+    pub fn update_x_val(&mut self, new_val: Value) {
+        self.x_val = Some(new_val);
+    }
+
+    pub fn clone_y_val(&self) -> Option<Value> {
+        self.y_val.clone()
+    }
+
+    pub fn update_y_val(&mut self, new_val: Value) {
+        self.y_val = Some(new_val);
+    }
+
+    pub fn update_special_val(&mut self, new_val: String) {
+        self.special_val = Some(new_val);
+    }
+
+    /// Grabs the base value of variables and sets that as the new value of x or y val
+    pub fn update_base_values(&mut self) {
+        if let Some(x_val) = self.x_val.clone() {
+            //println!("Value x is currently: {:?}", self.x_val.clone().unwrap());
+            let val_ty = x_val.get_var_base();
+            self.x_val = Some(Value::new(val_ty));
+            //println!("Adding value {:?} to x", self.x_val.clone().unwrap())
+        }
+
+        if let Some(y_val) = self.y_val.clone() {
+            //println!("Value y is currently: {:?}", self.y_val.clone().unwrap());
+            let val_ty = y_val.get_var_base();
+            self.y_val = Some(Value::new(val_ty));
+            //println!("Adding value {:?} to y", self.y_val.clone().unwrap())
+        }
+    }
+
     pub fn get_return_value(&self) -> String {
         let string = String::from("(") + &self.inst_number.to_string() + ")";
         string
@@ -184,8 +287,38 @@ impl Op {
 
     pub fn get_inst_num(&self) -> usize { self.inst_number.clone() }
 
+    pub fn update_inst_num(&mut self, new_inst_num: & usize) {
+        self.inst_number = new_inst_num.clone();
+    }
+
     pub fn inst_type(&self) -> &InstTy {
         &self.inst_type
+    }
+
+    pub fn op_cleanup(&mut self, var_to_clean: usize, replacement_op: Value) {
+        match self.x_val.clone() {
+            Some(val) => {
+                if let ValTy::op(op) = val.clone_value() {
+                    let op_id = op.borrow().get_inst_num();
+                    if op_id == var_to_clean {
+                        self.x_val = Some(replacement_op.clone());
+                    }
+                }
+            }
+            None => {}
+        }
+
+        match self.y_val.clone() {
+            Some(val) => {
+                if let ValTy::op(op) = val.clone_value() {
+                    let op_id = op.borrow().get_inst_num();
+                    if op_id == var_to_clean {
+                        self.y_val = Some(replacement_op.clone());
+                    }
+                }
+            }
+            None => {}
+        }
     }
 
     pub fn var_cleanup(&mut self, var_to_clean: Value, replacement_var: Value) {
@@ -193,7 +326,7 @@ impl Op {
         match self.x_val.clone() {
             Some(val) => {
                 if val == var_to_clean {
-                    println!("Clean cycle reaches x_val replacement for {}.", var_to_clean.get_value().to_string());
+                    //println!("Clean cycle reaches x_val replacement for {}.", var_to_clean.get_value().to_string());
                     self.x_val = Some(replacement_var.clone());
                 }
             },
@@ -206,7 +339,7 @@ impl Op {
         match self.y_val.clone() {
             Some(val) => {
                 if val == var_to_clean {
-                    println!("Clean cycle reaches y_val replacement for {}.", var_to_clean.get_value().to_string());
+                    //println!("Clean cycle reaches y_val replacement for {}.", var_to_clean.get_value().to_string());
                     self.y_val = Some(replacement_var.clone());
                 }
             },
@@ -226,6 +359,59 @@ impl std::fmt::Debug for Op {
 impl PartialEq for Op {
     fn eq(&self, other: &Op) -> bool {
         if self.inst_type == other.inst_type {
+            let (self_x, self_y) = self.get_val_ty();
+            let (other_x, other_y) = other.get_val_ty();
+
+            match (self_x, other_x) {
+                (Some(self_some_x), Some(other_some_x)) => {
+                    if let ValTy::op(self_op_x) = self_some_x {
+                        let x_inst_num = self_op_x.borrow().get_inst_num();
+                        //println!("Passes first op_check: {}", x_inst_num);
+                        if let ValTy::op(other_op_x) = other_some_x {
+                            //println!("Passes second op check");
+                            let x_other_inst_num = other_op_x.borrow().get_inst_num();
+                            //println!("{} == {} ?", x_inst_num, x_other_inst_num);
+                            if x_inst_num == x_other_inst_num {
+                                //println!("X_inst is same as Other_x_inst");
+                                match (self_y, other_y) {
+                                    (Some(self_some_y), Some(other_some_y)) => {
+                                        if let ValTy::op(self_op_y) = self_some_y {
+                                            let y_inst_num = self_op_y.borrow().get_inst_num();
+                                            if let ValTy::op(other_op_y) = other_some_y {
+                                                let y_other_inst_num = other_op_y.borrow().get_inst_num();
+                                                if y_inst_num == y_other_inst_num {
+                                                    return true;
+                                                } else {
+                                                    return false;
+                                                }
+                                            } else {
+                                                return false;
+                                            }
+                                        }
+                                    },
+                                    (None, None) => {
+                                        return true;
+                                    },
+                                    _ => {
+                                        return false;
+                                    }
+                                }
+                            } else {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
+                },
+                (None, None) => {
+                    return true;
+                },
+                _ => {
+                    return false;
+                }
+            }
+
             if self.x_val == other.x_val {
                 if self.y_val == other.y_val {
                     if self.special_val == other.special_val {
@@ -239,7 +425,7 @@ impl PartialEq for Op {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum InstTy {
     /// Op ///
     read,

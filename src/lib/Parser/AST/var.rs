@@ -79,11 +79,11 @@ impl Var {
                     println!("In function: {}\tVariable: {} is already global.", func_name.clone().unwrap(), var_name.clone());
                 }
 
-                irgm.variable_manager().add_variable(var_name, 0, 0);
+                irgm.add_variable(&var_name);
                 continue
             }
 
-            irgm.variable_manager().add_global(&var_name);
+            irgm.add_global(&var_name);
         }
     }
 }

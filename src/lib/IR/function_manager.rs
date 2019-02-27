@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use petgraph::prelude::NodeIndex;
 
 use super::{Rc,RefCell};
+use lib::Graph::node::Node;
 
 #[derive(Debug, Clone)]
 pub struct FunctionManager {
@@ -29,6 +30,12 @@ impl FunctionManager {
     pub fn get_function(&self, func_name: &String) -> UniqueFunction {
         self.func_manager.get(func_name).expect("Attempted to get non-existent function.").clone()
     }
+
+    pub fn list_functions(&self) -> Vec<(String, NodeIndex)> {
+        self.func_manager.iter().map(|(func_name, uniq_func)| {
+            (func_name.clone(), uniq_func.clone_index())
+        }).collect::<Vec<_>>()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +45,7 @@ pub struct UniqueFunction {
     recovery_point: Option<(HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>, HashMap<String, Rc<RefCell<UniqueVariable>>>)>,
     params_to_load: Vec<String>,
     affected_globals: Vec<String>,
+    assigned_globals: Vec<String>,
     has_return: bool,
 }
 
@@ -48,12 +56,21 @@ impl UniqueFunction {
             func_index: func_index.clone(),
             params_to_load: Vec::new(),
             affected_globals: Vec::new(),
+            assigned_globals: Vec::new(),
             has_return: false,
         }
     }
 
     pub fn get_name(&self) -> String {
         self.func_name.clone()
+    }
+
+    pub fn clone_index(&self) -> NodeIndex {
+        self.func_index.clone()
+    }
+
+    pub fn update_index(&mut self, node_id: NodeIndex) {
+        self.func_index = node_id;
     }
 
     pub fn add_parameter(&mut self, param: &String) {
@@ -70,7 +87,14 @@ impl UniqueFunction {
         }
 
         self.affected_globals.push(global_base.clone());
-        //self.variables_to_load.push(global_base.clone());
+    }
+
+    pub fn add_assigned_global(&mut self, global_base: &String) {
+        if self.assigned_globals.contains(global_base) {
+            return
+        }
+
+        self.assigned_globals.push(global_base.clone());
     }
 
     pub fn load_param_list(&self) -> Vec<String> {
@@ -83,6 +107,10 @@ impl UniqueFunction {
 
     pub fn load_globals_list(&self) -> Vec<String> {
         self.affected_globals.clone()
+    }
+
+    pub fn load_assigned_globals(&self) -> Vec<String> {
+        self.assigned_globals.clone()
     }
 
     pub fn add_checkpoint(&mut self, checkpoint: (HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>, HashMap<String, Rc<RefCell<UniqueVariable>>>)) {

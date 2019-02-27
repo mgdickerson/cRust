@@ -1,7 +1,11 @@
 //Simple Redundant Op Elimination Test
 main
-var x, y, z, w;
+var x, y, z, w, a, b, c;
 {
+    let a <- call InputNum();
+    let b <- a + 1;
+    let c <- a + 1;
+
     let x <- 1;
     let y <- x;
     let z <- y;

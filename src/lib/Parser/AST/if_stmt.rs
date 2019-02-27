@@ -122,7 +122,6 @@ impl IfStmt {
         let main_node = irgm.graph_manager().clone_node_index();
 
         irgm.new_node(String::from("If_Header"), NodeType::loop_header);
-        self.relation.to_ir(irgm, Value::new(ValTy::con(-1)));
         let loop_header = irgm.graph_manager().clone_node_index();
         irgm.graph_manager().add_edge(main_node, loop_header);
 
@@ -130,6 +129,7 @@ impl IfStmt {
 
 
         // Variable holder for else_node_bottom
+        let mut else_node_top = None;
         let mut else_node_bottom = None;
         let mut else_checkpoint = None;
 
@@ -141,19 +141,24 @@ impl IfStmt {
 
         // Go through if-body, generate if-bottom
         self.funcIfBody.to_ir(irgm);
+
+
         let if_node_bottom = irgm.graph_manager().clone_node_index();
 
         let if_checkpoint = irgm.variable_manager().var_checkpoint();
 
         match self.funcElseBody {
             Some(funcElseBody) => {
-                // TODO : Issue being run in to here. Now that the new Phi value is the "latest" that is being added instead of the correctly reset value from the "main" node. Need to use restore more intelligently.
+                // There is an else branch, so it is important to add the branch to the if node.
+                let if_branch = irgm.build_op_y(Value::new(ValTy::con(-1)), InstTy::bra);
+                irgm.graph_manager().add_instruction(if_branch);
+
                 irgm.variable_manager().restore_vars(main_checkpoint.clone());
 
                 // Generate else-node-top
                 irgm.new_node(String::from("Else_Top_Node"), NodeType::else_node);
-                let else_node_top = irgm.graph_manager().clone_node_index();
-                irgm.graph_manager().add_edge(loop_header,else_node_top);
+                else_node_top = Some(irgm.graph_manager().clone_node_index());
+                irgm.graph_manager().add_edge(loop_header,else_node_top.clone().unwrap());
 
                 // go through else-body, generate else-bottom
                 funcElseBody.to_ir(irgm);
@@ -166,9 +171,6 @@ impl IfStmt {
                 // Nothing to do here, fall through.
             }
         }
-
-        // TODO : How will i get the instruction for the if to branch to?
-        // TODO : Will i need a clean up cycle to determine branch locations?
 
         // Main branch node after if/else (phi node)
         irgm.new_node(String::from("Phi_Node"), NodeType::phi_node);
@@ -183,6 +185,11 @@ impl IfStmt {
         // Add else node
         match else_node_bottom {
             Some(node) => {
+                irgm.graph_manager().switch_current_node_index(loop_header);
+                //let else_id = irgm.graph_manager().get_node_id(else_node_top.unwrap());
+                self.relation.to_ir(irgm, Value::new(ValTy::node_id(else_node_top.unwrap())));
+                irgm.graph_manager().switch_current_node_index(phi_node);
+
                 // Connect else-bottom to phi
                 irgm.graph_manager().add_edge(node, phi_node);
 
@@ -194,6 +201,11 @@ impl IfStmt {
                                          .expect("There is an else node, there should be an else checkpoint."));
             },
             None => {
+                irgm.graph_manager().switch_current_node_index(loop_header);
+                //let phi_id = irgm.graph_manager().get_node_id(phi_node.clone());
+                self.relation.to_ir(irgm, Value::new(ValTy::node_id(phi_node.clone())));
+                irgm.graph_manager().switch_current_node_index(phi_node);
+
                 // no else body, connect main directly to phi
                 irgm.graph_manager().add_edge(loop_header, phi_node);
 

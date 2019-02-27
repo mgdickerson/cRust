@@ -57,29 +57,55 @@ impl ArrayManager {
             .for_each(|(adjust, val)| {
                 // adjust needs +1 because when storing space for the array, the first element is not counted for adjustment
                 // The 4 is for byte size of i32 (standard size for this project)
-                let adjustment =
+                let adj_size = 4 * uniq_arr.generate_adjustment(adjust + 1);
+
+                if let ValTy::con(val_con) = val.get_value().clone() {
+                    let new_adjust = val_con * adj_size;
+                    let new_adjust_value = Value::new(ValTy::con(new_adjust));
+                    match last_offset_inst.clone() {
+                        Some(last_inst) => {
+                            if let ValTy::con(last_con) = last_inst.clone().get_value() {
+                                last_offset_inst = Some(Value::new(ValTy::con(last_con + new_adjust)));
+                            } else {
+                                let offset_inst = irgm.build_op_x_y(last_inst, new_adjust_value, InstTy::add);
+                                let latest_offset = irgm.graph_manager().add_instruction(offset_inst);
+                                last_offset_inst = Some(latest_offset);
+                            }
+                        },
+                        None => {
+                            last_offset_inst = Some(new_adjust_value);
+                        }
+                    }
+                } else {
+                    let adjustment =
                         Value::new(
-                            ValTy::con(4 * uniq_arr.generate_adjustment(adjust + 1))
+                            ValTy::con(adj_size.clone())
                         );
 
-                // Generate Offset for Array
-                let mul_inst = irgm.build_op_x_y(val.clone(), adjustment, InstTy::mul);
-                let mul_val = irgm.graph_manager().add_instruction(mul_inst);
+                    // Generate Offset for Array
+                    let mul_inst = irgm.build_op_x_y(val.clone(), adjustment, InstTy::mul);
+                    let mul_val = irgm.graph_manager().add_instruction(mul_inst);
 
-                match last_offset_inst.clone() {
-                    Some(last_inst) => {
-                        let offset_inst = irgm.build_op_x_y(last_inst, mul_val, InstTy::add);
-                        let last_offset_val = irgm.graph_manager().add_instruction(offset_inst);
-                        last_offset_inst = Some(last_offset_val);
-                    },
-                    None => {
-                        last_offset_inst = Some(mul_val);
-                    },
+                    match last_offset_inst.clone() {
+                        Some(last_inst) => {
+                            let offset_inst = irgm.build_op_x_y(last_inst, mul_val, InstTy::add);
+                            let last_offset_val = irgm.graph_manager().add_instruction(offset_inst);
+                            last_offset_inst = Some(last_offset_val);
+                        },
+                        None => {
+                            last_offset_inst = Some(mul_val);
+                        },
+                    }
                 }
-
         });
 
-        let final_offset = last_offset_inst.expect("Should be at least one instruction.");
+        let final_offset;
+        if let ValTy::con(final_con) = last_offset_inst.clone().expect("Should be at least one instruction").get_var_base() {
+            let add_load = irgm.build_op_x_y(Value::new(ValTy::con(0)), last_offset_inst.unwrap(), InstTy::add);
+            final_offset = irgm.graph_manager().add_instruction(add_load);
+        } else {
+            final_offset = last_offset_inst.expect("Should be at least one instruction.");
+        }
 
         // Find Array home register
         let ref_register;
@@ -100,7 +126,12 @@ impl ArrayManager {
         // if there is a value to assign, store, otherwise load.
         match &value_to_assign {
             Some(val) => {
-                let store_inst = irgm.build_op_x_y(adda_val, val.clone(), InstTy::store);
+                let mut val_to_assign = val.clone();
+                if let ValTy::con(val_store) = val.get_value().clone() {
+                    let add_inst = irgm.build_op_x_y(Value::new(ValTy::con(0)), val.clone(), InstTy::add);
+                    val_to_assign = irgm.graph_manager().add_instruction(add_inst);
+                }
+                let store_inst = irgm.build_op_x_y(adda_val, val_to_assign, InstTy::store);
                 ret_val = irgm.graph_manager().add_instruction(store_inst);
             },
             None => {

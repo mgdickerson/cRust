@@ -3,6 +3,13 @@
 main
 var a, b, c, d, e, f, g;
 {
+    let a <- 1;
+    let b <- 2;
+    let c <- 3;
+    let d <- 4;
+    let e <- 5;
+    let f <- 6;
+    let g <- 7;
    	let a <- b + c;
 	let d <- b + c;
 	let e <- c + b + d;
@@ -14,8 +21,9 @@ var a, b, c, d, e, f, g;
 		let b <- 5;
 		let e <- c + b + d
 	else
-		let f <- a / d;
-		let g <- d / a
+	    let c <- c - ( c + c );
+		let f <- c / d;
+		let g <- e / c
 	fi;
 	
 	let f <- a * d;
