@@ -7,7 +7,7 @@ use petgraph::prelude::NodeIndex;
 use petgraph::visit::DfsPostOrder;
 
 use super::{Rc,RefCell};
-use petgraph::Directed;
+use petgraph::{Outgoing,Incoming, Directed};
 
 #[derive(Clone)]
 pub struct GraphManager {
@@ -44,6 +44,10 @@ impl GraphManager {
 
     pub fn set_main_node(&mut self) { self.current_node_index = self.main_node_index.clone() }
 
+    pub fn update_main_node(&mut self, node_id: NodeIndex) {
+        self.main_node_index = node_id;
+    }
+
     pub fn get_main_node(&self) -> NodeIndex {
         self.main_node_index.clone()
     }
@@ -63,6 +67,10 @@ impl GraphManager {
     }
 
     pub fn add_edge(&mut self, parent: NodeIndex, child: NodeIndex) {
+        self.graph.add_edge(parent, child, String::from("black"));
+    }
+
+    pub fn update_edge(&mut self, parent: NodeIndex, child: NodeIndex) {
         self.graph.add_edge(parent, child, String::from("black"));
     }
 

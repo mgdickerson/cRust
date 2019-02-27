@@ -75,6 +75,11 @@ impl TempValManager {
             InstTy::div | InstTy::cmp |
             InstTy::adda | InstTy::phi |
             InstTy::load => {
+                // TODO : Should this be removed and handled in dead code elimination?
+                // It is probably better practice to remove the dead code based on
+                // having no active uses in a separate sweep. Code that should not
+                // be removed will be protected by having an always constant use of
+                // itself.
                 inst.borrow_mut().deactivate();
             }
             _ => {

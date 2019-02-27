@@ -359,36 +359,48 @@ fn cmp_eval(inst_ty: InstTy,
             }
         }*/
 
-        let mut eliminate_branch = left_path;
+        let mut eliminate_branch = right_path;
         match branch_type.clone() {
             InstTy::bne => {
+                //println!("{} != {}", x_value, y_value);
                 if x_value != y_value {
-                    eliminate_branch = right_path;
+                    //println!("{} != {} is true!", x_value, y_value);
+                    eliminate_branch = left_path;
                 }
             },
             InstTy::beq => {
+                //println!("{} == {}", x_value, y_value);
                 if x_value == y_value {
-                    eliminate_branch = right_path;
+                    //println!("{} == {}is true!", x_value, y_value);
+                    eliminate_branch = left_path;
                 }
             },
             InstTy::ble => {
+                //println!("{} <= {}", x_value, y_value);
                 if x_value <= y_value {
-                    eliminate_branch = right_path;
+                    //println!("{} <= {} is true!", x_value, y_value);
+                    eliminate_branch = left_path;
                 }
             },
             InstTy::blt => {
+                //println!("{} < {}", x_value, y_value);
                 if x_value < y_value {
-                    eliminate_branch = right_path;
+                    //println!("{} < {} is true!", x_value, y_value);
+                    eliminate_branch = left_path;
                 }
             },
             InstTy::bge => {
+                //println!("{} >= {}", x_value, y_value);
                 if x_value >= y_value {
-                    eliminate_branch = right_path;
+                    //println!("{} >= {} is true!", x_value, y_value);
+                    eliminate_branch = left_path;
                 }
             },
             InstTy::bgt => {
+                //println!("{} > {}", x_value, y_value);
                 if x_value > y_value {
-                    eliminate_branch = right_path;
+                    //println!("{} > {} is true!", x_value, y_value);
+                    eliminate_branch = left_path;
                 }
             },
             _ => {
@@ -418,7 +430,6 @@ fn mark_dead_nodes(graph_manager: &mut GraphManager,
 
     let initial_edge = graph_manager.get_mut_ref_graph().find_edge(starting_node, eliminate_node);
     //println!("Finding Edge between {:?} and {:?} -> Edge : {:?}", starting_node, eliminate_node, initial_edge);
-    //println!("Checking if this is the error!");
 
     // Remove the edge between block to be removed and the starting block
     graph_manager.get_mut_ref_graph().remove_edge(initial_edge.unwrap());
@@ -430,7 +441,6 @@ fn mark_dead_nodes(graph_manager: &mut GraphManager,
     let main_node = traversal_order[0].clone();
 
     // Get mut graph and a clone for a walkable graph.
-    //let mut mut_graph = graph_manager.get_mut_ref_graph();
     let walkable_graph = graph_manager.get_mut_ref_graph().clone();
 
     let mut previous_node = new_traversal_order[0].clone();
@@ -442,7 +452,6 @@ fn mark_dead_nodes(graph_manager: &mut GraphManager,
 
                 for inst in graph_manager.get_mut_ref_graph().node_weight_mut(node_index.clone()).unwrap().get_mut_data_ref().get_inst_list_ref() {
                     let inst_id = inst.borrow().get_inst_num();
-                    //temp_manager.deactivate_instruction(&inst_id);
                     temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
                 }
             }
@@ -450,7 +459,6 @@ fn mark_dead_nodes(graph_manager: &mut GraphManager,
             previous_node = node_index.clone();
         } else {
             // This is the first node reached that DOES have a connecting path, thus it is likely the phi node from initial removal
-            //println!("Phi node: {}", node_index.index());
             let inst_list = graph_manager.get_mut_ref_graph().node_weight_mut(node_index.clone()).unwrap().get_mut_data_ref().get_inst_list_ref().clone();
             for inst in inst_list {
                 match inst.borrow().inst_type().clone() {
@@ -474,14 +482,14 @@ fn phi_handler(inst: & Rc<RefCell<Op>>,
                graph_manager: &mut GraphManager,
                temp_manager: &mut TempValManager) -> Result<bool, String> {
     let inst_id = inst.borrow().get_inst_num();
-    println!("Attemping to resolve Phi: {:?}", inst);
+    //println!("Attemping to resolve Phi: {:?}", inst);
     let active_uses = temp_manager.borrow_mut_inst(&inst_id)
         .borrow().active_uses()
         .iter()
         .map(|temp_val| {
             temp_val.borrow().inst_val()
         }).collect::<Vec<Rc<RefCell<Op>>>>();
-    println!("Active uses: {:?}", active_uses);
+    //println!("Active uses: {:?}", active_uses);
 
     // TODO : When deactivating Phi, traverse up each operand and remove use.
 

@@ -1,9 +1,16 @@
-use super::{IRGraphManager, TempValManager, PassId};
+use super::{IRGraphManager, TempValManager};
 use petgraph::prelude::NodeIndex;
 use petgraph::algo::has_path_connecting;
 use petgraph::algo::toposort;
+use petgraph::{Outgoing,Incoming, Directed};
 
-pub fn clean_graph(irgm: &mut IRGraphManager, root_node: NodeIndex, temp_manager: &mut TempValManager, graph_visitor: &Vec<NodeIndex>) {
+pub fn clean_graph(irgm: &mut IRGraphManager,
+                   root_node: NodeIndex,
+                   temp_manager: &mut TempValManager,
+                   graph_visitor: &Vec<NodeIndex>) -> NodeIndex {
+    let mut return_node_id = root_node.clone();
+    let mut new_root_id : usize = 0;
+
     // First remove nodes that cannot be reached from the root node.
     let mut walkable_graph = irgm.graph_manager().get_ref_graph().clone();
 
@@ -16,7 +23,7 @@ pub fn clean_graph(irgm: &mut IRGraphManager, root_node: NodeIndex, temp_manager
     // This removes nodes that have been marked (or separated from the main branch)
     for node_index in visit_order {
         if !has_path_connecting(&walkable_graph, root_node, node_index.clone(), None) {
-            println!("Removing node: {}", node_index.index());
+            //println!("Removing node: {}", node_index.index());
             let result = irgm.graph_manager().get_mut_ref_graph().remove_node(node_index);
             match result {
                 Some(res) => {},
@@ -41,27 +48,73 @@ pub fn clean_graph(irgm: &mut IRGraphManager, root_node: NodeIndex, temp_manager
     reverse_node_visitor.reverse();
 
     for node_index in reverse_node_visitor {
-        println!("Checking Node {:?}", node_index);
+        //println!("Checking Node {:?}", node_index);
         let is_node_valid = irgm.graph_manager().check_node(node_index);
 
         // Check result of node_check
         if !is_node_valid {
             // Node is not valid, and should be removed. Need to go through
             // the graph and point edges to next node.
-            // TODO : Route edges from removed nodes.
-            // TODO : this will go through the graph in reverse order of id.
+
+            // First check all edges incoming
+            let mut parents = Vec::new();
+            //println!("Children of node: {:?}", node.clone());
+            for parent_id in irgm.graph_manager()
+                .get_ref_graph().neighbors_directed(node_index.clone(), Incoming) {
+
+                parents.push(parent_id);
+            }
+
+            // Check all outgoing edges
+            let mut children = Vec::new();
+
+            for child_id in irgm.graph_manager()
+                .get_ref_graph().neighbors_directed(node_index.clone(), Outgoing) {
+
+                children.push(child_id);
+            }
+
+            // Bridge the parent nodes to the child nodes.
+            for parent in &parents {
+                for child in &children {
+                    if !irgm.graph_manager().get_ref_graph().contains_edge(parent.clone(), child.clone()) {
+                        irgm.graph_manager().add_edge(parent.clone(), child.clone());
+                    }
+                }
+            }
+
+            // If the main root_node is being removed, a new return value will be needed
+            if node_index == root_node.clone() {
+                if !children.is_empty() {
+                    // Ensure that children is not empty and use first node for return_id
+                    new_root_id = irgm.graph_manager().get_ref_graph()
+                        .node_weight(children[0].clone()).unwrap()
+                        .get_node_id();
+                }
+            }
+
+            // Remove no longer used node.
             irgm.graph_manager().get_mut_ref_graph().remove_node(node_index);
         }
-        println!("Removed Node {:?}", node_index);
+        //println!("Removed Node {:?}", node_index);
     }
 
-    // Testing purposes, prints out list of currently active instructions
-    /*let visit_order = irgm.graph_manager().graph_visitor(root_node);
-    for node_index in visit_order {
-        for inst in irgm.graph_manager().get_ref_graph().node_weight(node_index).unwrap().get_data_ref().get_inst_list_ref() {
-            let inst_id = inst.borrow().get_inst_num();
-            let uses = temp_manager.borrow_mut_inst(&inst_id).borrow().active_uses();
-            println!("Inst {} has uses: {:?}", inst_id, uses);
+    // Update branch commands
+    // TODO : Update branch commands.
+
+    // Using new_root_id to look up actual location (NodeIndex)
+    for node_id in irgm.graph_manager().get_ref_graph().node_indices() {
+        let current_node_id = irgm.graph_manager()
+            .get_ref_graph().node_weight(node_id).unwrap()
+            .get_node_id();
+
+        if new_root_id == current_node_id {
+            // Found new node_id for function. Update root node and break loop.
+            return_node_id = node_id;
+            break;
         }
-    }*/
+    }
+
+    //println!("Sending back new main node: {:?}", return_node_id);
+    return_node_id
 }

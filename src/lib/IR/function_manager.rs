@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use petgraph::prelude::NodeIndex;
 
 use super::{Rc,RefCell};
+use lib::Graph::node::Node;
 
 #[derive(Debug, Clone)]
 pub struct FunctionManager {
@@ -66,6 +67,10 @@ impl UniqueFunction {
 
     pub fn clone_index(&self) -> NodeIndex {
         self.func_index.clone()
+    }
+
+    pub fn update_index(&mut self, node_id: NodeIndex) {
+        self.func_index = node_id;
     }
 
     pub fn add_parameter(&mut self, param: &String) {

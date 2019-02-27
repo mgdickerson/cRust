@@ -1,11 +1,16 @@
 use lib::IR::ir::{Op,InstTy};
+
 use std::collections::HashMap;
-use super::Graph;
+use std::rc::Rc;
+use std::cell::RefCell;
+
 use petgraph::graph::NodeIndex;
+use super::Graph;
+use petgraph::algo::dominators::Dominators;
 
 #[derive(Clone)]
 pub struct OpDomHandler {
-    op_manager: HashMap<InstTy, OpGraph>,
+    op_manager: HashMap<InstTy, OpNode>,
 }
 
 impl OpDomHandler {
@@ -13,176 +18,137 @@ impl OpDomHandler {
         OpDomHandler { op_manager: HashMap::new() }
     }
 
-    fn get_op_manager(self) -> HashMap<InstTy, OpGraph> {
+    fn get_op_manager(self) -> HashMap<InstTy, OpNode> {
         self.op_manager
     }
 
-    pub fn get_op_graph(&mut self, op_type: InstTy) -> Option<&mut OpGraph> {
+    pub fn get_op_graph(&mut self, op_type: InstTy) -> Option<&mut OpNode> {
         self.op_manager.get_mut(&op_type)
     }
 
-    pub fn set_recovery_point(&mut self) -> OpDomHandler {
-        for (op_type, graph) in self.op_manager.iter_mut() {
-            graph.set_recovery_point();
-        }
+    // Dominance path
 
-        self.clone()
-    }
-
-    pub fn restore(&mut self, op_dom_recovery: OpDomHandler) {
-        self.op_manager = op_dom_recovery.get_op_manager();
-
-        for (op_type, graph) in self.op_manager.iter_mut() {
-            graph.restore();
-        }
-    }
 
     // True means new one was added, should be added to instruction list
     // False means it was found in search, do not add instruction just use value
-    pub fn search_or_add_inst(&mut self, new_op: Op) -> (bool, Op) {
-        let contains_key = self.op_manager.contains_key(new_op.inst_type());
+    pub fn search_or_add_inst(&mut self, next_op: Rc<RefCell<Op>>,
+                              node_id: NodeIndex,
+                              dom_path: Vec<NodeIndex>) -> (bool, Rc<RefCell<Op>>) {
+        let key = next_op.borrow().inst_type().clone();
+        let contains_key = self.op_manager.contains_key(&key);
 
         if !contains_key {
-            let key = new_op.inst_type().clone();
-            let op_head = OpNode::new_head_node(new_op.clone());
+            let op_head = OpNode::new_head_node(next_op.clone(), &node_id);
 
-            self.op_manager.insert(key, OpGraph::new(op_head));
+            self.op_manager.insert(key.clone(), op_head);
 
-            return (true, new_op);
+            return (true, next_op);
         }
 
-        let (is_new, op_node) = self.op_manager.get_mut(new_op.inst_type())
-            .expect("Key is present, should have graph.")
-            .search_or_add(new_op);
+        let op_node_builder = self.op_manager
+            .get_mut(&key)
+            .unwrap().clone();
 
-        (is_new, op_node.get_op().clone())
-    }
-}
+        let mut op_node_checker = op_node_builder.clone().to_iter();
 
+        //println!("Previous ops: {:?}", op_node_checker);
+        //println!("Checking instruction: {:?}", next_op);
 
+        // This checks all previously added op_nodes to see if any match
+        // AND are on the same dominance path.
+        while let Some(op_node) = op_node_checker.next() {
+            if op_node.clone_op() == next_op {
+                println!("Ops are the same!");
+                // First check if op is in the same node.
+                if op_node.get_node_id() == node_id {
+                    return (false, op_node.clone_op());
+                }
+                // Second, check if it is within the dominance path of nodes.
+                if dom_path.contains(&op_node.get_node_id()) {
+                    return (false, op_node.clone_op());
+                }
 
-
-#[derive(Clone)]
-pub struct OpGraph {
-    op_graph: Graph<OpNode,i32>,
-    head_node: NodeIndex,
-    tail_node: NodeIndex,
-
-    recovery_node: Option<NodeIndex>,
-    // This is the indicate that when recovery occurred, the first instance
-    // of an instruction was created in a non-dominating branch.
-    need_new_head: bool,
-}
-
-impl OpGraph {
-    pub fn new(head_node: OpNode) -> Self {
-        let mut op_graph = Graph::new();
-        let head_node = op_graph.add_node(head_node);
-        let tail_node = head_node.clone();
-        OpGraph { op_graph, head_node, tail_node, recovery_node: None, need_new_head: false }
-    }
-
-    pub fn clone_tail_index(&self) -> NodeIndex {
-        self.tail_node.clone()
-    }
-
-    pub fn set_recovery_point(&mut self) {
-        let recovery_point = self.tail_node.clone();
-        self.recovery_node = Some(recovery_point);
-    }
-
-    pub fn restore(&mut self) {
-        match self.recovery_node.clone() {
-            Some(recovery_point) => {
-                self.tail_node = recovery_point;
-            },
-            None => {
-                let recovery_point = self.head_node.clone();
-                self.tail_node = recovery_point;
-                self.need_new_head = true;
-            },
-        }
-    }
-
-    // True means one was added, should be added to instruction list
-    // False means it was found in search, do not add instruction just use value
-    pub fn search_or_add(&mut self, new_op: Op) -> (bool, OpNode) {
-        let op_tail = self.op_graph.node_weight(self.tail_node).expect("Tail index should have node weight.").clone();
-
-        if self.need_new_head {
-            let new_head_op = OpNode::new_head_node(new_op);
-            let new_head_node = self.op_graph.add_node(new_head_op.clone());
-            self.head_node = new_head_node.clone();
-            self.tail_node = new_head_node;
-            return (true, new_head_op);
-        }
-
-        // check op_tail
-        if op_tail.get_op().clone() == new_op {
-            return (false, op_tail);
-        }
-
-        let mut iter_op = op_tail.clone();
-
-        // Search through Op chain to find matching Op
-        while let Some(op_node) = iter_op.next() {
-            if op_node.get_op().clone() == new_op.clone() {
-                return (false, op_node.clone());
+                // If neither are true, it is not within the path of dominance,
+                // and must be added as a unique instruction.
             }
         }
 
-        // No Op found, add this Op to Op-Chain and return
-        let new_tail = OpNode::add_op_node(new_op, op_tail);
-        self.tail_node = self.add_child_op(new_tail.clone());
+        let new_op_chain = OpNode::add_op_node(next_op.clone(), op_node_builder, &node_id);
+        self.op_manager.insert(key, new_op_chain);
 
-        (true, new_tail)
-    }
-
-    pub fn add_child_op(&mut self, child_op: OpNode) -> NodeIndex<u32> {
-        let child_node = self.op_graph.add_node(child_op);
-        self.op_graph.add_edge(self.tail_node,child_node.clone(), 1);
-
-        return child_node;
-    }
-
-    pub fn get_graph(&self) -> &Graph<OpNode, i32> {
-        &self.op_graph
+        (true, next_op)
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OpNode {
-    op: Op,
+    op: Rc<RefCell<Op>>,
+    node_id: NodeIndex,
     parent_node: Option<Box<OpNode>>,
 }
 
 impl OpNode {
-    pub fn new_head_node(op_head: Op) -> Self {
-        OpNode { op: op_head, parent_node: None }
+    pub fn new_head_node(op_head: Rc<RefCell<Op>>, node_id: &NodeIndex) -> Self {
+        OpNode { op: op_head.clone(), node_id: node_id.clone(), parent_node: None }
     }
 
-    pub fn add_op_node(op: Op, parent_op: OpNode) -> Self {
-        OpNode { op, parent_node: Some(Box::new(parent_op)) }
+    pub fn add_op_node(op: Rc<RefCell<Op>>, parent_op: OpNode, node_id: &NodeIndex) -> Self {
+        OpNode { op: op.clone(), node_id: node_id.clone(), parent_node: Some(Box::new(parent_op)) }
     }
 
-    pub fn get_op(&self) -> &Op {
+    pub fn get_node_id(&self) -> NodeIndex {
+        self.node_id.clone()
+    }
+
+    pub fn get_op(&self) -> &Rc<RefCell<Op>> {
         &self.op
     }
 
-    pub fn clone_op(&self) -> Op {
+    pub fn clone_op(&self) -> Rc<RefCell<Op>> {
         self.op.clone()
     }
 
     pub fn clone_parent(&self) -> Option<Box<OpNode>> { self.parent_node.clone() }
 
-    pub fn next(&mut self) -> Option<OpNode> {
-        match self.parent_node.clone() {
-            Some(p_node) => {
-                self.op = p_node.clone_op();
-                self.parent_node = p_node.clone_parent();
-                Some(self.clone())
-            },
-            None => None,
+    pub fn to_iter(&self) -> OpNodeIterator {
+        let parent;
+        if let Some(parent_op) = self.clone_parent() {
+            parent = Some(*parent_op);
+        } else {
+            parent = None;
         }
+
+        OpNodeIterator::new(Some(self.clone()), parent)
+    }
+}
+
+pub struct OpNodeIterator {
+    curr: Option<OpNode>,
+    next: Option<OpNode>,
+}
+
+impl OpNodeIterator {
+    pub fn new(curr: Option<OpNode>, next: Option<OpNode>) -> Self {
+        OpNodeIterator { curr, next }
+    }
+
+    pub fn next(&mut self) -> Option<OpNode> {
+        let ret_node = self.curr.clone();
+        self.curr = self.next.clone();
+
+        match self.next.clone() {
+            Some(op_node) => {
+                if let Some(box_node) = op_node.clone_parent() {
+                    self.next = Some(*box_node);
+                } else {
+                    self.next = None;
+                }
+            },
+            None => {
+                self.next = None;
+            },
+        }
+
+        ret_node
     }
 }
