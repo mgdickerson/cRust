@@ -80,7 +80,7 @@ impl TempValManager {
                 // having no active uses in a separate sweep. Code that should not
                 // be removed will be protected by having an always constant use of
                 // itself.
-                inst.borrow_mut().deactivate();
+                //inst.borrow_mut().deactivate();
             }
             _ => {
                 ref_temp.borrow_mut().add_use(static_temp);

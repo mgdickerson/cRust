@@ -1,6 +1,9 @@
-use super::{IRGraphManager,TempValManager,Op,InstTy,Node,Graph};
+use super::{IRGraphManager,TempValManager,Op,InstTy,Node,Graph,Value,ValTy};
 use lib::Optimizer::operator_dominator::OpDomHandler;
+
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use petgraph::prelude::NodeIndex;
 use petgraph::algo::dominators::Dominators;
@@ -39,17 +42,42 @@ pub fn trace_common_expression(irgm: &mut IRGraphManager, temp_manager: &mut Tem
             .get_inst_list_ref()
             .iter() {
             let inst_ty = inst.borrow().inst_type().clone();
+            let inst_id = inst.borrow().get_inst_num();
+            println!("Checking Instruction: {}", inst_id);
 
             match inst_ty {
                 InstTy::add | InstTy::sub |
                 InstTy::mul | InstTy::div => {
-                    let (is_uniq, op) = local_op_handler.search_or_add_inst(
+                    let (is_uniq, replacement_inst) = local_op_handler.search_or_add_inst(
                         inst.clone(),
                         node_id.clone(),
                         dominance_path.clone());
 
                     if !is_uniq {
-                        println!("Operator to be replaced. {:?} -> {:?}", inst.clone(), op);
+                        println!("Operator to be replaced. {:?} -> {:?}", inst.clone(), replacement_inst);
+                        let active_uses = temp_manager.borrow_mut_inst(&inst_id)
+                            .borrow().active_uses()
+                            .iter()
+                            .map(|temp_val| {
+                                temp_val.borrow().inst_val()
+                            }).collect::<Vec<Rc<RefCell<Op>>>>();
+                        for op in active_uses {
+                            // First clean up the old Phi value at instruction site
+                            let replacement_value = Value::new(ValTy::op(replacement_inst.clone()));
+                            op.borrow_mut().op_cleanup(inst_id.clone(), replacement_value);
+
+                            // Get instruction id
+                            let op_id = op.borrow().get_inst_num();
+                            // Get inst value ref to add to y_inst temp
+                            let op_temp = temp_manager.borrow_inst(&op_id).clone();
+
+                            // Add new use to value used to replace.
+                            let replacement_id = replacement_inst.borrow().get_inst_num();
+                            let temp_val = temp_manager.borrow_mut_inst(&replacement_id);
+                            temp_val.borrow_mut().add_use(op_temp);
+                        }
+                        temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
+                        temp_manager.clean_instruction_uses(&inst_id);
                     }
                 }
                 _ => {

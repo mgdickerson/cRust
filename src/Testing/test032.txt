@@ -6,6 +6,18 @@ var x, y, a, b, c, d;
     let b <- a + 1;
     let c <- a + 1;
     let d <- a + 1;
+    let y <- b + 1;
+
+    if a > b then
+		let b <- y + 1
+	else
+	    let b <- y + 1;
+		let b <- y + 1
+	fi;
+
+    let b <- y + 1;
+    let b <- y + 1;
+    let b <- b + 1;
 
     let a <- call InputNum();
     let a <- a + 1;

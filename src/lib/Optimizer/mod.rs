@@ -128,6 +128,32 @@ impl Optimizer {
     pub fn pass_2(&mut self) {
         // Pass 2 consists of CSE
         let root_node = self.irgm.graph_manager().get_main_node();
-        cse::trace_common_expression(&mut self.irgm, &mut self.main_temp_val_manager, root_node);
+
+        cse::trace_common_expression(&mut self.irgm, &mut self.main_temp_val_manager, root_node.clone());
+        let graph_visitor = self.irgm.graph_manager().graph_visitor(root_node.clone());
+
+        let new_root = clean_graph(&mut self.irgm, root_node, &mut self.main_temp_val_manager, &graph_visitor);
+        self.irgm.graph_manager().update_main_node(new_root);
+
+        for (func_name, temp_manager) in self.func_temp_val_map.iter_mut() {
+            let mut root_node = self.irgm.function_manager()
+                .get_function(func_name).clone_index();
+
+            for node_id in self.irgm.graph_manager().get_ref_graph().node_indices() {
+                let current_node_id = self.irgm.graph_manager()
+                    .get_ref_graph().node_weight(node_id).unwrap()
+                    .get_node_id();
+
+                if root_node.index() == current_node_id {
+                    root_node = node_id;
+                    break;
+                }
+            }
+
+            cse::trace_common_expression(&mut self.irgm, temp_manager, root_node.clone());
+            let function_visitor = self.irgm.graph_manager().graph_visitor(root_node.clone());
+            let new_root = clean_graph(&mut self.irgm, root_node, temp_manager, &function_visitor);
+            self.irgm.function_manager().get_mut_function(func_name).update_index(new_root);
+        }
     }
 }

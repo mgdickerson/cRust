@@ -58,7 +58,7 @@ impl OpDomHandler {
         // AND are on the same dominance path.
         while let Some(op_node) = op_node_checker.next() {
             if op_node.clone_op() == next_op {
-                println!("Ops are the same!");
+                //println!("Ops are the same!");
                 // First check if op is in the same node.
                 if op_node.get_node_id() == node_id {
                     return (false, op_node.clone_op());
