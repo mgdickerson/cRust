@@ -111,6 +111,7 @@ fn main() {
         optimizer.pass_0();
         optimizer.pass_1();
         optimizer.pass_2();
+        optimizer.pass_3();
 
         /* // All of this is now handled by optimizer pass_0
         lib::clean_graph(&mut irgmanager);

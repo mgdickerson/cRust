@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 pub mod constant_evaluation;
 pub mod cse;
+pub mod dce;
 pub mod node_remover;
 pub mod temp_value_manager;
 pub mod operator_dominator;
@@ -155,5 +156,15 @@ impl Optimizer {
             let new_root = clean_graph(&mut self.irgm, root_node, temp_manager, &function_visitor);
             self.irgm.function_manager().get_mut_function(func_name).update_index(new_root);
         }
+    }
+
+    pub fn pass_3(&mut self) {
+        let root_node = self.irgm.graph_manager().get_main_node();
+
+        dce::dead_code_elimination(&mut self.irgm, &mut self.main_temp_val_manager, root_node.clone());
+        let graph_visitor = self.irgm.graph_manager().graph_visitor(root_node.clone());
+
+        let new_root = clean_graph(&mut self.irgm, root_node, &mut self.main_temp_val_manager, &graph_visitor);
+        self.irgm.graph_manager().update_main_node(new_root);
     }
 }

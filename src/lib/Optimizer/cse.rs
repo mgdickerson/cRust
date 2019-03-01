@@ -43,7 +43,7 @@ pub fn trace_common_expression(irgm: &mut IRGraphManager, temp_manager: &mut Tem
             .iter() {
             let inst_ty = inst.borrow().inst_type().clone();
             let inst_id = inst.borrow().get_inst_num();
-            println!("Checking Instruction: {}", inst_id);
+            //println!("Checking Instruction: {}", inst_id);
 
             match inst_ty {
                 InstTy::add | InstTy::sub |
