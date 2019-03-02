@@ -17,6 +17,7 @@ use petgraph::algo::has_path_connecting;
 
 use lib::Utility::display;
 
+// TODO : on while const evaluation, evaluate if the loop will ever even be taken by comparing the right side value of the phi in the cmp inst.
 pub fn eval_program_constants(irgm: &mut IRGraphManager, temp_manager: &mut TempValManager, graph_visitor: &Vec<NodeIndex>) -> Result<(), String> {
     //println!("Program Eval is being called.");
 

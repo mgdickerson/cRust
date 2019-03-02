@@ -22,6 +22,7 @@ pub mod Utility;
 pub mod IR;
 pub mod Graph;
 pub mod Optimizer;
+pub mod RegisterAllocation;
 
 #[cfg(test)]
 pub mod tests {

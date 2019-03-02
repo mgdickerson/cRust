@@ -54,7 +54,8 @@ pub fn trace_common_expression(irgm: &mut IRGraphManager, temp_manager: &mut Tem
                         dominance_path.clone());
 
                     if !is_uniq {
-                        println!("Operator to be replaced. {:?} -> {:?}", inst.clone(), replacement_inst);
+                        // This is a very good testing output.
+                        //println!("Operator to be replaced. {:?} -> {:?}", inst.clone(), replacement_inst);
                         let active_uses = temp_manager.borrow_mut_inst(&inst_id)
                             .borrow().active_uses()
                             .iter()

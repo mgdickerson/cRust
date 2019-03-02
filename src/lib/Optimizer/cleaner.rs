@@ -9,7 +9,7 @@ pub fn clean_graph(irgm: &mut IRGraphManager,
                    temp_manager: &mut TempValManager,
                    graph_visitor: &Vec<NodeIndex>) -> NodeIndex {
     let mut return_node_id = root_node.clone();
-    let mut new_root_id : usize = 0;
+    let mut new_root_id = root_node.index();
 
     // First remove nodes that cannot be reached from the root node.
     let mut walkable_graph = irgm.graph_manager().get_ref_graph().clone();
@@ -87,6 +87,7 @@ pub fn clean_graph(irgm: &mut IRGraphManager,
             if node_index == root_node.clone() {
                 if !children.is_empty() {
                     // Ensure that children is not empty and use first node for return_id
+                    //println!("Children[0]: {:?}", children[0]);
                     new_root_id = irgm.graph_manager().get_ref_graph()
                         .node_weight(children[0].clone()).unwrap()
                         .get_node_id();

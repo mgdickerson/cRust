@@ -126,7 +126,7 @@ impl TempValManager {
     }
 
     pub fn borrow_inst(&self, inst_id: &usize) -> & Rc<RefCell<TempVal>> {
-        self.op_hash.get(inst_id).expect("Attempted to borrow non-existent instruction.")
+        self.op_hash.get(inst_id).expect(&format!("Attempted to borrow non-existent instruction. {:?}", inst_id)[..])
     }
 
     pub fn update_inst_uses(&self, inst_id: &usize, new_val: Value) {

@@ -102,7 +102,7 @@ impl FuncCall {
         match self.funcName.get_value().as_ref() {
             "InputNum" => {
                 let inp_num = String::from("read");
-                let inst = irgm.build_spec_op(&inp_num, InstTy::call);
+                let inst = irgm.build_spec_op(&inp_num, InstTy::read);
                 let inst_val = irgm.graph_manager().add_instruction(inst);
                 return Some(inst_val);
             },
@@ -121,7 +121,7 @@ impl FuncCall {
             },
             "OutputNewLine" => {
                 let new_line = String::from("writeNL");
-                let inst = irgm.build_spec_op(&new_line, InstTy::call);
+                let inst = irgm.build_spec_op(&new_line, InstTy::writeNL);
                 irgm.graph_manager().add_instruction(inst);
             },
             func_name => {

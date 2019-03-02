@@ -166,5 +166,26 @@ impl Optimizer {
 
         let new_root = clean_graph(&mut self.irgm, root_node, &mut self.main_temp_val_manager, &graph_visitor);
         self.irgm.graph_manager().update_main_node(new_root);
+
+        for (func_name, temp_manager) in self.func_temp_val_map.iter_mut() {
+            let mut func_root_node = self.irgm.function_manager()
+                .get_function(func_name).clone_index();
+
+            for node_id in self.irgm.graph_manager().get_ref_graph().node_indices() {
+                let current_node_id = self.irgm.graph_manager()
+                    .get_ref_graph().node_weight(node_id).unwrap()
+                    .get_node_id();
+
+                if func_root_node.index() == current_node_id {
+                    func_root_node = node_id;
+                    break;
+                }
+            }
+
+            dce::dead_code_elimination(&mut self.irgm, temp_manager, func_root_node.clone());
+            let function_visitor = self.irgm.graph_manager().graph_visitor(func_root_node.clone());
+            let new_root = clean_graph(&mut self.irgm, func_root_node, temp_manager, &function_visitor);
+            self.irgm.function_manager().get_mut_function(func_name).update_index(new_root);
+        }
     }
 }

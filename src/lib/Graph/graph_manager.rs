@@ -153,7 +153,19 @@ impl GraphManager {
             1 => {
                 let inst_ty = inst_vec[0].borrow().inst_type().clone();
                 match inst_ty {
-                    InstTy::bra | InstTy::blt | InstTy::ble |
+                    InstTy::bra => {
+                        if let (_, Some(ValTy::node_id(node_id))) = inst_vec[0].borrow().get_val_ty() {
+                            // fall through
+                        } else if let (_, Some(ValTy::con(con))) = inst_vec[0].borrow().get_val_ty() {
+                            // fall through
+                        } else {
+                            return true
+                        }
+
+                        inst_vec[0].borrow_mut().deactivate();
+                        return false
+                    },
+                    InstTy::blt | InstTy::ble |
                     InstTy::bgt | InstTy::bge | InstTy::beq |
                     InstTy::bne => {
                         inst_vec[0].borrow_mut().deactivate();
