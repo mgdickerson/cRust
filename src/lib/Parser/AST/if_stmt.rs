@@ -176,7 +176,18 @@ impl IfStmt {
         irgm.new_node(String::from("Phi_Node"), NodeType::phi_node);
         let phi_node = irgm.graph_manager().clone_node_index();
 
-        // Figure out possible phi
+        // Connect branch command to phi node
+        if let Some(else_body) = &else_node_top {
+            irgm.graph_manager().get_mut_ref_graph().node_weight_mut(if_node_bottom)
+                .unwrap().get_mut_data_ref()
+                .get_inst_list_ref()
+                .last().unwrap()
+                .borrow_mut()
+                .update_y_val(
+                    Value::new(ValTy::node_id(phi_node)
+                    ));
+        }
+
 
         // Connect if-bottom to phi
         irgm.graph_manager().add_edge(if_node_bottom, phi_node);

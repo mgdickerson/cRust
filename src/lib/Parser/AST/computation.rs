@@ -9,6 +9,7 @@ use super::{Node, NodeType, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, 
 use super::Graph;
 use lib::Graph::graph_manager::GraphManager;
 use lib::Utility::display;
+use lib::Graph::node::NodeType::exit;
 
 #[derive(Debug,Clone)]
 pub struct Comp {
@@ -160,12 +161,16 @@ impl Comp {
             func.to_ir(&mut ir_graph_manager);
         }
 
-        //let main_index = ir_graph_manager.new_node(String::from("Main"), NodeType::main_node).clone();
         ir_graph_manager.graph_manager().set_main_node();
         self.funcBody.to_ir(&mut ir_graph_manager);
 
         let ret_0 = ir_graph_manager.build_op_x(Value::new(ValTy::con(0)), InstTy::ret);
         ir_graph_manager.graph_manager().add_instruction(ret_0);
+
+        let bottom_node = ir_graph_manager.graph_manager().get_mut_ref_current_node_index().clone();
+        let exit_index = ir_graph_manager.new_node(String::from("Exit"), NodeType::exit).clone();
+
+        ir_graph_manager.graph_manager().add_edge(bottom_node, exit_index);
 
         //println!("{:?}", ir_graph_manager.variable_manager().clone().get_var_map());
         //graph_manager.add_current_node_to_graph();

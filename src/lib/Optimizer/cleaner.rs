@@ -103,6 +103,18 @@ pub fn clean_graph(irgm: &mut IRGraphManager,
     // Update branch commands
     // TODO : Update branch commands.
 
+    // Remove inactive nodes in reverse order
+    let mut node_vec = irgm.graph_manager().get_ref_graph().node_indices().collect::<Vec<NodeIndex>>();
+    node_vec.sort_by_key(|id| {id.clone()});
+    node_vec.reverse();
+
+    // This should remove all the invalid nodes.
+    for node_id in node_vec {
+        if !irgm.graph_manager().get_ref_graph().node_weight(node_id).unwrap().is_valid() {
+            irgm.graph_manager().get_mut_ref_graph().remove_node(node_id);
+        }
+    }
+
     // Using new_root_id to look up actual location (NodeIndex)
     for node_id in irgm.graph_manager().get_ref_graph().node_indices() {
         let current_node_id = irgm.graph_manager()

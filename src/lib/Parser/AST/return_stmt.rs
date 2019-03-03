@@ -4,6 +4,8 @@ use Parser::AST::expression::Expression;
 
 use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use lib::Graph::node::NodeType;
+use lib::Graph::node::NodeType::exit;
 
 #[derive(Debug,Clone)]
 pub struct ReturnStmt {
@@ -82,6 +84,14 @@ impl ReturnStmt {
         // This will be a special instruction that always returns values on register R27;
         let ret_inst = irgm.build_op_x(ret_val.expect("return calls should always return an expr"), InstTy::ret);
         irgm.graph_manager().add_instruction(ret_inst);
+
+        // Create an exit at this point
+        let current_node_id = irgm.graph_manager().get_mut_ref_current_node_index().clone();
+        let exit_id = irgm.new_node(String::from("Exit"), NodeType::exit).clone();
+        irgm.graph_manager().add_edge(current_node_id, exit_id.clone());
+
+        let ignored_id = irgm.new_node(String::from("Ignored"), NodeType::ignored).clone();
+        irgm.graph_manager().add_edge(exit_id, ignored_id);
     }
 
     pub fn scan_globals(&self, irgm : &mut IRGraphManager) {

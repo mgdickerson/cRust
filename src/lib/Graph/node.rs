@@ -12,8 +12,8 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(node_tag: String, it: &mut InstTracker, bt: &mut BlockTracker, node_type: NodeType) -> Self {
-        let node_data = NodeData::new(it);
+    pub fn new(node_tag: String, bt: &mut BlockTracker, node_type: NodeType) -> Self {
+        let node_data = NodeData::new();
         let node_id = NodeId::new(bt.get());
         bt.increment();
         Node { node_tag, node_id, node_data, node_type, node_valid: true }
@@ -56,6 +56,7 @@ impl std::fmt::Debug for Node {
 
 #[derive(Debug,Clone, PartialEq)]
 pub enum NodeType {
+    entrance,
     function_head,
     main_node,
     loop_header,
@@ -63,6 +64,8 @@ pub enum NodeType {
     else_node,
     while_node,
     phi_node,
+    ignored,
+    exit,
 }
 
 #[derive(Debug,Clone)]
@@ -86,8 +89,8 @@ pub struct NodeData {
 }
 
 impl NodeData {
-    pub fn new(it: &mut InstTracker) -> Self {
-        NodeData { data: BasicBlock::new(it) }
+    pub fn new() -> Self {
+        NodeData { data: BasicBlock::new() }
     }
 
     pub fn get(self) -> BasicBlock {

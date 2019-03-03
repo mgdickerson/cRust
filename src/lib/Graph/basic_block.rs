@@ -9,8 +9,8 @@ pub struct BasicBlock {
 }
 
 impl BasicBlock {
-    pub fn new(it: &mut InstTracker) -> Self {
-        it.increment();
+    pub fn new() -> Self {
+        //it.increment();
         BasicBlock{ inst: Vec::new() }
     }
 

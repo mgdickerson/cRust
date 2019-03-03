@@ -31,6 +31,7 @@ use lib::IR::ir::{Value,ValTy,Op,InstTy};
 use lib::Graph::node::{Node,NodeId};
 use lib::Utility::display;
 use lib::Optimizer;
+use lib::RegisterAllocation::interference_graph::analyze_live_range;
 
 /// External Lib
 
@@ -43,6 +44,7 @@ use petgraph::Graph;
 use petgraph::visit::Dfs;
 use petgraph::dot::{Dot,Config};
 use petgraph::algo::DfsSpace;
+use petgraph::prelude::NodeIndex;
 
 fn main() {
     // TODO : Start building command line tool.
@@ -125,6 +127,18 @@ fn main() {
 
         // Getting back irgm from the optimizer.
         let mut irgmanager = optimizer.get_irgm();
+        let root_node = irgmanager.graph_manager().get_main_node();
+
+        //analyze_live_range(&mut irgmanager, root_node);
+        /*let mut irgm = irgmanager.clone();
+
+        let root_node = irgm.graph_manager().get_main_node();
+        let mut visit_order = irgm.graph_manager().graph_visitor(root_node.clone());
+        let final_node = visit_order.pop().expect("Returned a visit order with no nodes in it.");
+        let final_node_alias = irgm.graph_manager().get_ref_graph().node_weight(final_node).unwrap().get_node_id();
+
+        println!("Final Node: {:?}", final_node_alias);
+        */
 
         /// TEST SPACE FOR Dominators
         ///

@@ -98,6 +98,10 @@ impl Assignment {
                 }
                 expr_value = irgm.graph_manager().add_instruction(const_add_inst);
             },
+            ValTy::var(var) => {
+                let var_add_inst = irgm.build_op_x_y(Value::new(ValTy::con(0)), expr_value, InstTy::add);
+                expr_value = irgm.graph_manager().add_instruction(var_add_inst);
+            }
             _ => {},
         }
 

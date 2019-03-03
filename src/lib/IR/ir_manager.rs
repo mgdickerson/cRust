@@ -16,7 +16,7 @@ use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators;
 
 /// Rough Draft of IR_Manager Rewrite
-
+#[derive(Clone)]
 pub struct IRGraphManager {
     // Tracker for BlockId, which should match NodeId
     bt: BlockTracker,
@@ -49,8 +49,7 @@ impl IRGraphManager {
         let mut it = InstTracker::new();
         let mut bt = BlockTracker::new();
 
-        let graph_manager = GraphManager::
-        new(graph, &mut it, &mut bt);
+        let graph_manager = GraphManager::new(graph, &mut bt);
 
 
         IRGraphManager {
@@ -174,10 +173,11 @@ impl IRGraphManager {
         &mut self.graph_manager
     }
 
+    pub fn graph_manager_ref(&self) -> & GraphManager { &self.graph_manager }
+
     pub fn new_node(&mut self, node_tag: String, node_type: NodeType) -> &NodeIndex {
-        let it = &mut self.it;
         let bt = &mut self.bt;
-        self.graph_manager.new_node(node_tag, it, bt, node_type)
+        self.graph_manager.new_node(node_tag, bt, node_type)
     }
 
     /// Tracker Specific Functions ///

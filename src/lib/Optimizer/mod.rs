@@ -73,12 +73,40 @@ impl Optimizer {
         let main_node_index = self.get_irgm_mut_ref().graph_manager().get_main_node();
         local_main_manager.pull_temp_values(self.get_irgm_mut_ref().graph_manager(), main_node_index);
 
+        let graph_visitor = self.irgm.graph_manager().graph_visitor(main_node_index.clone());
+        for node_id in &graph_visitor {
+            if NodeType::exit == self.irgm.graph_manager().get_ref_graph().node_weight(node_id.clone()).unwrap().get_node_type() {
+                constant_evaluation::mark_invalid_nodes(
+                    self.get_irgm_mut_ref().graph_manager(),
+                    main_node_index,
+                    node_id.clone(),
+                    &mut local_main_manager);
+
+            }
+        }
+
         // Build managers for all functions in program
         for (func_name, func_index) in self.get_irgm_mut_ref().function_manager().list_functions().iter() {
             let mut temp_manager = TempValManager::new();
             temp_manager.pull_temp_values(self.get_irgm_mut_ref().graph_manager(), func_index.clone());
+
+            let graph_visitor = self.irgm.graph_manager().graph_visitor(func_index.clone());
+            for node_id in graph_visitor {
+                if NodeType::exit == self.irgm.graph_manager().get_ref_graph().node_weight(node_id).unwrap().get_node_type() {
+                    constant_evaluation::mark_invalid_nodes(
+                        self.get_irgm_mut_ref().graph_manager(),
+                        func_index.clone(),
+                        node_id,
+                        &mut temp_manager);
+
+                }
+            }
+
             local_func_map.insert(func_name.clone(), temp_manager);
         }
+
+        // Do some ignored path cleanup
+        clean_graph(&mut self.irgm, main_node_index, &mut local_main_manager, &graph_visitor);
 
         // Return values cloned for locals to update Optimizer
         self.main_temp_val_manager = local_main_manager;

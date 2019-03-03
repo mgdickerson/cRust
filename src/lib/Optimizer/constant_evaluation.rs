@@ -420,6 +420,59 @@ fn cmp_eval(inst_ty: InstTy,
     Ok(true)
 }
 
+pub fn mark_invalid_nodes(graph_manager: &mut GraphManager,
+                          main_id: NodeIndex,
+                          exit_id: NodeIndex,
+                          temp_manager: &mut TempValManager) {
+    let ignored_node = graph_manager.get_ref_graph().neighbors_directed(exit_id.clone(), Outgoing).next().clone();
+    let ignored_id;
+    match ignored_node {
+        Some(node_id) => {
+            ignored_id = node_id;
+        },
+        None => return
+    }
+    let initial_edge = graph_manager.get_ref_graph().find_edge(exit_id.clone(), ignored_id.clone()).unwrap();
+    graph_manager.get_mut_ref_graph().remove_edge(initial_edge);
+
+    let ignored_traversal = graph_manager.graph_visitor(ignored_id);
+    let walkable_graph = graph_manager.get_ref_graph().clone();
+    let mut node_removal = Vec::new();
+
+    let mut previous_node = ignored_traversal[0].clone();
+    for node_id in ignored_traversal.iter() {
+        if !has_path_connecting(&walkable_graph, main_id.clone(), node_id.clone(), None) {
+            if !node_removal.contains(node_id) {
+                node_removal.push(node_id.clone());
+                graph_manager.add_temp_dominance_edge(node_id.clone(), previous_node, String::from("blue"));
+                graph_manager.get_mut_ref_graph().node_weight_mut(node_id.clone()).unwrap().mark_node_invalid();
+
+                for inst in graph_manager.get_mut_ref_graph().node_weight_mut(node_id.clone()).unwrap().get_mut_data_ref().get_inst_list_ref() {
+                    let inst_id = inst.borrow().get_inst_num();
+                    temp_manager.borrow_mut_inst(&inst_id).borrow_mut().deactivate_instruction();
+                }
+            }
+
+            previous_node = node_id.clone();
+        } else {
+            // This is the first node reached that DOES have a connecting path, thus it is likely the phi node from initial removal
+            let inst_list = graph_manager.get_mut_ref_graph().node_weight_mut(node_id.clone()).unwrap().get_mut_data_ref().get_inst_list_ref().clone();
+            for inst in inst_list {
+                match inst.borrow().inst_type().clone() {
+                    InstTy::phi => {
+
+                    },
+                    _ => {
+                        continue
+                    },
+                }
+                phi_handler(&inst, &previous_node, node_id, graph_manager, temp_manager);
+            }
+            break;
+        }
+    }
+}
+
 fn mark_dead_nodes(graph_manager: &mut GraphManager,
                    starting_node: NodeIndex,
                    eliminate_node: NodeIndex,
@@ -427,9 +480,9 @@ fn mark_dead_nodes(graph_manager: &mut GraphManager,
                    node_removal: &mut Vec<NodeIndex>,
                    temp_manager: &mut TempValManager ) {
     // Visit tracker
-    let mut visited : Vec<NodeIndex> = Vec::new();
+    //let mut visited : Vec<NodeIndex> = Vec::new();
 
-    let initial_edge = graph_manager.get_mut_ref_graph().find_edge(starting_node, eliminate_node);
+    let initial_edge = graph_manager.get_mut_ref_graph().find_edge(starting_node.clone(), eliminate_node);
     //println!("Finding Edge between {:?} and {:?} -> Edge : {:?}", starting_node, eliminate_node, initial_edge);
 
     // Remove the edge between block to be removed and the starting block
@@ -446,6 +499,13 @@ fn mark_dead_nodes(graph_manager: &mut GraphManager,
 
     let mut previous_node = new_traversal_order[0].clone();
     for node_index in new_traversal_order.iter() {
+        // check to see if node being removed is an exit
+        if NodeType::exit == graph_manager.get_ref_graph().node_weight(node_index.clone()).unwrap().get_node_type() {
+            // if true, this is probably the last node in this branch so add back an edge and break.
+            graph_manager.add_edge(starting_node, node_index.clone());
+            break;
+        }
+
         if !has_path_connecting(&walkable_graph, main_node, node_index.clone(), None) {
             if !node_removal.contains(node_index) {
                 node_removal.push(node_index.clone());

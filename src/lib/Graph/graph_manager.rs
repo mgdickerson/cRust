@@ -8,6 +8,7 @@ use petgraph::visit::DfsPostOrder;
 
 use super::{Rc,RefCell};
 use petgraph::{Outgoing,Incoming, Directed};
+use lib::Graph::node::NodeType::entrance;
 
 #[derive(Clone)]
 pub struct GraphManager {
@@ -17,17 +18,20 @@ pub struct GraphManager {
 }
 
 impl GraphManager {
-    pub fn new(mut graph: Graph<Node, String, Directed, u32>, it: &mut InstTracker, bt: &mut BlockTracker) -> Self {
-        let current_node = Node::new(String::from("Main_Node"), it, bt, NodeType::main_node);
+    pub fn new(mut graph: Graph<Node, String, Directed, u32>, bt: &mut BlockTracker) -> Self {
+        let entrance_node = Node::new(String::from("Entrance"), bt, NodeType::entrance);
+        let current_node = Node::new(String::from("Main"), bt, NodeType::main_node);
+        let entrance_node_index = graph.add_node(entrance_node);
         let current_node_index = graph.add_node(current_node);
+        graph.add_edge(entrance_node_index, current_node_index, String::from("black"));
         let main_node_index = current_node_index.clone();
         GraphManager { graph, current_node_index, main_node_index }
     }
 
     // -- Node Related Functions -- //
 
-    pub fn new_node(&mut self, node_tag: String, it: &mut InstTracker, bt: &mut BlockTracker, node_type: NodeType) -> &mut NodeIndex {
-        let current_node = Node::new(node_tag, it, bt, node_type);
+    pub fn new_node(&mut self, node_tag: String, bt: &mut BlockTracker, node_type: NodeType) -> &mut NodeIndex {
+        let current_node = Node::new(node_tag, bt, node_type);
         self.current_node_index = self.graph.add_node(current_node);
         self.get_mut_ref_current_node_index()
     }
@@ -51,6 +55,8 @@ impl GraphManager {
     pub fn get_main_node(&self) -> NodeIndex {
         self.main_node_index.clone()
     }
+
+    pub fn get_current_id(&self) -> NodeIndex { self.current_node_index.clone() }
 
     pub fn get_mut_ref_current_node_index(&mut self) -> &mut NodeIndex {
         &mut self.current_node_index
@@ -142,6 +148,16 @@ impl GraphManager {
     /// true if node is valid, false if it is not and needs to be
     /// removed.
     pub fn check_node(&mut self, node_id: NodeIndex) -> bool {
+        match self.graph.node_weight(node_id).expect("Attempted to check non-existent node")
+            .get_node_type() {
+            NodeType::entrance | NodeType::exit => {
+                return true;
+            },
+            _ => {
+                // standard case, fall through
+            },
+        }
+
         let inst_vec = self.graph.node_weight_mut(node_id)
             .expect("Attempted to check non-existent node").get_mut_data_ref()
             .get_mut_inst_list_ref();

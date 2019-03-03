@@ -8,6 +8,7 @@ use super::{Node, NodeType, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, 
 use super::Graph;
 use super::{Rc,RefCell};
 use lib::Graph::graph_manager::GraphManager;
+use lib::Graph::node::NodeType::exit;
 
 #[derive(Debug,Clone)]
 pub struct FuncDecl {
@@ -139,7 +140,9 @@ impl FuncDecl {
     pub fn to_ir(self, irgm : &mut IRGraphManager) {
         let (func_name, func_param) = self.funcName.get_value();
 
+        let entrance_id = irgm.new_node(String::from("Entrance"), NodeType::entrance).clone();
         let func_index = irgm.new_node(func_name.get_value(), NodeType::function_head).clone();
+        irgm.graph_manager().add_edge(entrance_id, func_index);
         irgm.new_function(func_name.get_value(), &func_index);
 
         match func_param {
@@ -223,7 +226,14 @@ impl FuncDecl {
             let stack_pointer = Value::new(ValTy::adr(irgm.address_manager().get_stack_pointer()));
             let bra_inst = irgm.build_op_y(stack_pointer, InstTy::bra);
             irgm.graph_manager().add_instruction(bra_inst);
+
+            // In this case there is a need to add an exit
+            let current_id = irgm.graph_manager().get_current_id();
+            let exit_id = irgm.new_node(String::from("Exit"), NodeType::exit).clone();
+            irgm.graph_manager().add_edge(current_id, exit_id);
         }
+
+        // TODO : Add exit to end of function and also wherever there are rets
 
         let uniq_func = irgm.end_function();
         irgm.function_manager().add_func_to_manager(uniq_func);

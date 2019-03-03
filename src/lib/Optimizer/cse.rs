@@ -47,7 +47,8 @@ pub fn trace_common_expression(irgm: &mut IRGraphManager, temp_manager: &mut Tem
 
             match inst_ty {
                 InstTy::add | InstTy::sub |
-                InstTy::mul | InstTy::div => {
+                InstTy::mul | InstTy::div |
+                InstTy::phi => {
                     let (is_uniq, replacement_inst) = local_op_handler.search_or_add_inst(
                         inst.clone(),
                         node_id.clone(),
