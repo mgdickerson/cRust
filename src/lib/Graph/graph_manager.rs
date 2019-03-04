@@ -56,6 +56,19 @@ impl GraphManager {
         self.main_node_index.clone()
     }
 
+    pub fn get_exit_nodes(&self, root_node: & NodeIndex) -> Vec<NodeIndex> {
+        let search_path = self.graph_visitor(root_node.clone());
+        let mut exit_ids = Vec::new();
+
+        for node_id in search_path {
+            if self.graph.node_weight(node_id).unwrap().get_node_type() == NodeType::exit {
+                exit_ids.push(node_id);
+            }
+        }
+
+        exit_ids
+    }
+
     pub fn get_current_id(&self) -> NodeIndex { self.current_node_index.clone() }
 
     pub fn get_mut_ref_current_node_index(&mut self) -> &mut NodeIndex {

@@ -199,6 +199,7 @@ impl FuncCall {
                 }
 
                 // println!("Called function {} has return: {}", func_name, uniq_func.has_return());
+                // TODO : I think I want to change how this is handled to a stack based approach. Not sure.
                 if uniq_func.has_return() {
                     return Some(Value::new(ValTy::ret(RetRegister::new())));
                 }

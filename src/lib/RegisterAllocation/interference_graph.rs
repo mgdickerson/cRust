@@ -1,26 +1,50 @@
+use std::fmt;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use super::{Node,NodeIndex};
+use super::{Node,NodeIndex,Color};
 use lib::IR::ir::Op;
 use lib::IR::ir_manager::IRGraphManager;
+use lib::IR::ir::ValTy;
+use lib::Utility::display;
 
 use petgraph::Graph;
 use petgraph::{Outgoing,Incoming, Directed};
 use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators::simple_fast;
+use std::collections::HashMap;
+use std::fmt::Debug;
 
 pub struct InterferenceGraph {
-    inter_graph: Graph<Node,String,Directed,u32>,
+    inter_graph: Graph<OpNode,String,Directed,u32>,
 }
 
 impl InterferenceGraph {
 
 }
 
-pub fn analyze_live_range(irgm: &mut IRGraphManager,
-                      //inter_graph: &mut Graph<Node,String,Directed,u32>,
-                      root_node: NodeIndex) {
+pub struct OpNode {
+    inst: Rc<RefCell<Op>>,
+    reg_color: Option<Color>,
+}
+
+impl OpNode {
+    pub fn new(inst: Rc<RefCell<Op>>) -> Self {
+        OpNode { inst, reg_color: None }
+    }
+}
+
+impl Debug for OpNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}): {}", self.inst.borrow().get_inst_num(), self.inst.borrow().to_string())
+    }
+}
+
+pub fn analyze_live_range(
+    irgm: &mut IRGraphManager,
+    root_node: NodeIndex,
+    exit_node: NodeIndex
+) {
     // Make vector of live instructions.
     // When a new instruction is found that is not
     // part of the "live" instructions, add it to
@@ -30,13 +54,25 @@ pub fn analyze_live_range(irgm: &mut IRGraphManager,
 
     // Create a new graph which will contain each instruction as a node,
     // and edges between instructions represent the interference.
-    let interference_graph : Graph<Rc<RefCell<Op>>, String, Directed, u32> = Graph::new();
+    let mut interference_graph = Graph::new();
+    let mut inst_node_map = HashMap::new();
+    let mut live_node_map = HashMap::new();
 
     let graph = irgm.graph_manager().get_mut_ref_graph().clone();
     let dom_space = simple_fast(&graph,root_node.clone());
 
-    let mut visited = Vec::new();
-    let final_node = recurse_base_node(irgm, root_node, &mut visited);
+    recurse_graph(
+        irgm,
+        exit_node,
+        &mut interference_graph,
+        &mut inst_node_map,
+        &mut live_node_map,
+        & dom_space,
+        None,
+        false
+    );
+
+    println!("{:?}", display::Dot::with_config(&interference_graph, &[display::Config::EdgeNoLabel]));
 
     // TODO : No longer need recurse base, just use the exit points
     // on the graphs provided. Those should be the correct exit points
@@ -53,22 +89,110 @@ pub fn analyze_live_range(irgm: &mut IRGraphManager,
 ///                                 up the dominating path.
 fn recurse_graph(irgm: &mut IRGraphManager,
                  current_node: NodeIndex,
-                 live_range: &mut Vec<NodeIndex>,
+                 interference_graph: &mut Graph<OpNode,String,Directed,u32>,
+                 inst_node_map: &mut HashMap<usize,NodeIndex>,
+                 live_node_map: &mut HashMap<usize,NodeIndex>,
                  dominators: & Dominators<NodeIndex>,
-                 loop_break_point: Option<NodeIndex>) {
-    // Ensure that the while loops dont recurse through the graph infinitely
-    if let Some(node_id) = loop_break_point.clone() {
-        if current_node == current_node {
-            return
+                 loop_break_point: Option<NodeIndex>,
+                 is_if: bool
+) {
+    // Ensure that the if loops dont pass the dominating node
+    if is_if {
+        if let Some(node_id) = loop_break_point.clone() {
+            if current_node == current_node {
+                return
+            }
+        }
+    }
+
+    // Get current node's instructions
+    let mut inst_list = irgm.graph_manager()
+        .get_ref_graph()
+        .node_weight(current_node.clone())
+        .unwrap()
+        .get_data_ref()
+        .get_inst_list_ref()
+        .clone();
+
+    // Reverse instruction to traverse inst from bottom to top
+    inst_list.reverse();
+
+    for inst in inst_list.iter() {
+        // Get current instruction ID and remove from live range
+        let inst_id = inst.borrow().get_inst_num();
+
+        // Remove instruction from live range
+        if live_node_map.contains_key(&inst_id) {
+            live_node_map.remove(&inst_id);
+        }
+
+        // Check for x and y values, only Ops can produce result and must be tracked.
+
+        // Check for an x_value
+        if let Some(x_val) = inst.borrow().clone_x_val() {
+            if let ValTy::op(x_inst) = x_val.get_value() {
+                let x_inst_id = x_inst.borrow().get_inst_num();
+                if !live_node_map.contains_key(&x_inst_id) {
+                    // This instruction is not already part of the live range.
+                    // Create new node and add to the graph.
+                    let op_node = OpNode::new(Rc::clone(x_inst));
+
+                    let inst_node_id;
+                    if !inst_node_map.contains_key(&x_inst_id) {
+                        inst_node_id = interference_graph.add_node(op_node);
+                        inst_node_map.insert(x_inst_id, inst_node_id.clone());
+                    } else {
+                        inst_node_id = inst_node_map.get(&x_inst_id).unwrap().clone();
+                    }
+
+                    // Make an edge between all nodes currently in live range, then add to live range
+                    for (_, node_id) in live_node_map.iter() {
+                        if None == interference_graph.find_edge_undirected(inst_node_id, node_id.clone()) {
+                            interference_graph.update_edge(inst_node_id, node_id.clone(), String::from("black"));
+                        }
+                    }
+
+                    live_node_map.insert(x_inst_id, inst_node_id);
+                }
+            }
+        }
+
+        // Check for a y_value
+        if let Some(y_val) = inst.borrow().clone_y_val() {
+            if let ValTy::op(y_inst) = y_val.get_value() {
+                let y_inst_id = y_inst.borrow().get_inst_num();
+                if !live_node_map.contains_key(&y_inst_id) {
+                    // This instruction is not already part of the live range.
+                    // Create new node and add to the graph.
+                    let op_node = OpNode::new(Rc::clone(y_inst));
+
+                    let inst_node_id;
+                    if !inst_node_map.contains_key(&y_inst_id) {
+                        inst_node_id = interference_graph.add_node(op_node);
+                        inst_node_map.insert(y_inst_id, inst_node_id.clone());
+                    } else {
+                        inst_node_id = inst_node_map.get(&y_inst_id).unwrap().clone();
+                    }
+
+                    // Make an edge between all nodes currently in live range, then add to live range
+                    for (_, node_id) in live_node_map.iter() {
+                        if None == interference_graph.find_edge_undirected(inst_node_id, node_id.clone()) {
+                            interference_graph.update_edge(inst_node_id, node_id.clone(), String::from("black"));
+                        }
+                    }
+
+                    live_node_map.insert(y_inst_id, inst_node_id);
+                }
+            }
         }
     }
 
     // Get parents from current node.
     let mut parents = Vec::new();
-    println!("Children of node: {:?}", current_node.clone());
+    //println!("Parents of node: {:?}", current_node.clone());
     for parent_id in irgm.graph_manager().get_ref_graph().neighbors_directed(current_node.clone(), Incoming) {
         parents.push(parent_id);
-        println!("Child node: {:?}", parent_id);
+        //println!("Parent node: {:?}", parent_id);
     }
 
     match parents.len() {
@@ -78,7 +202,7 @@ fn recurse_graph(irgm: &mut IRGraphManager,
         },
         1 => {
             let current_node = parents.pop().unwrap();
-            recurse_graph(irgm, current_node, live_range, dominators, loop_break_point);
+            recurse_graph(irgm, current_node, interference_graph, inst_node_map, live_node_map, dominators, loop_break_point, is_if);
             return
         },
         2 => {
@@ -102,29 +226,55 @@ fn recurse_graph(irgm: &mut IRGraphManager,
                 // 0 is the dominating path, thus goes second.
                 // 1 is the looping path, thus must go through it twice.
 
+                // Ensure that the while loops dont recurse through the graph infinitely
+                // but also goes through the header again.
+                if let Some(node_id) = loop_break_point.clone() {
+                    if current_node == current_node {
+                        return
+                    }
+                }
+
                 recurse_graph(irgm,
                               ordered_parents[1].clone(),
-                              live_range,
+                              interference_graph,
+                              inst_node_map,
+                              live_node_map,
                               dominators,
-                              Some(current_node.clone()));
+                              Some(current_node.clone()),
+                              is_if);
                 recurse_graph(irgm,
                               ordered_parents[1].clone(),
-                              live_range,
+                              interference_graph,
+                              inst_node_map,
+                              live_node_map,
                               dominators,
-                              Some(current_node.clone()));
-                recurse_graph(irgm, ordered_parents[0].clone(), live_range, dominators, None);
+                              Some(current_node.clone()),
+                              is_if);
+                recurse_graph(irgm, ordered_parents[0].clone(), interference_graph, inst_node_map, live_node_map, dominators, None, is_if);
                 return
             } else {
                 // This is the if case. Traverse up both paths until the dominator is hit, then return
                 // and merge the two live ranges and go through the dominating path.
-                let immediate_dominator = dominators.immediate_dominator(current_node).unwrap().clone();
-                recurse_graph(irgm, ordered_parents[0].clone(), live_range, dominators, Some(immediate_dominator.clone()));
-                recurse_graph(irgm, ordered_parents[1].clone(), live_range, dominators, Some(immediate_dominator.clone()));
+                let immediate_dominator = dominators.immediate_dominator(current_node).expect(&format!("No dominating path found for: {:?}", current_node)[..]).clone();
 
-                // Combine live ranges here.
-                // TODO : ^
+                let is_if = true;
 
-                recurse_graph(irgm, immediate_dominator, live_range, dominators, None);
+                let mut live_path_0_map = live_node_map.clone();
+                recurse_graph(irgm, ordered_parents[0].clone(), interference_graph, inst_node_map, &mut live_path_0_map, dominators, Some(immediate_dominator.clone()), is_if);
+
+                let mut live_path_1_map = live_node_map.clone();
+                recurse_graph(irgm, ordered_parents[1].clone(), interference_graph, inst_node_map, &mut live_path_1_map, dominators, Some(immediate_dominator.clone()), is_if);
+
+                let is_if = false;
+
+                // Combine live ranges of both paths here. The new live_path_1_map should be the new liveness range.
+                for (key, value) in live_path_0_map.iter() {
+                    if !live_path_1_map.contains_key(key) {
+                        live_path_1_map.insert(key.clone(),value.clone());
+                    }
+                }
+
+                recurse_graph(irgm, immediate_dominator, interference_graph, inst_node_map, &mut live_path_1_map, dominators, loop_break_point, is_if);
                 return
             }
         },
@@ -132,36 +282,4 @@ fn recurse_graph(irgm: &mut IRGraphManager,
             panic!("Should be no more than 2 parents for any given node of the graph.");
         }
     }
-}
-
-fn recurse_base_node(irgm: & IRGraphManager, test_node: NodeIndex, visited: &mut Vec<NodeIndex>) -> Option<NodeIndex> {
-    visited.push(test_node);
-    let mut neighbors = irgm.graph_manager_ref().get_ref_graph().neighbors_directed(test_node, Outgoing);
-
-    let mut children = Vec::new();
-    while let Some(child) = neighbors.next() {
-        children.push(child);
-    }
-    children.reverse();
-
-    if children.len() == 0 {
-        return Some(test_node)
-    } else {
-        for child in children.iter() {
-            if visited.contains(&child) {
-                continue
-            }
-            let ret_node = recurse_base_node(irgm, child.clone(), visited);
-            match ret_node {
-                Some(node_id) => return Some(node_id),
-                None => {
-                    // loop again
-                },
-            }
-        }
-    }
-
-    // If path reaches this point, then this was not the path to the final node.
-    // If no path reaches a node with no children, it is an infinite loop.
-    None
 }

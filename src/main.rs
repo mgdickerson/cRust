@@ -128,8 +128,12 @@ fn main() {
         // Getting back irgm from the optimizer.
         let mut irgmanager = optimizer.get_irgm();
         let root_node = irgmanager.graph_manager().get_main_node();
+        let exit_nodes = irgmanager.graph_manager().get_exit_nodes(&root_node);
 
-        //analyze_live_range(&mut irgmanager, root_node);
+        for exit_id in exit_nodes {
+            analyze_live_range(&mut irgmanager, root_node.clone(), exit_id);
+        }
+
         /*let mut irgm = irgmanager.clone();
 
         let root_node = irgm.graph_manager().get_main_node();
