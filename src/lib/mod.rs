@@ -254,7 +254,7 @@ pub fn run_file(file_name: String) {
     let exit_nodes = irgmanager.graph_manager().get_exit_nodes(&root_node);
 
     for exit_id in exit_nodes {
-        analyze_live_range(&mut irgmanager, root_node.clone(), exit_id);
+        //analyze_live_range(&mut irgmanager, root_node.clone(), exit_id, path.clone(), file_name.clone());
     }
 
     /// TEST SPACE FOR Dominators

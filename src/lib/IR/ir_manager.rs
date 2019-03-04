@@ -252,12 +252,7 @@ impl IRGraphManager {
     }
 
     pub fn add_global(&mut self, var: &String) {
-        let add_var_inst = self.build_op_x_y(
-            Value::new(ValTy::con(0)),
-            Value::new(ValTy::con(0)),
-            InstTy::add,
-        );
-        let init_val = self.graph_manager.add_instruction(add_var_inst);
+        let init_val = Value::new(ValTy::con(0));
 
         let block_num = self.get_block_num();
         let inst_num = self.get_inst_num();
@@ -266,12 +261,7 @@ impl IRGraphManager {
     }
 
     pub fn add_variable(&mut self, var: &String) {
-        let add_var_inst = self.build_op_x_y(
-            Value::new(ValTy::con(0)),
-            Value::new(ValTy::con(0)),
-            InstTy::add,
-        );
-        let init_val = self.graph_manager.add_instruction(add_var_inst);
+        let init_val = Value::new(ValTy::con(0));
 
         let block_num = self.get_block_num();
         let inst_num = self.get_inst_num();

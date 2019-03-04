@@ -32,7 +32,7 @@ use lib::IR::ir;
 use lib::IR::ir::{InstTy, Op, ValTy, Value};
 use lib::IR::ir_manager::IRGraphManager;
 
-extern crate core;
+//extern crate core;
 /// External Lib
 extern crate petgraph;
 
@@ -115,9 +115,9 @@ fn main() {
 
         let mut optimizer = Optimizer::Optimizer::new(irgmanager);
         optimizer.pass_0();
-        optimizer.pass_1();
-        optimizer.pass_2();
-        optimizer.pass_3();
+        //optimizer.pass_1();
+        //optimizer.pass_2();
+        //optimizer.pass_3();
 
         /* // All of this is now handled by optimizer pass_0
         lib::clean_graph(&mut irgmanager);
@@ -135,7 +135,7 @@ fn main() {
         let exit_nodes = irgmanager.graph_manager().get_exit_nodes(&root_node);
 
         for exit_id in exit_nodes {
-            analyze_live_range(&mut irgmanager, root_node.clone(), exit_id);
+            //analyze_live_range(&mut irgmanager, root_node.clone(), exit_id, path.clone(), entry.file_name().clone());
         }
 
         /*let mut irgm = irgmanager.clone();

@@ -109,7 +109,7 @@ impl Assignment {
             .to_ir(irgm)
             .expect("Expected some expression with related Assignment Operation");
 
-        match expr_value.get_value().clone() {
+        /*match expr_value.get_value().clone() {
             ValTy::con(con) => {
                 let const_add_inst;
                 if con < 0 {
@@ -133,7 +133,7 @@ impl Assignment {
                 expr_value = irgm.graph_manager().add_instruction(var_add_inst);
             }
             _ => {}
-        }
+        }*/
 
         if expr_array.is_empty() {
             let block_num = irgm.get_block_num();
