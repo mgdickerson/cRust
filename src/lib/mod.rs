@@ -15,6 +15,8 @@ use petgraph::graph;
 use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators::simple_fast;
 use lib::IR::ir_manager::IRGraphManager;
+use lib::RegisterAllocation::interference_graph::analyze_live_range;
+
 
 pub mod Lexer;
 pub mod Parser;
@@ -239,11 +241,21 @@ pub fn run_file(file_name: String) {
     let mut optimizer = Optimizer::Optimizer::new(irgmanager);
     optimizer.pass_0();
     optimizer.pass_1();
+    optimizer.pass_2();
+    optimizer.pass_3();
 
     //clean_graph(&mut irgmanager);
     //Optimizer::constant_evaluation::eval_program_constants(&mut irgmanager);
 
     let mut irgmanager = optimizer.get_irgm();
+
+    // Getting back irgm from the optimizer.
+    let root_node = irgmanager.graph_manager().get_main_node();
+    let exit_nodes = irgmanager.graph_manager().get_exit_nodes(&root_node);
+
+    for exit_id in exit_nodes {
+        analyze_live_range(&mut irgmanager, root_node.clone(), exit_id);
+    }
 
     /// TEST SPACE FOR Dominators
     ///
