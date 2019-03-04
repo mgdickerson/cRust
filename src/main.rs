@@ -36,6 +36,7 @@ use lib::RegisterAllocation::interference_graph::analyze_live_range;
 /// External Lib
 
 extern crate petgraph;
+extern crate core;
 
 use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators::simple_fast;
