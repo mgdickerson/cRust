@@ -1,51 +1,49 @@
-#![allow(unused_imports,
-        non_camel_case_types,
-        non_upper_case_globals,
-        non_snake_case,
-        unused_must_use,
-        dead_code,
-        unused_doc_comments
+#![allow(
+    unused_imports,
+    non_camel_case_types,
+    non_upper_case_globals,
+    non_snake_case,
+    unused_must_use,
+    dead_code,
+    unused_doc_comments
 )]
 
+use std::env;
+use std::fs::{self, DirEntry};
 /// Std Lib
-
 use std::io::prelude::*;
 use std::io::{BufRead, BufReader, Result};
-use std::fs::{self, DirEntry};
 use std::path::Path;
 use std::path::PathBuf;
-use std::env;
 
 use std::fmt::Write;
 use std::fs::OpenOptions;
 
 /// Internal Lib
-
 mod lib;
+use lib::Graph::node::{Node, NodeId};
 use lib::Lexer;
-use lib::Lexer::token::{Token,TokenCollection,TokenType};
-use lib::Parser;
-use lib::IR::ir;
-use lib::IR::ir_manager::IRGraphManager;
-use lib::IR::ir::{Value,ValTy,Op,InstTy};
-use lib::Graph::node::{Node,NodeId};
-use lib::Utility::display;
+use lib::Lexer::token::{Token, TokenCollection, TokenType};
 use lib::Optimizer;
+use lib::Parser;
 use lib::RegisterAllocation::interference_graph::analyze_live_range;
+use lib::Utility::display;
+use lib::IR::ir;
+use lib::IR::ir::{InstTy, Op, ValTy, Value};
+use lib::IR::ir_manager::IRGraphManager;
 
-/// External Lib
-
-extern crate petgraph;
 extern crate core;
+/// External Lib
+extern crate petgraph;
 
-use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators::simple_fast;
+use petgraph::algo::dominators::Dominators;
 
-use petgraph::Graph;
-use petgraph::visit::Dfs;
-use petgraph::dot::{Dot,Config};
 use petgraph::algo::DfsSpace;
+use petgraph::dot::{Config, Dot};
 use petgraph::prelude::NodeIndex;
+use petgraph::visit::Dfs;
+use petgraph::Graph;
 
 fn main() {
     // TODO : Start building command line tool.
@@ -65,7 +63,9 @@ fn main() {
     let mut path = PathBuf::new();
     //env::current_dir().unwrap();
     path.push(env::current_exe().unwrap());
-    path.pop(); path.pop(); path.pop(); //this is needed because current .exe is 3 folders too deep.    
+    path.pop();
+    path.pop();
+    path.pop(); //this is needed because current .exe is 3 folders too deep.
     println!("{:?}", path);
     path.push("src/Testing");
 
@@ -75,30 +75,33 @@ fn main() {
     println!("Proof of concept, read each character and print for Tokenization.");
 
     // Sorts entries based on key
-    let mut paths : Vec<_> = fs::read_dir(path.clone()).unwrap()
+    let mut paths: Vec<_> = fs::read_dir(path.clone())
+        .unwrap()
         .map(|r| r.unwrap())
         .filter(|result| {
-            result.file_name().to_str().expect("valid_path_name").contains(".txt")
+            result
+                .file_name()
+                .to_str()
+                .expect("valid_path_name")
+                .contains(".txt")
         })
         .collect();
     paths.sort_by_key(|dir| dir.path());
 
-    for entry in paths
-    {
+    for entry in paths {
         println!("{:?}", entry);
         println!();
 
         let mut file = fs::File::open(entry.path()).expect("Error Opening File.");
         let mut token_builder: Vec<lib::Lexer::token::Token> = Vec::new();
-        
+
         let mut buffer = String::new();
         let result = BufReader::new(file).read_to_string(&mut buffer);
-
 
         //this works and consumes iter properly!
         let mut char_iter = buffer.chars().peekable();
         let mut read_iter = char_iter.clone();
-        
+
         // #TODO : Need to look up better way to detect an empty iterater.
         //This currently goes way past end of file, but doesn't error, so that is interesting.
         let mut tokens = Lexer::token::TokenCollection::collect(&mut read_iter);
@@ -148,27 +151,38 @@ fn main() {
         /// TEST SPACE FOR Dominators
         ///
         /// It works!
-
         let root = irgmanager.graph_manager().get_main_node();
         let graph = irgmanager.graph_manager().get_mut_ref_graph().clone();
-        let dom_space = simple_fast(&graph,root);
+        let dom_space = simple_fast(&graph, root);
         //println!("{:?}", dom_space);
         for node in graph.node_indices() {
             match dom_space.immediate_dominator(node) {
                 Some(parent_node) => {
-                    irgmanager.graph_manager().add_dominance_edge(node, parent_node);
-                },
-                None => {},
+                    irgmanager
+                        .graph_manager()
+                        .add_dominance_edge(node, parent_node);
+                }
+                None => {}
             }
         }
 
         /// END TEST SPACE ///
 
         let mut dot_graph_path = entry.file_name();
-        let mut file_name = path.to_str().unwrap().to_owned() + "/" + dot_graph_path.to_str().unwrap().trim_end_matches(".txt") + ".dot";
+        let mut file_name = path.to_str().unwrap().to_owned()
+            + "/"
+            + dot_graph_path.to_str().unwrap().trim_end_matches(".txt")
+            + ".dot";
 
         let mut output = String::new();
-        write!(output, "{:?}", display::Dot::with_config(&irgmanager.graph_manager().get_mut_ref_graph().clone(), &[display::Config::EdgeColor]));
+        write!(
+            output,
+            "{:?}",
+            display::Dot::with_config(
+                &irgmanager.graph_manager().get_mut_ref_graph().clone(),
+                &[display::Config::EdgeColor]
+            )
+        );
         fs::write(file_name, output);
         //write!(file_name, "{:?}", display::Dot::with_config(&irgmanager.get_graph(), &[display::Config::EdgeNoLabel]) as [u8]).expect("File already existed");
 
@@ -177,6 +191,5 @@ fn main() {
         println!();
         println!();
         println!();
-
     }
 }

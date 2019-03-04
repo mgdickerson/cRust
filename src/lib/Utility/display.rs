@@ -2,7 +2,7 @@
 
 use std::fmt::{self, Display, Write};
 
-use petgraph::visit::{GraphRef};
+use petgraph::visit::GraphRef;
 
 /// `Dot` implements output to graphviz .dot format for a graph.
 ///
@@ -54,7 +54,10 @@ static TYPE: [&'static str; 2] = ["graph", "digraph"];
 static EDGE: [&'static str; 2] = ["--", "->"];
 static INDENT: &'static str = "    ";
 
-impl<'a, G> Dot<'a, G> where G: GraphRef {
+impl<'a, G> Dot<'a, G>
+where
+    G: GraphRef,
+{
     /// Create a `Dot` formatting wrapper with default configuration.
     pub fn new(graph: G) -> Self {
         Self::with_config(graph, &[])
@@ -86,19 +89,24 @@ pub enum Config {
     _Incomplete(()),
 }
 
-use petgraph::visit::{ IntoNodeReferences, NodeIndexable, IntoEdgeReferences, EdgeRef};
-use petgraph::visit::{ Data, NodeRef, GraphProp, };
 use petgraph::graph::edge_index;
+use petgraph::visit::{Data, GraphProp, NodeRef};
+use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences, NodeIndexable};
 
-impl<'a, G> Dot<'a, G>
-{
-    fn graph_fmt<NF, EF, NW, EW>(&self, g: G, f: &mut fmt::Formatter,
-                                 mut node_fmt: NF, mut edge_fmt: EF) -> fmt::Result
-        where G: NodeIndexable + IntoNodeReferences + IntoEdgeReferences,
-              G: GraphProp,
-              G: Data<NodeWeight=NW, EdgeWeight=EW>,
-              NF: FnMut(&NW, &mut FnMut(&Display) -> fmt::Result) -> fmt::Result,
-              EF: FnMut(&EW, &mut FnMut(&Display) -> fmt::Result) -> fmt::Result,
+impl<'a, G> Dot<'a, G> {
+    fn graph_fmt<NF, EF, NW, EW>(
+        &self,
+        g: G,
+        f: &mut fmt::Formatter,
+        mut node_fmt: NF,
+        mut edge_fmt: EF,
+    ) -> fmt::Result
+    where
+        G: NodeIndexable + IntoNodeReferences + IntoEdgeReferences,
+        G: GraphProp,
+        G: Data<NodeWeight = NW, EdgeWeight = EW>,
+        NF: FnMut(&NW, &mut FnMut(&Display) -> fmt::Result) -> fmt::Result,
+        EF: FnMut(&EW, &mut FnMut(&Display) -> fmt::Result) -> fmt::Result,
     {
         try!(writeln!(f, "{} {{", TYPE[g.is_directed() as usize]));
 
@@ -112,15 +120,17 @@ impl<'a, G> Dot<'a, G>
                 try!(node_fmt(node.weight(), &mut |d| Escaped(d).fmt(f)));
                 try!(writeln!(f, " }}\"]"));
             }
-
         }
         // output all edges
         for (i, edge) in g.edge_references().enumerate() {
-            try!(write!(f, "{}{} {} {}",
-                        INDENT,
-                        g.to_index(edge.source()),
-                        EDGE[g.is_directed() as usize],
-                        g.to_index(edge.target())));
+            try!(write!(
+                f,
+                "{}{} {} {}",
+                INDENT,
+                g.to_index(edge.source()),
+                EDGE[g.is_directed() as usize],
+                g.to_index(edge.target())
+            ));
             if self.config.contains(&Config::EdgeNoLabel) {
                 try!(writeln!(f, ""));
             } else if self.config.contains(&Config::EdgeIndexLabel) {
@@ -129,8 +139,7 @@ impl<'a, G> Dot<'a, G>
                 try!(write!(f, " [color="));
                 try!(edge_fmt(edge.weight(), &mut |d| PassThrough(d).fmt(f)));
                 try!(writeln!(f, "]"));
-            }
-            else {
+            } else {
                 try!(write!(f, " [label=\""));
                 try!(edge_fmt(edge.weight(), &mut |d| Escaped(d).fmt(f)));
                 try!(writeln!(f, "\"]"));
@@ -143,9 +152,10 @@ impl<'a, G> Dot<'a, G>
 }
 
 impl<'a, G> fmt::Display for Dot<'a, G>
-    where G: IntoEdgeReferences + IntoNodeReferences + NodeIndexable + GraphProp,
-          G::EdgeWeight: fmt::Display,
-          G::NodeWeight: fmt::Display,
+where
+    G: IntoEdgeReferences + IntoNodeReferences + NodeIndexable + GraphProp,
+    G::EdgeWeight: fmt::Display,
+    G::NodeWeight: fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.graph_fmt(self.graph, f, |n, cb| cb(n), |e, cb| cb(e))
@@ -153,14 +163,18 @@ impl<'a, G> fmt::Display for Dot<'a, G>
 }
 
 impl<'a, G> fmt::Debug for Dot<'a, G>
-    where G: IntoEdgeReferences + IntoNodeReferences + NodeIndexable + GraphProp,
-          G::EdgeWeight: fmt::Debug,
-          G::NodeWeight: fmt::Debug,
+where
+    G: IntoEdgeReferences + IntoNodeReferences + NodeIndexable + GraphProp,
+    G::EdgeWeight: fmt::Debug,
+    G::NodeWeight: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.graph_fmt(self.graph, f,
-                       |n, cb| cb(&DebugFmt(n)),
-                       |e, cb| cb(&DebugFmt(e)))
+        self.graph_fmt(
+            self.graph,
+            f,
+            |n, cb| cb(&DebugFmt(n)),
+            |e, cb| cb(&DebugFmt(e)),
+        )
     }
 }
 
@@ -168,7 +182,8 @@ impl<'a, G> fmt::Debug for Dot<'a, G>
 struct Escaper<W>(W);
 
 impl<W> fmt::Write for Escaper<W>
-    where W: fmt::Write
+where
+    W: fmt::Write,
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.chars() {
@@ -182,7 +197,7 @@ impl<W> fmt::Write for Escaper<W>
             '"' => try!(self.0.write_char('\\')),
             // \l is for left justified linebreak
             '\n' => return self.0.write_str(r#"\l"#),
-            _   => { }
+            _ => {}
         }
         self.0.write_char(c)
     }
@@ -192,7 +207,8 @@ impl<W> fmt::Write for Escaper<W>
 struct Escaped<T>(T);
 
 impl<T> fmt::Display for Escaped<T>
-    where T: fmt::Display
+where
+    T: fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if f.alternate() {
@@ -206,7 +222,8 @@ impl<T> fmt::Display for Escaped<T>
 struct PassThrough<T>(T);
 
 impl<T> fmt::Display for PassThrough<T>
-    where T: fmt::Display
+where
+    T: fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
@@ -217,7 +234,8 @@ impl<T> fmt::Display for PassThrough<T>
 struct DebugFmt<T>(T);
 
 impl<T> fmt::Display for DebugFmt<T>
-    where T: fmt::Debug
+where
+    T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)

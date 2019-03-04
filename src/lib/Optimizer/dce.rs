@@ -1,7 +1,11 @@
-use super::{IRGraphManager,TempValManager,NodeIndex,Node,InstTy};
+use super::{IRGraphManager, InstTy, Node, NodeIndex, TempValManager};
 
 /// Dead Code Elimination
-pub fn dead_code_elimination(irgm: &mut IRGraphManager, temp_manager: &mut TempValManager, root_node: NodeIndex) {
+pub fn dead_code_elimination(
+    irgm: &mut IRGraphManager,
+    temp_manager: &mut TempValManager,
+    root_node: NodeIndex,
+) {
     // Unlike previous passes, this one will traverse in reverse order.
     let mut visitor = irgm.graph_manager().graph_visitor(root_node);
     visitor.reverse();
@@ -14,10 +18,11 @@ pub fn dead_code_elimination(irgm: &mut IRGraphManager, temp_manager: &mut TempV
         println!("DCE pass: {:?}", test_counter);
         test_counter += 1;
 
-
         for node_id in &visitor {
             // Each instruction will also need to be traversed in reverse order as well.
-            let mut inst_list = irgm.graph_manager().get_mut_ref_graph()
+            let mut inst_list = irgm
+                .graph_manager()
+                .get_mut_ref_graph()
                 .node_weight_mut(node_id.clone())
                 .unwrap()
                 .get_mut_data_ref()

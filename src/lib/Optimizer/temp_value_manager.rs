@@ -1,17 +1,17 @@
-use super::{Rc,RefCell,HashMap};
-use super::{Value,ValTy, Op};
-use std::cell::Ref;
+use super::{HashMap, Rc, RefCell};
+use super::{Op, ValTy, Value};
 use lib::Graph::graph_manager::GraphManager;
+use lib::Optimizer::Optimizer;
+use lib::IR::ir::InstTy;
 use petgraph::prelude::NodeIndex;
 use petgraph::visit::DfsPostOrder;
+use std::cell::Ref;
 use std::fmt::Debug;
-use lib::IR::ir::InstTy;
-use lib::Optimizer::Optimizer;
 
 #[derive(Clone)]
 pub struct TempValManager {
     temp_vec: Vec<Rc<RefCell<TempVal>>>,
-    op_hash: HashMap<usize,Rc<RefCell<TempVal>>>,
+    op_hash: HashMap<usize, Rc<RefCell<TempVal>>>,
 }
 
 impl TempValManager {
@@ -32,15 +32,24 @@ impl TempValManager {
         // all uses.
         for node in graph_visitor.iter() {
             // iterate through instructions in each node
-            for inst in graph_manager.get_ref_graph().node_weight(node.clone()).unwrap().get_data_ref().get_inst_list_ref() {
+            for inst in graph_manager
+                .get_ref_graph()
+                .node_weight(node.clone())
+                .unwrap()
+                .get_data_ref()
+                .get_inst_list_ref()
+            {
                 self.add_inst(inst, &mut revisit_inst);
             }
         }
 
         // Now revisit instruction that used values before they were added to the original map
         for (node_id, temp_val) in revisit_inst.iter() {
-            self.op_hash.get_mut(&node_id).expect("While adding temp values, clean up routine found value not already added.")
-                .borrow_mut().add_use(Rc::clone(temp_val));
+            self.op_hash
+                .get_mut(&node_id)
+                .expect("While adding temp values, clean up routine found value not already added.")
+                .borrow_mut()
+                .add_use(Rc::clone(temp_val));
         }
 
         // Testing equipment below.
@@ -58,7 +67,11 @@ impl TempValManager {
         }*/
     }
 
-    pub fn add_inst(&mut self, inst: &Rc<RefCell<Op>>, inst_revisit_vec: &mut Vec<(usize, Rc<RefCell<TempVal>>)>) {
+    pub fn add_inst(
+        &mut self,
+        inst: &Rc<RefCell<Op>>,
+        inst_revisit_vec: &mut Vec<(usize, Rc<RefCell<TempVal>>)>,
+    ) {
         // Make a new TempVal using the passed inst
         let inst_num = inst.borrow().get_inst_num();
         let mut new_temp = TempVal::new(inst, inst_num);
@@ -70,11 +83,15 @@ impl TempValManager {
 
         let inst_ty = inst.borrow().inst_type().clone();
         match inst_ty {
-            InstTy::read | InstTy::add |
-            InstTy::sub | InstTy::mul |
-            InstTy::div | InstTy::cmp |
-            InstTy::adda | InstTy::phi |
-            InstTy::load => {
+            InstTy::read
+            | InstTy::add
+            | InstTy::sub
+            | InstTy::mul
+            | InstTy::div
+            | InstTy::cmp
+            | InstTy::adda
+            | InstTy::phi
+            | InstTy::load => {
                 // TODO : Should this be removed and handled in dead code elimination?
                 // It is probably better practice to remove the dead code based on
                 // having no active uses in a separate sweep. Code that should not
@@ -84,7 +101,7 @@ impl TempValManager {
             }
             _ => {
                 ref_temp.borrow_mut().add_use(static_temp);
-            },
+            }
         }
 
         // Check to see if this value calls any other previously added values
@@ -93,7 +110,11 @@ impl TempValManager {
                 let temp_inst_num = op.borrow().get_inst_num();
                 if self.op_hash.contains_key(&temp_inst_num) {
                     // x_val is already added to hash_map, add use
-                    self.op_hash.get_mut(&temp_inst_num).unwrap().borrow_mut().add_use(Rc::clone(&ref_temp));
+                    self.op_hash
+                        .get_mut(&temp_inst_num)
+                        .unwrap()
+                        .borrow_mut()
+                        .add_use(Rc::clone(&ref_temp));
                 } else {
                     // x_val is not already part of map, add to revisit list
                     inst_revisit_vec.push((temp_inst_num, Rc::clone(&ref_temp)));
@@ -106,7 +127,11 @@ impl TempValManager {
                 let temp_inst_num = op.borrow().get_inst_num();
                 if self.op_hash.contains_key(&temp_inst_num) {
                     // y_val is already added to hash_map, add use
-                    self.op_hash.get_mut(&temp_inst_num).unwrap().borrow_mut().add_use(Rc::clone(&ref_temp));
+                    self.op_hash
+                        .get_mut(&temp_inst_num)
+                        .unwrap()
+                        .borrow_mut()
+                        .add_use(Rc::clone(&ref_temp));
                 } else {
                     // y_val is not already part of map, add to revisit list
                     inst_revisit_vec.push((temp_inst_num, Rc::clone(&ref_temp)));
@@ -121,26 +146,41 @@ impl TempValManager {
         self.temp_vec.push(Rc::clone(&ref_temp));
     }
 
-    pub fn borrow_mut_inst(&mut self, inst_id: & usize) -> &mut Rc<RefCell<TempVal>> {
-        self.op_hash.get_mut(inst_id).expect("Attempted to mutably borrow non-existent instruction.")
+    pub fn borrow_mut_inst(&mut self, inst_id: &usize) -> &mut Rc<RefCell<TempVal>> {
+        self.op_hash
+            .get_mut(inst_id)
+            .expect("Attempted to mutably borrow non-existent instruction.")
     }
 
-    pub fn borrow_inst(&self, inst_id: &usize) -> & Rc<RefCell<TempVal>> {
-        self.op_hash.get(inst_id).expect(&format!("Attempted to borrow non-existent instruction. {:?}", inst_id)[..])
+    pub fn borrow_inst(&self, inst_id: &usize) -> &Rc<RefCell<TempVal>> {
+        self.op_hash.get(inst_id).expect(
+            &format!(
+                "Attempted to borrow non-existent instruction. {:?}",
+                inst_id
+            )[..],
+        )
     }
 
     pub fn update_inst_uses(&self, inst_id: &usize, new_val: Value) {
-        self.op_hash.get(&inst_id).unwrap().borrow().update_use_values(new_val);
+        self.op_hash
+            .get(&inst_id)
+            .unwrap()
+            .borrow()
+            .update_use_values(new_val);
     }
 
     pub fn get_inactive_list(&self) -> Vec<&Rc<RefCell<TempVal>>> {
-        self.op_hash.values().filter(|value| {
-            !value.borrow().is_active()
-        }).collect::<Vec<_>>()
+        self.op_hash
+            .values()
+            .filter(|value| !value.borrow().is_active())
+            .collect::<Vec<_>>()
     }
 
-    pub fn check_active_values(&self, inst_id: & usize) -> (bool, bool) {
-        let temp_val = self.op_hash.get(inst_id).expect("Values attempting to be checked should be valid");
+    pub fn check_active_values(&self, inst_id: &usize) -> (bool, bool) {
+        let temp_val = self
+            .op_hash
+            .get(inst_id)
+            .expect("Values attempting to be checked should be valid");
         let mut x_valid = false;
         let mut y_valid = false;
 
@@ -149,10 +189,10 @@ impl TempValManager {
                 ValTy::op(x_op) => {
                     //println!("x_op: {:?} is_active: {}", x_op, x_op.borrow().is_active());
                     x_valid = x_op.borrow().is_active();
-                },
+                }
                 _ => {
                     x_valid = true;
-                },
+                }
             }
         }
 
@@ -161,17 +201,17 @@ impl TempValManager {
                 ValTy::op(y_op) => {
                     //println!("x_op: {:?} is_active: {}", y_op, y_op.borrow().is_active());
                     y_valid = y_op.borrow().is_active();
-                },
+                }
                 _ => {
                     y_valid = true;
-                },
+                }
             }
         }
 
         (x_valid, y_valid)
     }
 
-    pub fn clean_instruction_uses(&mut self, inst_id: & usize) {
+    pub fn clean_instruction_uses(&mut self, inst_id: &usize) {
         //println!("Are we panicing here?");
 
         let mut local_handle = self.op_hash.get_mut(inst_id).unwrap().clone();
@@ -180,14 +220,22 @@ impl TempValManager {
         let x_val = local_handle.borrow().x_val();
         if let ValTy::op(x_op) = x_val.unwrap().get_value().clone() {
             let x_inst_id = x_op.borrow().get_inst_num();
-            self.op_hash.get_mut(&x_inst_id).unwrap().borrow_mut().remove_use(inst_id);
+            self.op_hash
+                .get_mut(&x_inst_id)
+                .unwrap()
+                .borrow_mut()
+                .remove_use(inst_id);
         }
 
         //println!("Are we panicing here3?");
         let y_val = local_handle.borrow().y_val();
         if let ValTy::op(y_op) = y_val.unwrap().get_value().clone() {
             let y_inst_id = y_op.borrow().get_inst_num();
-            self.op_hash.get_mut(&y_inst_id).unwrap().borrow_mut().remove_use(inst_id);
+            self.op_hash
+                .get_mut(&y_inst_id)
+                .unwrap()
+                .borrow_mut()
+                .remove_use(inst_id);
         }
     }
 }
@@ -225,7 +273,10 @@ impl TempVal {
     }
 
     pub fn x_y_val(&self) -> (Option<Value>, Option<Value>) {
-        (self.op_val.borrow().clone_x_val(), self.op_val.borrow().clone_y_val())
+        (
+            self.op_val.borrow().clone_x_val(),
+            self.op_val.borrow().clone_y_val(),
+        )
     }
 
     pub fn x_val(&self) -> Option<Value> {
@@ -249,7 +300,9 @@ impl TempVal {
         for active_use in self.active_uses().iter() {
             let use_op = active_use.borrow().inst_val();
             println!("Failure on active use: {}", use_op.borrow().get_inst_num());
-            use_op.borrow_mut().var_cleanup(old_val.clone(), new_val.clone());
+            use_op
+                .borrow_mut()
+                .var_cleanup(old_val.clone(), new_val.clone());
         }
     }
 
@@ -265,20 +318,22 @@ impl TempVal {
     }
 
     pub fn active_uses(&self) -> Vec<Rc<RefCell<TempVal>>> {
-        self.used.values().filter(|temp_val| {
-            temp_val.borrow().is_active()
-        }).map(|temp_val| {
-            Rc::clone(temp_val)
-        }).collect::<Vec<_>>()
+        self.used
+            .values()
+            .filter(|temp_val| temp_val.borrow().is_active())
+            .map(|temp_val| Rc::clone(temp_val))
+            .collect::<Vec<_>>()
     }
 
-    pub fn remove_use(&mut self, remove_id: & usize) -> bool {
+    pub fn remove_use(&mut self, remove_id: &usize) -> bool {
         if let Some(value) = self.used.remove(remove_id) {
             // After successfully removing a use from this temp_val,
             // if it was the last use mark it as no longer active.
-            let active_uses = self.used.values().filter(|temp_val| {
-                temp_val.borrow().is_active()
-            }).collect::<Vec<_>>();
+            let active_uses = self
+                .used
+                .values()
+                .filter(|temp_val| temp_val.borrow().is_active())
+                .collect::<Vec<_>>();
 
             if active_uses.is_empty() {
                 self.op_val.borrow_mut().deactivate();

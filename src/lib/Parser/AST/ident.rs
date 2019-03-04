@@ -1,7 +1,7 @@
 use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Ident {
     ident_type: TokenType,
     ident_value: String,
@@ -10,9 +10,11 @@ pub struct Ident {
 impl Ident {
     pub fn new(tc: &mut TokenCollection) -> Self {
         let token = tc.get_next_token().unwrap();
-        Ident{ ident_type: token.get_type(),
+        Ident {
+            ident_type: token.get_type(),
             ident_value: token.get_contents(),
-            debugLine: String::from("test")}
+            debugLine: String::from("test"),
+        }
     }
 
     pub fn get_value(&self) -> String {

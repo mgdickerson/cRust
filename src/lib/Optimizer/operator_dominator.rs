@@ -1,12 +1,12 @@
-use lib::IR::ir::{Op,InstTy};
+use lib::IR::ir::{InstTy, Op};
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::cell::RefCell;
 
-use petgraph::graph::NodeIndex;
 use super::Graph;
 use petgraph::algo::dominators::Dominators;
+use petgraph::graph::NodeIndex;
 
 #[derive(Clone)]
 pub struct OpDomHandler {
@@ -15,7 +15,9 @@ pub struct OpDomHandler {
 
 impl OpDomHandler {
     pub fn new() -> Self {
-        OpDomHandler { op_manager: HashMap::new() }
+        OpDomHandler {
+            op_manager: HashMap::new(),
+        }
     }
 
     fn get_op_manager(self) -> HashMap<InstTy, OpNode> {
@@ -28,12 +30,14 @@ impl OpDomHandler {
 
     // Dominance path
 
-
     // True means new one was added, should be added to instruction list
     // False means it was found in search, do not add instruction just use value
-    pub fn search_or_add_inst(&mut self, next_op: Rc<RefCell<Op>>,
-                              node_id: NodeIndex,
-                              dom_path: Vec<NodeIndex>) -> (bool, Rc<RefCell<Op>>) {
+    pub fn search_or_add_inst(
+        &mut self,
+        next_op: Rc<RefCell<Op>>,
+        node_id: NodeIndex,
+        dom_path: Vec<NodeIndex>,
+    ) -> (bool, Rc<RefCell<Op>>) {
         let key = next_op.borrow().inst_type().clone();
         let contains_key = self.op_manager.contains_key(&key);
 
@@ -45,9 +49,7 @@ impl OpDomHandler {
             return (true, next_op);
         }
 
-        let op_node_builder = self.op_manager
-            .get_mut(&key)
-            .unwrap().clone();
+        let op_node_builder = self.op_manager.get_mut(&key).unwrap().clone();
 
         let mut op_node_checker = op_node_builder.clone().to_iter();
 
@@ -89,11 +91,19 @@ pub struct OpNode {
 
 impl OpNode {
     pub fn new_head_node(op_head: Rc<RefCell<Op>>, node_id: &NodeIndex) -> Self {
-        OpNode { op: op_head.clone(), node_id: node_id.clone(), parent_node: None }
+        OpNode {
+            op: op_head.clone(),
+            node_id: node_id.clone(),
+            parent_node: None,
+        }
     }
 
     pub fn add_op_node(op: Rc<RefCell<Op>>, parent_op: OpNode, node_id: &NodeIndex) -> Self {
-        OpNode { op: op.clone(), node_id: node_id.clone(), parent_node: Some(Box::new(parent_op)) }
+        OpNode {
+            op: op.clone(),
+            node_id: node_id.clone(),
+            parent_node: Some(Box::new(parent_op)),
+        }
     }
 
     pub fn get_node_id(&self) -> NodeIndex {
@@ -108,7 +118,9 @@ impl OpNode {
         self.op.clone()
     }
 
-    pub fn clone_parent(&self) -> Option<Box<OpNode>> { self.parent_node.clone() }
+    pub fn clone_parent(&self) -> Option<Box<OpNode>> {
+        self.parent_node.clone()
+    }
 
     pub fn to_iter(&self) -> OpNodeIterator {
         let parent;
@@ -143,10 +155,10 @@ impl OpNodeIterator {
                 } else {
                     self.next = None;
                 }
-            },
+            }
             None => {
                 self.next = None;
-            },
+            }
         }
 
         ret_node

@@ -5,7 +5,9 @@ pub struct RetRegister {
 
 impl RetRegister {
     pub fn new() -> Self {
-        RetRegister{ ret: String::from("27") }
+        RetRegister {
+            ret: String::from("27"),
+        }
     }
 
     pub fn to_string(&self) -> String {

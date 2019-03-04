@@ -1,7 +1,7 @@
+use lib::IR::ir::{InstTy, Op};
 use lib::IR::ir_manager::InstTracker;
-use lib::IR::ir::{Op, InstTy};
 
-use super::{Rc,RefCell};
+use super::{Rc, RefCell};
 
 #[derive(Clone)]
 pub struct BasicBlock {
@@ -11,7 +11,7 @@ pub struct BasicBlock {
 impl BasicBlock {
     pub fn new() -> Self {
         //it.increment();
-        BasicBlock{ inst: Vec::new() }
+        BasicBlock { inst: Vec::new() }
     }
 
     pub fn add_instruction(&mut self, op: Rc<RefCell<Op>>) {
@@ -24,12 +24,12 @@ impl BasicBlock {
 
     pub fn remove_inactive_inst(&mut self) {
         // Iterate through list of instructions checking if they are still active
-        let active_inst = self.inst.iter()
-            .filter(|op| {
-                op.borrow().is_active()
-        }).map(|filtered_ops| {
-            Rc::clone(filtered_ops)
-        }).collect::<Vec<_>>();
+        let active_inst = self
+            .inst
+            .iter()
+            .filter(|op| op.borrow().is_active())
+            .map(|filtered_ops| Rc::clone(filtered_ops))
+            .collect::<Vec<_>>();
 
         // Replace instruction vector with active_inst vector
         self.inst = active_inst;
@@ -47,7 +47,7 @@ impl BasicBlock {
         &mut self.inst
     }
 
-    pub fn get_inst_list_ref(&self) -> & Vec<Rc<RefCell<Op>>> {
+    pub fn get_inst_list_ref(&self) -> &Vec<Rc<RefCell<Op>>> {
         &self.inst
     }
 

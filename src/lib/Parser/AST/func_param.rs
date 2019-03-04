@@ -2,22 +2,22 @@ use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST::ident::Ident;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct FuncParam {
     node_type: TokenType,
-    parameters: Vec<Ident>
+    parameters: Vec<Ident>,
 }
 
 impl FuncParam {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut parameters = vec!();
+        let mut parameters = vec![];
 
         while let Some(next_token) = tc.peek_next_token_type() {
             match next_token {
                 TokenType::Ident => {
                     //get parameter ident
                     parameters.push(Ident::new(tc));
-                },
+                }
                 TokenType::Comma => {
                     //consume token
                     tc.get_next_token();
@@ -25,32 +25,41 @@ impl FuncParam {
                         Some(TokenType::Ident) => {
                             //all is well, drop through
                             continue;
-                        },
+                        }
                         None => {
                             // Compiler Error :
                             panic!("Unexpected EOF, expected Ident Token following ',' in function param.");
-                        },
+                        }
                         err => {
                             // Compiler Error :
-                            panic!("Expected Ident Token following ',', found unexpected Token: {:?}", err);
-                        },
+                            panic!(
+                                "Expected Ident Token following ',', found unexpected Token: {:?}",
+                                err
+                            );
+                        }
                     }
-                },
+                }
                 TokenType::RightPara => {
                     //end of function, return to func_ident but do not consume token
-                    break
-                },
+                    break;
+                }
                 err => {
                     // Compiler Error :
-                    panic!("Expected Function Parameters, was unable to parse: {:?}", err);
-                },
+                    panic!(
+                        "Expected Function Parameters, was unable to parse: {:?}",
+                        err
+                    );
+                }
             }
         }
 
-        FuncParam { node_type: TokenType::FuncParam, parameters }
+        FuncParam {
+            node_type: TokenType::FuncParam,
+            parameters,
+        }
     }
 
-    pub fn get_value(&self) -> Vec<Ident>  {
+    pub fn get_value(&self) -> Vec<Ident> {
         self.parameters.to_vec()
     }
 

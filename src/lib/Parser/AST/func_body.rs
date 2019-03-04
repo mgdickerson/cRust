@@ -1,16 +1,16 @@
 use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 use Parser::AST::assignment::Assignment;
-use Parser::AST::if_stmt::IfStmt;
-use Parser::AST::while_stmt::WhileStmt;
 use Parser::AST::func_call::FuncCall;
+use Parser::AST::if_stmt::IfStmt;
 use Parser::AST::return_stmt::ReturnStmt;
+use Parser::AST::while_stmt::WhileStmt;
 
-use super::{Node, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{IRGraphManager, InstTy, Node, NodeData, NodeId, Op, ValTy, Value};
 use lib::Graph::graph_manager::GraphManager;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 enum Stmt {
     assignment(Assignment),
     if_stmt(IfStmt),
@@ -19,7 +19,7 @@ enum Stmt {
     return_stmt(ReturnStmt),
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct FuncBody {
     node_type: TokenType,
     stmt_vec: Vec<Stmt>,
@@ -33,13 +33,13 @@ impl FuncBody {
             match next_token {
                 TokenType::Assignment => {
                     stmt_vec.push(Stmt::assignment(Assignment::new(tc)));
-                },
+                }
                 TokenType::IfStatement => {
                     stmt_vec.push(Stmt::if_stmt(IfStmt::new(tc)));
-                },
+                }
                 TokenType::WhileStatement => {
                     stmt_vec.push(Stmt::while_stmt(WhileStmt::new(tc)));
-                },
+                }
                 TokenType::FuncCall => {
                     stmt_vec.push(Stmt::funcCall(FuncCall::new(tc)));
 
@@ -48,32 +48,36 @@ impl FuncBody {
                             //consume then resume cycle
                             tc.get_next_token();
                             continue;
-                        },
-                        Some(TokenType::RightBrace) | Some(TokenType::FiStatement) |
-                        Some(TokenType::OdStatement) | Some(TokenType::ElseStatement) => {
+                        }
+                        Some(TokenType::RightBrace)
+                        | Some(TokenType::FiStatement)
+                        | Some(TokenType::OdStatement)
+                        | Some(TokenType::ElseStatement) => {
                             //fall through
-                            continue
-                        },
+                            continue;
+                        }
                         None => {
                             // Compiler Error :
                             panic!("Expected some form of termination after function call in function body.");
-                        },
+                        }
                         err => {
                             // Compiler Error :
                             panic!("Expected termination sequence after FuncCall, found unexpected Token: {:?}");
-                        },
+                        }
                     }
-                },
+                }
                 TokenType::ReturnStatement => {
                     stmt_vec.push(Stmt::return_stmt(ReturnStmt::new(tc)));
-                },
+                }
 
                 //end of function body sequences
-                TokenType::RightBrace | TokenType::FiStatement |
-                TokenType::OdStatement | TokenType::ElseStatement => {
+                TokenType::RightBrace
+                | TokenType::FiStatement
+                | TokenType::OdStatement
+                | TokenType::ElseStatement => {
                     //consume token? or just return?
-                    break
-                },
+                    break;
+                }
 
                 // Compiler Error :
                 err => {
@@ -82,57 +86,60 @@ impl FuncBody {
             }
         }
 
-        FuncBody { node_type: TokenType::FuncBody, stmt_vec }
+        FuncBody {
+            node_type: TokenType::FuncBody,
+            stmt_vec,
+        }
     }
 
-    pub fn get_value(&self) -> Vec<Stmt>  {
-        return self.stmt_vec.to_vec()
+    pub fn get_value(&self) -> Vec<Stmt> {
+        return self.stmt_vec.to_vec();
     }
 
     pub fn get_type(&self) -> TokenType {
         self.node_type.clone()
     }
 
-    pub fn to_ir(self, irgm : &mut IRGraphManager) {
+    pub fn to_ir(self, irgm: &mut IRGraphManager) {
         for stmt in self.stmt_vec {
             match stmt {
                 Stmt::assignment(assign) => {
                     assign.to_ir(irgm);
-                },
+                }
                 Stmt::if_stmt(if_st) => {
                     if_st.to_ir(irgm);
-                },
+                }
                 Stmt::while_stmt(wh_st) => {
                     wh_st.to_ir(irgm);
-                },
+                }
                 Stmt::funcCall(fn_cl) => {
                     fn_cl.to_ir(irgm);
-                },
+                }
                 Stmt::return_stmt(rt) => {
                     rt.to_ir(irgm);
-                },
+                }
             }
         }
     }
 
-    pub fn scan_globals(&self, irgm : &mut IRGraphManager) {
+    pub fn scan_globals(&self, irgm: &mut IRGraphManager) {
         for stmt in &self.stmt_vec {
             match stmt {
                 Stmt::assignment(assign) => {
                     assign.scan_globals(irgm);
-                },
+                }
                 Stmt::if_stmt(if_st) => {
                     if_st.scan_globals(irgm);
-                },
+                }
                 Stmt::while_stmt(wh_st) => {
                     wh_st.scan_globals(irgm);
-                },
+                }
                 Stmt::funcCall(fn_cl) => {
                     fn_cl.scan_globals(irgm);
-                },
+                }
                 Stmt::return_stmt(rt) => {
                     rt.scan_globals(irgm);
-                },
+                }
             }
         }
     }

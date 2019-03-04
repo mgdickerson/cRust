@@ -1,30 +1,29 @@
-use std::io::{BufRead, BufReader, Result};
-use std::fs::{self, DirEntry};
-use std::path::Path;
-use std::path::PathBuf;
 use std::env;
-use std::io::prelude::*;
 use std::fmt::Write;
 use std::fs::OpenOptions;
+use std::fs::{self, DirEntry};
+use std::io::prelude::*;
+use std::io::{BufRead, BufReader, Result};
+use std::path::Path;
+use std::path::PathBuf;
 
 use self::Utility::display;
 
 extern crate petgraph;
 use petgraph::graph;
 
-use petgraph::algo::dominators::Dominators;
-use petgraph::algo::dominators::simple_fast;
-use lib::IR::ir_manager::IRGraphManager;
 use lib::RegisterAllocation::interference_graph::analyze_live_range;
+use lib::IR::ir_manager::IRGraphManager;
+use petgraph::algo::dominators::simple_fast;
+use petgraph::algo::dominators::Dominators;
 
-
-pub mod Lexer;
-pub mod Parser;
-pub mod Utility;
-pub mod IR;
 pub mod Graph;
+pub mod IR;
+pub mod Lexer;
 pub mod Optimizer;
+pub mod Parser;
 pub mod RegisterAllocation;
+pub mod Utility;
 
 #[cfg(test)]
 pub mod tests {
@@ -215,13 +214,14 @@ pub mod tests {
 pub fn run_file(file_name: String) {
     let mut path = PathBuf::new();
     path.push(env::current_exe().unwrap());
-    path.pop(); path.pop(); path.pop(); path.pop(); //this is needed because current .exe is 4 folders too deep.
+    path.pop();
+    path.pop();
+    path.pop();
+    path.pop(); //this is needed because current .exe is 4 folders too deep.
     path.push("src/Testing/");
     let mut base_path = path.clone();
     path.push(file_name.clone() + ".txt");
     println!("{:?}", path);
-
-
 
     let mut file = fs::File::open(path.as_path()).expect("Error Opening File.");
     let mut token_builder: Vec<Lexer::token::Token> = Vec::new();
@@ -260,27 +260,34 @@ pub fn run_file(file_name: String) {
     /// TEST SPACE FOR Dominators
     ///
     /// It works!
-
     let root = irgmanager.graph_manager().get_main_node();
     let graph = irgmanager.graph_manager().get_mut_ref_graph().clone();
-    let dom_space = simple_fast(&graph,root);
+    let dom_space = simple_fast(&graph, root);
 
     //println!("{:?}", dom_space);
     for node in graph.node_indices() {
         match dom_space.immediate_dominator(node) {
             Some(parent_node) => {
-                irgmanager.graph_manager().add_dominance_edge(node, parent_node);
-            },
-            None => {},
+                irgmanager
+                    .graph_manager()
+                    .add_dominance_edge(node, parent_node);
+            }
+            None => {}
         }
     }
 
     /// END TEST SPACE ///
-
     base_path.push(file_name + ".dot");
 
     let mut output = String::new();
-    write!(output, "{:?}", display::Dot::with_config(&irgmanager.graph_manager().get_mut_ref_graph().clone(), &[display::Config::EdgeColor]));
+    write!(
+        output,
+        "{:?}",
+        display::Dot::with_config(
+            &irgmanager.graph_manager().get_mut_ref_graph().clone(),
+            &[display::Config::EdgeColor]
+        )
+    );
     fs::write(base_path.as_path(), output);
 
     println!();

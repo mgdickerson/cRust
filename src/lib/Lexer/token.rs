@@ -1,7 +1,7 @@
 use std;
 use Lexer;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Token {
     token_type: TokenType,
     token_contents: String,
@@ -9,7 +9,10 @@ pub struct Token {
 
 impl Token {
     pub fn new(TkTy: TokenType, TkCn: String) -> Self {
-        Token{ token_type: TkTy, token_contents: TkCn }
+        Token {
+            token_type: TkTy,
+            token_contents: TkCn,
+        }
     }
 
     pub fn get_contents(&self) -> String {
@@ -40,20 +43,20 @@ pub struct TokenCollection {
 
 impl TokenCollection {
     pub fn collect(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> TokenCollection {
-        let mut token_builder : Vec<Token> = Vec::new();
+        let mut token_builder: Vec<Token> = Vec::new();
 
         loop {
             if iter.peek() == None {
-                return TokenCollection{ token_vector: token_builder.into_iter().peekable() };
+                return TokenCollection {
+                    token_vector: token_builder.into_iter().peekable(),
+                };
             }
 
             if let Some(token) = Lexer::get_token(iter) {
-                token_builder.push( token );
-            }
-            else {
+                token_builder.push(token);
+            } else {
                 //Lexer::get_token(iter) returned None.
             }
-            
         }
     }
 
@@ -68,17 +71,16 @@ impl TokenCollection {
 
     pub fn peek_next_token_type(&mut self) -> Option<TokenType> {
         match self.token_vector.peek() {
-            Some(x) => { 
+            Some(x) => {
                 let token_type_peek = x.clone();
                 Some(token_type_peek.peek_type())
-             },
+            }
             None => None,
         }
-
     }
 }
 //std::iter::Peekable<std::slice::Iter<Token<'_>>>
-#[derive(Debug,Copy,Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum TokenType {
     // Debugging Type
     Test,
@@ -125,11 +127,11 @@ pub enum TokenType {
 
     Assignment,
     AssignmentOp,
-    
+
     FuncCall,
     FuncParam,
     FuncIdent,
-    
+
     IfStatement,
     ThenStatement,
     ElseStatement,
@@ -138,7 +140,7 @@ pub enum TokenType {
     WhileStatement,
     DoStatement,
     OdStatement,
-    
+
     ReturnStatement,
 
     Statement,

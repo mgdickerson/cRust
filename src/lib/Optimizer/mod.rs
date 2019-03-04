@@ -1,33 +1,33 @@
-use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
+pub mod cleaner;
 pub mod constant_evaluation;
 pub mod cse;
 pub mod dce;
 pub mod node_remover;
-pub mod temp_value_manager;
 pub mod operator_dominator;
-pub mod cleaner;
+pub mod temp_value_manager;
 
-use lib::IR::ir_manager::{IRGraphManager, InstTracker, BlockTracker};
-use lib::IR::variable_manager::{UniqueVariable,VariableManager};
-use lib::IR::function_manager::{UniqueFunction,FunctionManager};
-use lib::IR::address_manager::{UniqueAddress,AddressManager};
-use lib::IR::array_manager::{UniqueArray,ArrayManager};
+use lib::IR::address_manager::{AddressManager, UniqueAddress};
+use lib::IR::array_manager::{ArrayManager, UniqueArray};
+use lib::IR::function_manager::{FunctionManager, UniqueFunction};
+use lib::IR::ir::{InstTy, Op, ValTy, Value};
+use lib::IR::ir_manager::{BlockTracker, IRGraphManager, InstTracker};
 use lib::IR::ret_register::RetRegister;
-use lib::IR::ir::{Op,Value,ValTy,InstTy};
+use lib::IR::variable_manager::{UniqueVariable, VariableManager};
 
-use lib::Graph::graph_manager::GraphManager;
-use lib::Graph::basic_block::BasicBlock;
-use lib::Graph::node::{Node,NodeId,NodeData,NodeType};
 use lib::clean_base_values;
+use lib::Graph::basic_block::BasicBlock;
+use lib::Graph::graph_manager::GraphManager;
+use lib::Graph::node::{Node, NodeData, NodeId, NodeType};
 
-use super::petgraph::Graph;
-use super::{petgraph,graph};
 use self::temp_value_manager::TempValManager;
-use petgraph::prelude::NodeIndex;
+use super::petgraph::Graph;
+use super::{graph, petgraph};
 use lib::Optimizer::cleaner::clean_graph;
+use petgraph::prelude::NodeIndex;
 
 pub struct Optimizer {
     irgm: IRGraphManager,
@@ -38,7 +38,11 @@ pub struct Optimizer {
 
 impl Optimizer {
     pub fn new(irgm: IRGraphManager) -> Self {
-        Optimizer { irgm, main_temp_val_manager: TempValManager::new(), func_temp_val_map: HashMap::new() }
+        Optimizer {
+            irgm,
+            main_temp_val_manager: TempValManager::new(),
+            func_temp_val_map: HashMap::new(),
+        }
     }
 
     pub fn get_irgm(self) -> IRGraphManager {
@@ -71,34 +75,60 @@ impl Optimizer {
 
         // Second get temp_val_manager for main
         let main_node_index = self.get_irgm_mut_ref().graph_manager().get_main_node();
-        local_main_manager.pull_temp_values(self.get_irgm_mut_ref().graph_manager(), main_node_index);
+        local_main_manager
+            .pull_temp_values(self.get_irgm_mut_ref().graph_manager(), main_node_index);
 
-        let graph_visitor = self.irgm.graph_manager().graph_visitor(main_node_index.clone());
+        let graph_visitor = self
+            .irgm
+            .graph_manager()
+            .graph_visitor(main_node_index.clone());
         for node_id in &graph_visitor {
-            if NodeType::exit == self.irgm.graph_manager().get_ref_graph().node_weight(node_id.clone()).unwrap().get_node_type() {
+            if NodeType::exit
+                == self
+                    .irgm
+                    .graph_manager()
+                    .get_ref_graph()
+                    .node_weight(node_id.clone())
+                    .unwrap()
+                    .get_node_type()
+            {
                 constant_evaluation::mark_invalid_nodes(
                     self.get_irgm_mut_ref().graph_manager(),
                     main_node_index,
                     node_id.clone(),
-                    &mut local_main_manager);
-
+                    &mut local_main_manager,
+                );
             }
         }
 
         // Build managers for all functions in program
-        for (func_name, func_index) in self.get_irgm_mut_ref().function_manager().list_functions().iter() {
+        for (func_name, func_index) in self
+            .get_irgm_mut_ref()
+            .function_manager()
+            .list_functions()
+            .iter()
+        {
             let mut temp_manager = TempValManager::new();
-            temp_manager.pull_temp_values(self.get_irgm_mut_ref().graph_manager(), func_index.clone());
+            temp_manager
+                .pull_temp_values(self.get_irgm_mut_ref().graph_manager(), func_index.clone());
 
             let graph_visitor = self.irgm.graph_manager().graph_visitor(func_index.clone());
             for node_id in graph_visitor {
-                if NodeType::exit == self.irgm.graph_manager().get_ref_graph().node_weight(node_id).unwrap().get_node_type() {
+                if NodeType::exit
+                    == self
+                        .irgm
+                        .graph_manager()
+                        .get_ref_graph()
+                        .node_weight(node_id)
+                        .unwrap()
+                        .get_node_type()
+                {
                     constant_evaluation::mark_invalid_nodes(
                         self.get_irgm_mut_ref().graph_manager(),
                         func_index.clone(),
                         node_id,
-                        &mut temp_manager);
-
+                        &mut temp_manager,
+                    );
                 }
             }
 
@@ -106,7 +136,12 @@ impl Optimizer {
         }
 
         // Do some ignored path cleanup
-        clean_graph(&mut self.irgm, main_node_index, &mut local_main_manager, &graph_visitor);
+        clean_graph(
+            &mut self.irgm,
+            main_node_index,
+            &mut local_main_manager,
+            &graph_visitor,
+        );
 
         // Return values cloned for locals to update Optimizer
         self.main_temp_val_manager = local_main_manager;
@@ -119,25 +154,41 @@ impl Optimizer {
 
         let graph_visitor = self.irgm.graph_manager().graph_visitor(root_node);
 
-        constant_evaluation::eval_program_constants(&mut self.irgm, &mut local_temp_manager, &graph_visitor);
+        constant_evaluation::eval_program_constants(
+            &mut self.irgm,
+            &mut local_temp_manager,
+            &graph_visitor,
+        );
 
-        let new_root = clean_graph(&mut self.irgm, root_node, &mut local_temp_manager, &graph_visitor);
+        let new_root = clean_graph(
+            &mut self.irgm,
+            root_node,
+            &mut local_temp_manager,
+            &graph_visitor,
+        );
         self.irgm.graph_manager().update_main_node(new_root);
 
         // Return temp manager to itself.
         self.main_temp_val_manager = local_temp_manager;
 
         for (func, temp_manager) in self.func_temp_val_map.iter_mut() {
-            let mut root_node = self.irgm.function_manager()
-                .get_function(func).clone_index();
+            let mut root_node = self
+                .irgm
+                .function_manager()
+                .get_function(func)
+                .clone_index();
 
             // First, update the root node of the function
             for node_id in self.irgm.graph_manager().get_ref_graph().node_indices() {
-                let current_node_id = self.irgm.graph_manager()
-                    .get_ref_graph().node_weight(node_id).unwrap()
+                let current_node_id = self
+                    .irgm
+                    .graph_manager()
+                    .get_ref_graph()
+                    .node_weight(node_id)
+                    .unwrap()
                     .get_node_id();
 
-                if root_node.index() ==  current_node_id {
+                if root_node.index() == current_node_id {
                     // Found new node_id for function. Update root node and break loop.
                     root_node = node_id;
                     break;
@@ -145,10 +196,17 @@ impl Optimizer {
             }
 
             let function_visitor = self.irgm.graph_manager().graph_visitor(root_node);
-            constant_evaluation::eval_program_constants(&mut self.irgm, temp_manager, &function_visitor);
+            constant_evaluation::eval_program_constants(
+                &mut self.irgm,
+                temp_manager,
+                &function_visitor,
+            );
 
             let new_root = clean_graph(&mut self.irgm, root_node, temp_manager, &function_visitor);
-            self.irgm.function_manager().get_mut_function(func).update_index(new_root);
+            self.irgm
+                .function_manager()
+                .get_mut_function(func)
+                .update_index(new_root);
 
             //self.func_temp_val_map.insert(func.clone(), temp_manager.clone());
         }
@@ -158,19 +216,35 @@ impl Optimizer {
         // Pass 2 consists of CSE
         let root_node = self.irgm.graph_manager().get_main_node();
 
-        cse::trace_common_expression(&mut self.irgm, &mut self.main_temp_val_manager, root_node.clone());
+        cse::trace_common_expression(
+            &mut self.irgm,
+            &mut self.main_temp_val_manager,
+            root_node.clone(),
+        );
         let graph_visitor = self.irgm.graph_manager().graph_visitor(root_node.clone());
 
-        let new_root = clean_graph(&mut self.irgm, root_node, &mut self.main_temp_val_manager, &graph_visitor);
+        let new_root = clean_graph(
+            &mut self.irgm,
+            root_node,
+            &mut self.main_temp_val_manager,
+            &graph_visitor,
+        );
         self.irgm.graph_manager().update_main_node(new_root);
 
         for (func_name, temp_manager) in self.func_temp_val_map.iter_mut() {
-            let mut root_node = self.irgm.function_manager()
-                .get_function(func_name).clone_index();
+            let mut root_node = self
+                .irgm
+                .function_manager()
+                .get_function(func_name)
+                .clone_index();
 
             for node_id in self.irgm.graph_manager().get_ref_graph().node_indices() {
-                let current_node_id = self.irgm.graph_manager()
-                    .get_ref_graph().node_weight(node_id).unwrap()
+                let current_node_id = self
+                    .irgm
+                    .graph_manager()
+                    .get_ref_graph()
+                    .node_weight(node_id)
+                    .unwrap()
                     .get_node_id();
 
                 if root_node.index() == current_node_id {
@@ -182,26 +256,45 @@ impl Optimizer {
             cse::trace_common_expression(&mut self.irgm, temp_manager, root_node.clone());
             let function_visitor = self.irgm.graph_manager().graph_visitor(root_node.clone());
             let new_root = clean_graph(&mut self.irgm, root_node, temp_manager, &function_visitor);
-            self.irgm.function_manager().get_mut_function(func_name).update_index(new_root);
+            self.irgm
+                .function_manager()
+                .get_mut_function(func_name)
+                .update_index(new_root);
         }
     }
 
     pub fn pass_3(&mut self) {
         let root_node = self.irgm.graph_manager().get_main_node();
 
-        dce::dead_code_elimination(&mut self.irgm, &mut self.main_temp_val_manager, root_node.clone());
+        dce::dead_code_elimination(
+            &mut self.irgm,
+            &mut self.main_temp_val_manager,
+            root_node.clone(),
+        );
         let graph_visitor = self.irgm.graph_manager().graph_visitor(root_node.clone());
 
-        let new_root = clean_graph(&mut self.irgm, root_node, &mut self.main_temp_val_manager, &graph_visitor);
+        let new_root = clean_graph(
+            &mut self.irgm,
+            root_node,
+            &mut self.main_temp_val_manager,
+            &graph_visitor,
+        );
         self.irgm.graph_manager().update_main_node(new_root);
 
         for (func_name, temp_manager) in self.func_temp_val_map.iter_mut() {
-            let mut func_root_node = self.irgm.function_manager()
-                .get_function(func_name).clone_index();
+            let mut func_root_node = self
+                .irgm
+                .function_manager()
+                .get_function(func_name)
+                .clone_index();
 
             for node_id in self.irgm.graph_manager().get_ref_graph().node_indices() {
-                let current_node_id = self.irgm.graph_manager()
-                    .get_ref_graph().node_weight(node_id).unwrap()
+                let current_node_id = self
+                    .irgm
+                    .graph_manager()
+                    .get_ref_graph()
+                    .node_weight(node_id)
+                    .unwrap()
                     .get_node_id();
 
                 if func_root_node.index() == current_node_id {
@@ -211,9 +304,20 @@ impl Optimizer {
             }
 
             dce::dead_code_elimination(&mut self.irgm, temp_manager, func_root_node.clone());
-            let function_visitor = self.irgm.graph_manager().graph_visitor(func_root_node.clone());
-            let new_root = clean_graph(&mut self.irgm, func_root_node, temp_manager, &function_visitor);
-            self.irgm.function_manager().get_mut_function(func_name).update_index(new_root);
+            let function_visitor = self
+                .irgm
+                .graph_manager()
+                .graph_visitor(func_root_node.clone());
+            let new_root = clean_graph(
+                &mut self.irgm,
+                func_root_node,
+                temp_manager,
+                &function_visitor,
+            );
+            self.irgm
+                .function_manager()
+                .get_mut_function(func_name)
+                .update_index(new_root);
         }
     }
 }
