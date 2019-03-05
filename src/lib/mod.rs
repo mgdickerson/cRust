@@ -302,3 +302,23 @@ pub fn clean_base_values(irgm: &mut IRGraphManager) {
         }
     }
 }
+
+pub fn extract_constants(irgm: &mut IRGraphManager) {
+    // Go through each node:
+    //  - If inst contains too many constants,
+    //    remove them to immediately above
+    //  - If it is a phi instruction, there are
+    //    two cases:
+    //      - if -> split up in whichever direction
+    //              the replaced constant comes from
+    //              as an add or subtract inst.
+    //      - while -> the constant should only
+    //              be in the immediate dominator
+    //              path, but if there is a case of
+    //              two constants.... well that
+    //              will suck....
+    //  - Once all constants are properly removed,
+    //    continue with other functions. Should
+    //    behave... hopefully.
+    
+}
