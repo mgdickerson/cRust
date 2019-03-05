@@ -320,5 +320,5 @@ pub fn extract_constants(irgm: &mut IRGraphManager) {
     //  - Once all constants are properly removed,
     //    continue with other functions. Should
     //    behave... hopefully.
-    
+    // 
 }
