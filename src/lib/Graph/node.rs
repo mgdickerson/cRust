@@ -41,6 +41,10 @@ impl Node {
         self.node_id.get()
     }
 
+    pub fn update_node_id(&mut self, new_node_id: usize) {
+        self.node_id = NodeId::new(new_node_id);
+    }
+
     pub fn get_node_type(&self) -> NodeType {
         self.node_type.clone()
     }

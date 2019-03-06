@@ -14,16 +14,16 @@ use petgraph::Graph;
 use petgraph::{Directed, Incoming, Outgoing};
 
 use std::collections::HashMap;
+use std::env;
+use std::ffi::OsString;
 use std::fmt::Debug;
 use std::fmt::Write;
 use std::fs::OpenOptions;
-use std::env;
 use std::fs::{self, DirEntry};
 use std::io::prelude::*;
 use std::io::{BufRead, BufReader, Result};
 use std::path::Path;
 use std::path::PathBuf;
-use std::ffi::OsString;
 
 pub struct InterferenceGraph {
     inter_graph: Graph<OpNode, String, Directed, u32>,
@@ -47,20 +47,43 @@ impl OpNode {
     pub fn get_inst_ref(&self) -> &Rc<RefCell<Op>> {
         &self.inst
     }
+
+    pub fn add_color(&mut self, color: Color) {
+        self.reg_color = Some(color);
+    }
 }
 
 impl Debug for OpNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "({}): {}",
-            self.inst.borrow().get_inst_num(),
-            self.inst.borrow().to_string()
-        )
+        match &self.reg_color {
+            Some(color) => {
+                write!(
+                    f,
+                    " [shape=record style=filled fillcolor={} label=\"{{ ({}): {} }}\"]",
+                    color.to_string(),
+                    self.inst.borrow().get_inst_num(),
+                    self.inst.borrow().to_string()
+                )
+            },
+            None => {
+                write!(
+                    f,
+                    " [shape=record label=\"{{ ({}): {} }}\"]",
+                    self.inst.borrow().get_inst_num(),
+                    self.inst.borrow().to_string()
+                )
+            }
+        }
     }
 }
 
-pub fn analyze_live_range(irgm: &mut IRGraphManager, root_node: NodeIndex, exit_node: NodeIndex, path: PathBuf, entry: OsString) {
+pub fn analyze_live_range(
+    irgm: &mut IRGraphManager,
+    root_node: NodeIndex,
+    exit_node: NodeIndex,
+    path: PathBuf,
+    entry: OsString,
+) {
     // Make vector of live instructions.
     // When a new instruction is found that is not
     // part of the "live" instructions, add it to
@@ -74,13 +97,14 @@ pub fn analyze_live_range(irgm: &mut IRGraphManager, root_node: NodeIndex, exit_
     let graph = irgm.graph_manager().get_mut_ref_graph().clone();
     let dom_space = simple_fast(&graph, root_node.clone());
 
-    let mut recurse_graph = RecurseTraverse::new(
-        exit_node,
-        dom_space
-    );
+    let mut recurse_graph = RecurseTraverse::new(exit_node, dom_space);
 
     recurse_graph.recursive_traversal(irgm);
-    let interference_graph = recurse_graph.get_interference_graph();
+    let mut interference_graph = recurse_graph.get_interference_graph();
+
+    for node in interference_graph.node_weights_mut() {
+        node.add_color(Color::gray);
+    }
 
     let mut dot_graph_path = entry;
     let mut file_name = path.to_str().unwrap().to_owned()
@@ -92,10 +116,7 @@ pub fn analyze_live_range(irgm: &mut IRGraphManager, root_node: NodeIndex, exit_
     write!(
         output,
         "{:?}",
-        display::Dot::with_config(
-            &interference_graph,
-            &[display::Config::EdgeNoLabel]
-        )
+        display::Dot::with_config(&interference_graph, &[display::Config::InterferenceGraph])
     );
     fs::write(file_name, output);
 
@@ -106,7 +127,7 @@ pub fn analyze_live_range(irgm: &mut IRGraphManager, root_node: NodeIndex, exit_
 
 struct RecurseTraverse {
     current_node: NodeIndex,
-    interference_graph: Graph<OpNode,String,Directed,u32>,
+    interference_graph: Graph<OpNode, String, Directed, u32>,
     inst_node_map: HashMap<usize, NodeIndex>,
     live_inst_map: HashMap<usize, NodeIndex>,
     dominators: Dominators<NodeIndex>,
@@ -127,7 +148,7 @@ impl RecurseTraverse {
         }
     }
 
-    pub fn get_interference_graph(self) -> Graph<OpNode,String,Directed,u32> {
+    pub fn get_interference_graph(self) -> Graph<OpNode, String, Directed, u32> {
         self.interference_graph
     }
 
@@ -141,7 +162,7 @@ impl RecurseTraverse {
     fn recursive_traversal(&mut self, irgm: &mut IRGraphManager) {
         if let Some(node_id) = self.if_bp {
             if self.current_node == node_id.clone() {
-                return
+                return;
             }
         }
 
@@ -150,7 +171,8 @@ impl RecurseTraverse {
             .clone()
             .graph_manager()
             .get_ref_graph()
-            .neighbors_directed(self.current_node.clone(), Incoming) {
+            .neighbors_directed(self.current_node.clone(), Incoming)
+        {
             parents.push(parent_id);
         }
 
@@ -159,13 +181,13 @@ impl RecurseTraverse {
                 // Final node, perform any required actions then simply return.
                 self.grab_live_ranges(irgm, BlockType::standard);
                 return;
-            },
+            }
             1 => {
                 self.grab_live_ranges(irgm, BlockType::standard);
                 self.current_node = parents.pop().unwrap();
                 self.recursive_traversal(irgm);
-                return
-            },
+                return;
+            }
             2 => {
                 // two cases here, if or while
                 let mut ordered_parents = Vec::new();
@@ -174,7 +196,9 @@ impl RecurseTraverse {
                 // This gives both information as to which control flow type it
                 // is, as well as sorting for the while case.
                 for node_id in parents.iter() {
-                    if self.dominators.immediate_dominator(self.current_node) == Some(node_id.clone()) {
+                    if self.dominators.immediate_dominator(self.current_node)
+                        == Some(node_id.clone())
+                    {
                         ordered_parents.insert(0, node_id.clone());
                         is_while = true;
                     } else {
@@ -191,7 +215,7 @@ impl RecurseTraverse {
                     // but also goes through the header again.
                     if let Some(node_id) = &self.while_bp {
                         if self.current_node == node_id.clone() {
-                            return
+                            return;
                         }
                     }
 
@@ -218,17 +242,19 @@ impl RecurseTraverse {
                     self.while_bp = prev_while_bp;
                     self.current_node = ordered_parents[0].clone();
                     self.recursive_traversal(irgm);
-                    return
-                }
-                else {
+                    return;
+                } else {
                     //println!("Is If Case!");
                     //println!("Ordered parents: {:?}", ordered_parents);
 
                     // This is the if case. Traverse up both paths until the dominator is hit, then return
                     // and merge the two live ranges and go through the dominating path.
-                    let immediate_dominator = self.dominators
+                    let immediate_dominator = self
+                        .dominators
                         .immediate_dominator(self.current_node)
-                        .expect(&format!("No dominating path found for: {:?}", self.current_node)[..])
+                        .expect(
+                            &format!("No dominating path found for: {:?}", self.current_node)[..],
+                        )
                         .clone();
 
                     // Clone current live range so it can be used for both left and right side
@@ -315,17 +341,16 @@ impl RecurseTraverse {
 
                     self.recursive_traversal(irgm);
 
-                    return
+                    return;
                 }
-            },
+            }
             _ => {
                 panic!("Should be no more than 2 parents for any given node of the graph.");
-            },
+            }
         }
     }
 
     fn grab_live_ranges(&mut self, irgm: &mut IRGraphManager, block_type: BlockType) {
-
         // Get current node's instructions
         let mut inst_list = irgm
             .graph_manager()
@@ -375,8 +400,9 @@ impl RecurseTraverse {
                                 // Make an edge between all nodes currently in live range, then add to live range
                                 for (_, node_id) in self.live_inst_map.iter() {
                                     if None
-                                        == self.interference_graph
-                                        .find_edge_undirected(inst_node_id, node_id.clone())
+                                        == self
+                                            .interference_graph
+                                            .find_edge_undirected(inst_node_id, node_id.clone())
                                     {
                                         self.interference_graph.update_edge(
                                             inst_node_id,
@@ -394,8 +420,9 @@ impl RecurseTraverse {
                             // Make an edge between all nodes currently in live range, then add to live range
                             for (_, node_id) in self.live_inst_map.iter() {
                                 if None
-                                    == self.interference_graph
-                                    .find_edge_undirected(inst_node_id, node_id.clone())
+                                    == self
+                                        .interference_graph
+                                        .find_edge_undirected(inst_node_id, node_id.clone())
                                 {
                                     self.interference_graph.update_edge(
                                         inst_node_id,
@@ -435,8 +462,9 @@ impl RecurseTraverse {
                                 // Make an edge between all nodes currently in live range, then add to live range
                                 for (_, node_id) in self.live_inst_map.iter() {
                                     if None
-                                        == self.interference_graph
-                                        .find_edge_undirected(inst_node_id, node_id.clone())
+                                        == self
+                                            .interference_graph
+                                            .find_edge_undirected(inst_node_id, node_id.clone())
                                     {
                                         self.interference_graph.update_edge(
                                             inst_node_id,
@@ -454,8 +482,9 @@ impl RecurseTraverse {
                             // Make an edge between all nodes currently in live range, then add to live range
                             for (_, node_id) in self.live_inst_map.iter() {
                                 if None
-                                    == self.interference_graph
-                                    .find_edge_undirected(inst_node_id, node_id.clone())
+                                    == self
+                                        .interference_graph
+                                        .find_edge_undirected(inst_node_id, node_id.clone())
                                 {
                                     self.interference_graph.update_edge(
                                         inst_node_id,
@@ -472,13 +501,37 @@ impl RecurseTraverse {
             }
         }
 
-        println!("Live range ending at node {} [Type: {:?}]:", irgm.graph_manager().get_ref_graph().node_weight(self.current_node).unwrap().get_node_id(), block_type);
+        println!(
+            "Live range ending at node {} [Type: {:?}]:",
+            irgm.graph_manager()
+                .get_ref_graph()
+                .node_weight(self.current_node)
+                .unwrap()
+                .get_node_id(),
+            block_type
+        );
         let mut live_range_str = String::new();
         for (_, live_inst) in self.live_inst_map.iter() {
             if live_range_str.is_empty() {
-                live_range_str += &String::from(format!("[ {:?}", self.interference_graph.node_weight(live_inst.clone()).unwrap().get_inst_ref().borrow().get_inst_num()));
+                live_range_str += &String::from(format!(
+                    "[ {:?}",
+                    self.interference_graph
+                        .node_weight(live_inst.clone())
+                        .unwrap()
+                        .get_inst_ref()
+                        .borrow()
+                        .get_inst_num()
+                ));
             } else {
-                live_range_str += &String::from(format!(", {:?}", self.interference_graph.node_weight(live_inst.clone()).unwrap().get_inst_ref().borrow().get_inst_num()));
+                live_range_str += &String::from(format!(
+                    ", {:?}",
+                    self.interference_graph
+                        .node_weight(live_inst.clone())
+                        .unwrap()
+                        .get_inst_ref()
+                        .borrow()
+                        .get_inst_num()
+                ));
             }
         }
         if !live_range_str.is_empty() {
@@ -486,12 +539,10 @@ impl RecurseTraverse {
         }
 
         println!("{}", live_range_str);
-
     }
 }
 
-
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq, Debug)]
 enum BlockType {
     standard,
     while_loop,
@@ -980,4 +1031,3 @@ fn grab_live_ranges(
     }
 }
 */
-

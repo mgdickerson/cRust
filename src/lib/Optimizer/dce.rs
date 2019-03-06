@@ -41,7 +41,7 @@ pub fn dead_code_elimination(
                 if active_uses.len() < 1 {
                     if inst.borrow().is_active() {
                         value_deactivated = true;
-                        println!("Removing inactive instruction: {:?}", inst);
+                        //println!("Removing inactive instruction: {:?}", inst);
                     }
                     // If the number of times it is used is less than 1,
                     // then the instruction is inactive and should be marked.

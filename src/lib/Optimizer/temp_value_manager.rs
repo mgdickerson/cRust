@@ -169,6 +169,24 @@ impl TempValManager {
             .update_use_values(new_val);
     }
 
+    pub fn update_inst_x_val(&mut self, inst_id: &usize, x_val: Value) {
+        self.op_hash.get_mut(inst_id).expect(&format!(
+            "Attempted to alter x_val of non-existent instruction. {:?}",
+            inst_id
+            )[..])
+            .borrow_mut()
+            .update_x_val(x_val);
+    }
+
+    pub fn update_inst_y_val(&mut self, inst_id: &usize, y_val: Value) {
+        self.op_hash.get_mut(inst_id).expect(&format!(
+            "Attempted to alter y_val non-existent instruction. {:?}",
+            inst_id
+        )[..])
+            .borrow_mut()
+            .update_y_val(y_val);
+    }
+
     pub fn get_inactive_list(&self) -> Vec<&Rc<RefCell<TempVal>>> {
         self.op_hash
             .values()
@@ -283,8 +301,16 @@ impl TempVal {
         self.op_val.borrow().clone_x_val()
     }
 
+    pub fn update_x_val(&mut self, x_val: Value) {
+        self.op_val.borrow_mut().update_x_val(x_val);
+    }
+
     pub fn y_val(&self) -> Option<Value> {
         self.op_val.borrow().clone_y_val()
+    }
+
+    pub fn update_y_val(&mut self, y_val: Value) {
+        self.op_val.borrow_mut().update_y_val(y_val);
     }
 
     pub fn block_num(&self) -> usize {

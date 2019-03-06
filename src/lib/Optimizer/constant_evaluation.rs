@@ -16,6 +16,7 @@ use petgraph::algo::dominators::Dominators;
 use petgraph::algo::has_path_connecting;
 
 use lib::Utility::display;
+use lib::RegisterAllocator::{Register, RegisterAllocation};
 
 // TODO : on while const evaluation, evaluate if the loop will ever even be taken by comparing the right side value of the phi in the cmp inst.
 pub fn eval_program_constants(
@@ -125,61 +126,35 @@ fn generic_type_eval(
     let inst_id = inst.borrow().get_inst_num();
     let sum;
     match inst.borrow().get_val_ty() {
-        (Some(ValTy::con(x_val)), Some(ValTy::con(y_val))) => match inst_ty {
-            InstTy::add => {
-                sum = x_val + y_val;
-            }
-            InstTy::sub => {
-                sum = x_val - y_val;
-            }
-            InstTy::mul => {
-                sum = x_val * y_val;
-            }
-            InstTy::div => {
-                if y_val == 0 {
-                    return Err(format!("Instruction {} attempted to divide by 0", inst_id));
-                }
-
-                sum = x_val / y_val;
-            }
-            _ => return Ok(false),
-        },
-        // x_val is const, y_val is an Op
-        (Some(ValTy::con(x_val)), Some(ValTy::op(y_op))) => {
-            let y_inst_id = y_op.borrow().get_inst_num();
-
-            if let Some(y_val) = value_sub_map.clone().get(&y_inst_id) {
+        (Some(ValTy::reg(reg_alloc)), Some(ValTy::con(y_val))) => {
+            if reg_alloc.get_register() == Register::R0 {
                 match inst_ty {
                     InstTy::add => {
-                        sum = x_val + y_val.clone();
+                        sum = 0 + y_val;
                     }
                     InstTy::sub => {
-                        sum = x_val - y_val.clone();
+                        sum = 0 - y_val;
                     }
                     InstTy::mul => {
-                        sum = x_val * y_val.clone();
+                        sum = 0 * y_val;
                     }
                     InstTy::div => {
-                        if y_val.clone() == 0 {
+                        if y_val == 0 {
                             return Err(format!("Instruction {} attempted to divide by 0", inst_id));
                         }
 
-                        sum = x_val / y_val.clone();
+                        sum = 0 / y_val;
                     }
                     _ => return Ok(false),
                 }
-
-                // After updating the x and y values, remove use of y_op
-                temp_manager
-                    .borrow_mut_inst(&y_inst_id)
-                    .borrow_mut()
-                    .remove_use(&inst_id);
-            } else {
+            } else{
                 return Ok(false);
             }
-        }
+
+        },
         // x_val is an Op, y_val is const
         (Some(ValTy::op(x_op)), Some(ValTy::con(y_val))) => {
+            println!("case op const");
             let x_inst_id = x_op.borrow().get_inst_num();
 
             if let Some(x_val) = value_sub_map.clone().get(&x_inst_id) {
@@ -214,6 +189,7 @@ fn generic_type_eval(
         }
         // x_val is an Op, y_val is an Op
         (Some(ValTy::op(x_op)), Some(ValTy::op(y_op))) => {
+            println!("case op op");
             let x_inst_id = x_op.borrow().get_inst_num();
             let y_inst_id = y_op.borrow().get_inst_num();
 
@@ -266,7 +242,7 @@ fn generic_type_eval(
     } else {
         inst.borrow_mut().update_inst_ty(InstTy::add);
     }
-    inst.borrow_mut().update_x_val(Value::new(ValTy::con(0)));
+    inst.borrow_mut().update_x_val(Value::new(ValTy::reg(RegisterAllocation::allocate_R0())));
     inst.borrow_mut().update_y_val(Value::new(ValTy::con(val)));
 
     // Add instruction to value_sub_map
@@ -658,7 +634,7 @@ fn phi_handler(
     temp_manager: &mut TempValManager,
 ) -> Result<bool, String> {
     let inst_id = inst.borrow().get_inst_num();
-    //println!("Attemping to resolve Phi: {:?}", inst);
+    println!("Attemping to resolve Phi: {:?}", inst);
     let active_uses = temp_manager
         .borrow_mut_inst(&inst_id)
         .borrow()
@@ -700,6 +676,8 @@ fn phi_handler(
                 y_inst_id = y_op.borrow().get_inst_num();
             }
 
+            let y_type = active_y_val.clone_value();
+
             let active_uses = temp_manager
                 .borrow_mut_inst(&inst_id)
                 .borrow()
@@ -711,6 +689,11 @@ fn phi_handler(
                 // First clean up the old Phi value at instruction site
                 op.borrow_mut()
                     .op_cleanup(inst_id.clone(), active_y_val.clone());
+
+
+                if let ValTy::reg(reg) = & y_type {
+                    continue
+                }
 
                 // Get instruction id
                 let op_id = op.borrow().get_inst_num();
@@ -760,6 +743,8 @@ fn phi_handler(
                         x_inst_id = x_op.borrow().get_inst_num();
                     }
 
+                    let x_type = active_x_val.clone_value();
+
                     let active_uses = temp_manager
                         .borrow_mut_inst(&inst_id)
                         .borrow()
@@ -771,6 +756,10 @@ fn phi_handler(
                         // First clean up the old Phi value at instruction site
                         op.borrow_mut()
                             .op_cleanup(inst_id.clone(), active_x_val.clone());
+
+                        if let ValTy::reg(reg) = &x_type {
+                            continue
+                        }
 
                         // Get instruction id
                         let op_id = op.borrow().get_inst_num();
@@ -809,6 +798,8 @@ fn phi_handler(
                         y_inst_id = y_op.borrow().get_inst_num();
                     }
 
+                    let y_type = active_y_val.clone_value();
+
                     let active_uses = temp_manager
                         .borrow_mut_inst(&inst_id)
                         .borrow()
@@ -820,6 +811,10 @@ fn phi_handler(
                         // First clean up the old Phi value at instruction site
                         op.borrow_mut()
                             .op_cleanup(inst_id.clone(), active_y_val.clone());
+
+                        if let ValTy::reg(reg) = & y_type {
+                            continue
+                        }
 
                         // Get instruction id
                         let op_id = op.borrow().get_inst_num();
@@ -850,6 +845,8 @@ fn phi_handler(
                         x_inst_id = x_op.borrow().get_inst_num();
                     }
 
+                    let x_type = active_x_val.clone_value();
+
                     let active_uses = temp_manager
                         .borrow_mut_inst(&inst_id)
                         .borrow()
@@ -861,6 +858,10 @@ fn phi_handler(
                         // First clean up the old Phi value at instruction site
                         op.borrow_mut()
                             .op_cleanup(inst_id.clone(), active_x_val.clone());
+
+                        if let ValTy::reg(reg) = & x_type {
+                            continue
+                        }
 
                         // Get instruction id
                         let op_id = op.borrow().get_inst_num();

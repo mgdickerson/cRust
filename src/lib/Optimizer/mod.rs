@@ -18,10 +18,10 @@ use lib::IR::ir_manager::{BlockTracker, IRGraphManager, InstTracker};
 use lib::IR::ret_register::RetRegister;
 use lib::IR::variable_manager::{UniqueVariable, VariableManager};
 
-use lib::clean_base_values;
 use lib::Graph::basic_block::BasicBlock;
 use lib::Graph::graph_manager::GraphManager;
 use lib::Graph::node::{Node, NodeData, NodeId, NodeType};
+use lib::{clean_base_values, extract_constants};
 
 use self::temp_value_manager::TempValManager;
 use super::petgraph::Graph;
@@ -69,12 +69,23 @@ impl Optimizer {
         // First clean graph
         clean_base_values(self.get_irgm_mut_ref());
 
+        let main_node_index = self.get_irgm_mut_ref().graph_manager().get_main_node();
+        extract_constants(&mut self.irgm, main_node_index.clone());
+
+        for (func_name, func_index) in self
+            .get_irgm_mut_ref()
+            .function_manager()
+            .list_functions()
+            .iter()
+            {
+                extract_constants(&mut self.irgm, func_index.clone());
+            }
+
         // Create locals for easier access to them without worrying about borrowing
         let mut local_main_manager = self.get_main_manager();
         let mut local_func_map = self.get_func_manager();
 
         // Second get temp_val_manager for main
-        let main_node_index = self.get_irgm_mut_ref().graph_manager().get_main_node();
         local_main_manager
             .pull_temp_values(self.get_irgm_mut_ref().graph_manager(), main_node_index);
 
@@ -136,12 +147,12 @@ impl Optimizer {
         }
 
         // Do some ignored path cleanup
-        clean_graph(
+        /*clean_graph(
             &mut self.irgm,
             main_node_index,
             &mut local_main_manager,
             &graph_visitor,
-        );
+        );*/
 
         // Return values cloned for locals to update Optimizer
         self.main_temp_val_manager = local_main_manager;

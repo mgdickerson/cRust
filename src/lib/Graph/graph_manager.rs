@@ -15,6 +15,7 @@ pub struct GraphManager {
     graph: Graph<Node, String, Directed, u32>,
     current_node_index: NodeIndex,
     main_node_index: NodeIndex,
+    entrance_index: NodeIndex,
 }
 
 impl GraphManager {
@@ -33,6 +34,7 @@ impl GraphManager {
             graph,
             current_node_index,
             main_node_index,
+            entrance_index: entrance_node_index,
         }
     }
 
@@ -72,6 +74,8 @@ impl GraphManager {
     pub fn get_main_node(&self) -> NodeIndex {
         self.main_node_index.clone()
     }
+
+    pub fn get_main_entrance_node(&self) -> NodeIndex { self.entrance_index.clone() }
 
     pub fn get_exit_nodes(&self, root_node: &NodeIndex) -> Vec<NodeIndex> {
         let search_path = self.graph_visitor(root_node.clone());
@@ -147,11 +151,32 @@ impl GraphManager {
         Value::new(ValTy::op(Rc::clone(&inst_ref)))
     }
 
+    pub fn add_instruction_in_node(&mut self, inst: Op, node_id: & NodeIndex) -> Value {
+        let inst_ref = Rc::new(RefCell::new(inst));
+        self.graph
+            .node_weight_mut(node_id.clone())
+            .expect("Expected Node to have weight when adding inst, found none.")
+            .get_mut_data_ref()
+            .add_instruction(Rc::clone(&inst_ref));
+        Value::new(ValTy::op(Rc::clone(&inst_ref)))
+    }
+
     pub fn insert_instruction(&mut self, position: usize, inst: Op) -> Value {
         let inst_ref = Rc::new(RefCell::new(inst));
         self.graph
             .node_weight_mut(self.current_node_index)
             .expect("Expected Node to have weight when inserting, found none.")
+            .get_mut_data_ref()
+            .insert_instruction(position, Rc::clone(&inst_ref));
+
+        Value::new(ValTy::op(Rc::clone(&inst_ref)))
+    }
+
+    pub fn insert_instruction_in_node(&mut self, position: usize, inst: Op, node_id: & NodeIndex) -> Value {
+        let inst_ref = Rc::new(RefCell::new(inst));
+        self.graph
+            .node_weight_mut(node_id.clone())
+            .expect("Expected Node to have weight when inserting inst, found none.")
             .get_mut_data_ref()
             .insert_instruction(position, Rc::clone(&inst_ref));
 

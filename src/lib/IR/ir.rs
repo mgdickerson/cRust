@@ -3,10 +3,13 @@ use lib::IR::array_manager::UniqueArray;
 use lib::IR::ret_register::RetRegister;
 use lib::IR::variable_manager::{UniqueVariable, VariableManager};
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use super::{Rc, RefCell};
+use lib::RegisterAllocator::RegisterAllocation;
 use petgraph::graph::NodeIndex;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub struct Value {
     val: ValTy,
 }
@@ -49,6 +52,38 @@ pub enum ValTy {
     adr(UniqueAddress),
     arr(UniqueArray),
     ret(RetRegister),
+    reg(RegisterAllocation),
+}
+
+impl Hash for ValTy {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match &self {
+            ValTy::op(op) => {
+                op.borrow().get_inst_num().hash(state);
+            }
+            ValTy::node_id(node_id) => {
+                node_id.index().hash(state);
+            },
+            ValTy::con(con) => {
+                con.clone().hash(state);
+            },
+            ValTy::var(var) => {
+                0.hash(state);
+            },
+            ValTy::adr(adr) => {
+                adr.to_string().hash(state);
+            },
+            ValTy::arr(arr) => {
+                arr.to_string().hash(state);
+            },
+            ValTy::ret(ret) => {
+                ret.to_string().hash(state);
+            },
+            ValTy::reg(reg) => {
+                reg.get_register().to_string().hash(state);
+            },
+        }
+    }
 }
 
 impl ValTy {
@@ -65,6 +100,7 @@ impl ValTy {
             ValTy::adr(adr) => adr.to_string(),
             ValTy::arr(arr) => arr.to_string(),
             ValTy::ret(ret) => ret.to_string(),
+            ValTy::reg(reg) => reg.get_register().to_string(),
         }
     }
 }
@@ -218,6 +254,14 @@ impl Op {
         }
 
         p_command
+    }
+
+    pub fn get_active_base_op(&self) -> Option<Op> {
+        if !self.is_active {
+            None
+        } else {
+            Some(self.clone())
+        }
     }
 
     pub fn update_inst_ty(&mut self, new_inst_ty: InstTy) {
@@ -387,6 +431,30 @@ impl std::fmt::Debug for Op {
         write!(f, "({}): {}; \\l ", self.inst_number, self.to_string())
     }
 }
+
+impl Hash for Op {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.inst_type.hash(state);
+        match &self.x_val {
+            Some(x_val) => {
+                x_val.clone().hash(state);
+            },
+            None => {
+                0.hash(state);
+            }
+        }
+        match &self.y_val {
+            Some(y_val) => {
+                y_val.clone().hash(state);
+            },
+            None => {
+                0.hash(state);
+            }
+        }
+    }
+}
+
+impl Eq for Op {}
 
 impl PartialEq for Op {
     fn eq(&self, other: &Op) -> bool {

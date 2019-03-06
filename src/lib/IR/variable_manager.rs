@@ -127,7 +127,9 @@ impl VariableManager {
                 Some((Rc::clone(left_val), Rc::clone(right_val)))
             })
             .collect::<Vec<_>>();
-        set.sort_by_key(|(left_key, _right_key)| left_key.borrow().base_ident.clone());
+
+        // TODO : This was removed because apparently sorting the phis is bad
+        //set.sort_by_key(|(left_key, _right_key)| left_key.borrow().base_ident.clone());
 
         set
     }

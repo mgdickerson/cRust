@@ -143,6 +143,13 @@ pub fn clean_graph(
                 .get_mut_ref_graph()
                 .remove_node(node_id);
         }
+
+        /*// renumber all node_index
+        irgm.graph_manager()
+            .get_mut_ref_graph()
+            .node_weight_mut(node_id.clone())
+            .unwrap()
+            .update_node_id(node_id.index());*/
     }
 
     // Using new_root_id to look up actual location (NodeIndex)

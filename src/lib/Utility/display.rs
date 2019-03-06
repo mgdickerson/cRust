@@ -85,6 +85,8 @@ pub enum Config {
     EdgeNoLabel,
     /// Arrow color indicator
     EdgeColor,
+    /// Interference Graph Config
+    InterferenceGraph,
     #[doc(hidden)]
     _Incomplete(()),
 }
@@ -92,6 +94,7 @@ pub enum Config {
 use petgraph::graph::edge_index;
 use petgraph::visit::{Data, GraphProp, NodeRef};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences, NodeIndexable};
+use petgraph::visit::Control::Continue;
 
 impl<'a, G> Dot<'a, G> {
     fn graph_fmt<NF, EF, NW, EW>(
@@ -110,10 +113,18 @@ impl<'a, G> Dot<'a, G> {
     {
         try!(writeln!(f, "{} {{", TYPE[g.is_directed() as usize]));
 
+        // For config type interference graph, add below instruction
+        if self.config.contains(&Config::InterferenceGraph) {
+            try!(writeln!(f, "\t{}", String::from("layout=\"circo\";")));
+        }
+
         // output all labels
         for node in g.node_references() {
             try!(write!(f, "{}{}", INDENT, g.to_index(node.id())));
             if self.config.contains(&Config::NodeIndexLabel) {
+                try!(writeln!(f, ""));
+            } else if self.config.contains(&Config::InterferenceGraph) {
+                try!(node_fmt(node.weight(), &mut |d| PassThrough(d).fmt(f)));
                 try!(writeln!(f, ""));
             } else {
                 try!(write!(f, " [shape=record label=\"{{"));
@@ -139,7 +150,11 @@ impl<'a, G> Dot<'a, G> {
                 try!(write!(f, " [color="));
                 try!(edge_fmt(edge.weight(), &mut |d| PassThrough(d).fmt(f)));
                 try!(writeln!(f, "]"));
-            } else {
+            } else if self.config.contains(&Config::InterferenceGraph) {
+                try!(write!(f, " [arrowhead=none]"));
+                try!(writeln!(f, ""));
+            }
+            else {
                 try!(write!(f, " [label=\""));
                 try!(edge_fmt(edge.weight(), &mut |d| Escaped(d).fmt(f)));
                 try!(writeln!(f, "\"]"));

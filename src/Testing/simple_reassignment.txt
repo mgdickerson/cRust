@@ -12,6 +12,8 @@ var z, j, k, l;
         let k <- j;
         let j <- l;
 
+        call OutputNum(k);
+
         let z <- z + 1;
 	od
 }.

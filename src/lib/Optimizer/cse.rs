@@ -30,13 +30,6 @@ pub fn trace_common_expression(
     let mut local_op_handler = OpDomHandler::new();
 
     for node_id in visitor {
-        let mut dominance_path: Vec<NodeIndex> = Vec::new();
-        if let Some(mut dominance_iter) = dom_space.strict_dominators(node_id.clone()) {
-            while let Some(dominant_node_id) = dominance_iter.next() {
-                dominance_path.push(dominant_node_id);
-            }
-        }
-
         for inst in irgm
             .graph_manager()
             .get_mut_ref_graph()
@@ -55,12 +48,12 @@ pub fn trace_common_expression(
                     let (is_uniq, replacement_inst) = local_op_handler.search_or_add_inst(
                         inst.clone(),
                         node_id.clone(),
-                        dominance_path.clone(),
+                        & dom_space
                     );
 
                     if !is_uniq {
                         // This is a very good testing output.
-                        //println!("Operator to be replaced. {:?} -> {:?}", inst.clone(), replacement_inst);
+                        println!("Operator to be replaced. {:?} -> {:?}", inst.clone(), replacement_inst);
                         let active_uses = temp_manager
                             .borrow_mut_inst(&inst_id)
                             .borrow()
