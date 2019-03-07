@@ -9,10 +9,12 @@ use petgraph::visit::DfsPostOrder;
 use super::{Rc, RefCell};
 use lib::Graph::node::NodeType::entrance;
 use petgraph::{Directed, Incoming, Outgoing};
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct GraphManager {
     graph: Graph<Node, String, Directed, u32>,
+    block_to_id_map: HashMap<usize, NodeIndex>,
     current_node_index: NodeIndex,
     main_node_index: NodeIndex,
     entrance_index: NodeIndex,
@@ -32,6 +34,7 @@ impl GraphManager {
         let main_node_index = current_node_index.clone();
         GraphManager {
             graph,
+            block_to_id_map: HashMap::new(),
             current_node_index,
             main_node_index,
             entrance_index: entrance_node_index,
@@ -88,6 +91,22 @@ impl GraphManager {
         }
 
         exit_ids
+    }
+
+    pub fn map_blocks_to_node_ids(&mut self) {
+        let mut node_index_list = self.graph.node_indices();
+        for node_id in node_index_list {
+            let block_num = self.graph
+                .node_weight(node_id)
+                .unwrap()
+                .get_node_id();
+
+            self.block_to_id_map.insert(block_num, node_id);
+        }
+    }
+
+    pub fn block_node_map(&self) -> &HashMap<usize, NodeIndex> {
+        &self.block_to_id_map
     }
 
     pub fn get_current_id(&self) -> NodeIndex {

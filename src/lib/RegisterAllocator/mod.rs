@@ -1,4 +1,5 @@
 pub mod color_graph;
+pub mod spill_handler;
 
 
 pub mod interference_graph;

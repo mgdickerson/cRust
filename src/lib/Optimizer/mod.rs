@@ -339,4 +339,7 @@ impl Optimizer {
                 .update_index(new_root);
         }
     }
+    pub fn pass_4(&mut self) {
+        self.irgm.graph_manager().map_blocks_to_node_ids();
+    }
 }
