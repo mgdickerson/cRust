@@ -80,7 +80,7 @@ impl Hash for ValTy {
                 ret.to_string().hash(state);
             },
             ValTy::reg(reg) => {
-                reg.get_register().to_string().hash(state);
+                reg.to_string().hash(state);
             },
         }
     }
@@ -100,7 +100,7 @@ impl ValTy {
             ValTy::adr(adr) => adr.to_string(),
             ValTy::arr(arr) => arr.to_string(),
             ValTy::ret(ret) => ret.to_string(),
-            ValTy::reg(reg) => reg.get_register().to_string(),
+            ValTy::reg(reg) => reg.to_string(),
         }
     }
 }

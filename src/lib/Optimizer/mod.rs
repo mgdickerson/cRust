@@ -49,6 +49,14 @@ impl Optimizer {
         self.irgm
     }
 
+    pub fn get_main_temp(&self) -> TempValManager {
+        self.main_temp_val_manager.clone()
+    }
+
+    pub fn get_func_temp(&self) -> HashMap<String, TempValManager> {
+        self.func_temp_val_map.clone()
+    }
+
     pub fn get_irgm_ref(&self) -> &IRGraphManager {
         &self.irgm
     }

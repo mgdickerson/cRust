@@ -16,8 +16,8 @@ use petgraph::graph;
 use petgraph::{Directed, Incoming, Outgoing};
 
 use lib::Optimizer::temp_value_manager::TempValManager;
-use lib::RegisterAllocator::interference_graph::analyze_live_range;
-use lib::RegisterAllocator::{Color, Register, RegisterAllocation};
+use lib::RegisterAllocator::analyze_live_range;
+use lib::RegisterAllocator::{Color, RegisterAllocation};
 use lib::IR::ir::{InstTy, ValTy, Value};
 use lib::IR::ir_manager::IRGraphManager;
 use petgraph::algo::dominators::simple_fast;

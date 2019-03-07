@@ -26,7 +26,7 @@ use lib::Lexer;
 use lib::Lexer::token::{Token, TokenCollection, TokenType};
 use lib::Optimizer;
 use lib::Parser;
-use lib::RegisterAllocator::interference_graph::analyze_live_range;
+use lib::RegisterAllocator::analyze_live_range;
 use lib::Utility::display;
 use lib::IR::ir;
 use lib::IR::ir::{InstTy, Op, ValTy, Value};
@@ -35,6 +35,7 @@ use lib::IR::ir_manager::IRGraphManager;
 //extern crate core;
 /// External Lib
 extern crate petgraph;
+extern crate core;
 
 use petgraph::algo::dominators::simple_fast;
 use petgraph::algo::dominators::Dominators;
@@ -130,13 +131,14 @@ fn main() {
         */
 
         // Getting back irgm from the optimizer.
+        let mut main_temp_manager = optimizer.get_main_temp();
         let mut irgmanager = optimizer.get_irgm();
         let root_node = irgmanager.graph_manager().get_main_node();
         let entry_node = irgmanager.graph_manager().get_main_entrance_node();
         let exit_nodes = irgmanager.graph_manager().get_exit_nodes(&root_node);
 
         for exit_id in exit_nodes {
-            analyze_live_range(&mut irgmanager, entry_node.clone(), exit_id, path.clone(), entry.file_name().clone());
+            analyze_live_range(&mut irgmanager, &mut main_temp_manager, entry_node.clone(), exit_id, path.clone(), entry.file_name().clone());
         }
 
         /*let mut irgm = irgmanager.clone();

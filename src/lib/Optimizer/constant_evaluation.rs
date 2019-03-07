@@ -16,7 +16,7 @@ use petgraph::algo::dominators::Dominators;
 use petgraph::algo::has_path_connecting;
 
 use lib::Utility::display;
-use lib::RegisterAllocator::{Register, RegisterAllocation};
+use lib::RegisterAllocator::{RegisterAllocation};
 
 // TODO : on while const evaluation, evaluate if the loop will ever even be taken by comparing the right side value of the phi in the cmp inst.
 pub fn eval_program_constants(
@@ -127,7 +127,7 @@ fn generic_type_eval(
     let sum;
     match inst.borrow().get_val_ty() {
         (Some(ValTy::reg(reg_alloc)), Some(ValTy::con(y_val))) => {
-            if reg_alloc.get_register() == Register::R0 {
+            if reg_alloc.to_usize() == 0 {
                 match inst_ty {
                     InstTy::add => {
                         sum = 0 + y_val;
@@ -154,7 +154,6 @@ fn generic_type_eval(
         },
         // x_val is an Op, y_val is const
         (Some(ValTy::op(x_op)), Some(ValTy::con(y_val))) => {
-            println!("case op const");
             let x_inst_id = x_op.borrow().get_inst_num();
 
             if let Some(x_val) = value_sub_map.clone().get(&x_inst_id) {
@@ -189,7 +188,6 @@ fn generic_type_eval(
         }
         // x_val is an Op, y_val is an Op
         (Some(ValTy::op(x_op)), Some(ValTy::op(y_op))) => {
-            println!("case op op");
             let x_inst_id = x_op.borrow().get_inst_num();
             let y_inst_id = y_op.borrow().get_inst_num();
 
@@ -634,7 +632,7 @@ fn phi_handler(
     temp_manager: &mut TempValManager,
 ) -> Result<bool, String> {
     let inst_id = inst.borrow().get_inst_num();
-    println!("Attemping to resolve Phi: {:?}", inst);
+    //println!("Attemping to resolve Phi: {:?}", inst);
     let active_uses = temp_manager
         .borrow_mut_inst(&inst_id)
         .borrow()

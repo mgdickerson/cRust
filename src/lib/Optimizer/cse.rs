@@ -53,7 +53,7 @@ pub fn trace_common_expression(
 
                     if !is_uniq {
                         // This is a very good testing output.
-                        println!("Operator to be replaced. {:?} -> {:?}", inst.clone(), replacement_inst);
+                        //println!("Operator to be replaced. {:?} -> {:?}", inst.clone(), replacement_inst);
                         let active_uses = temp_manager
                             .borrow_mut_inst(&inst_id)
                             .borrow()
