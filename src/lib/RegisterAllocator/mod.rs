@@ -43,6 +43,7 @@ pub fn analyze_live_range(
     let mut recurse_graph = RecurseTraverse::new(exit_node, temp_manager,dom_space);
 
     recurse_graph.recursive_traversal(irgm);
+    recurse_graph.coalesce_phis();
     let mut interference_graph = recurse_graph.get_interference_graph();
 
     color(&mut interference_graph);

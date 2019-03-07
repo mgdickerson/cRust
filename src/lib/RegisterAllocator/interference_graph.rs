@@ -318,7 +318,7 @@ impl RecurseTraverse {
             let inst_id = inst.borrow().get_inst_num();
             let inst_type = inst.borrow().inst_type().clone();
 
-            let inst_node;
+            /*let inst_node;
             match self.inst_node_map.get(&inst_id) {
                 Some(node_id) => {
                     inst_node = Some(node_id.clone());
@@ -327,13 +327,8 @@ impl RecurseTraverse {
                     inst_node = None;
                 }
             }
-            let mut is_phi = false;
             let mut x_index = None;
-            let mut y_index = None;
-
-            if inst_type == InstTy::phi {
-                is_phi = true;
-            }
+            let mut y_index = None;*/
 
             // Remove instruction from live range
             if self.live_inst_map.contains_key(&inst_id) {
@@ -373,7 +368,7 @@ impl RecurseTraverse {
                         }
 
                         if inst_type == InstTy::phi {
-                            x_index = Some(inst_node_id.clone());
+                            //x_index = Some(inst_node_id.clone());
                             if block_type == BlockType::while_loop
                                 || block_type == BlockType::if_phi_left
                             {
@@ -449,7 +444,7 @@ impl RecurseTraverse {
                         }
 
                         if inst_type == InstTy::phi {
-                            y_index = Some(inst_node_id.clone());
+                            //y_index = Some(inst_node_id.clone());
                             if block_type == BlockType::if_phi_right
                                 || block_type == BlockType::while_cont
                             {
@@ -494,16 +489,16 @@ impl RecurseTraverse {
                 }
             }
 
-            match inst_node {
+            /*match inst_node {
                 Some(node_id) => {
-                    if !self.coalescence_map.contains_key(&node_id) {
-                        self.coalescence_map.insert(node_id.clone(), (x_index,y_index));
-                    }
+                    self.coalescence_map.insert(node_id.clone(), (x_index,y_index));
+
+                    //if !self.coalescence_map.contains_key(&node_id) {}
                 },
                 None => {
                     // Still not added to the graph, so dont do anything.
                 }
-            }
+            }*/
         }
 
         /*println!(
@@ -548,9 +543,51 @@ impl RecurseTraverse {
 
     pub fn coalesce_phis(&mut self) {
         let mut walkable_graph = self.interference_graph.clone();
+        //let mut secondary_walk_graph = self.interference_graph.clone();
 
-        let mut values_to_coalesce = self.coalescence_map
-            .clone()
+        // Collecting phis before did not seem to work very well,
+        // so manual collecting will be done here.
+        // First grab all phi instructions:
+        let mut phi_nodes = walkable_graph
+            .node_indices()
+            .filter_map(|node_id| {
+                let node_inst = self.interference_graph
+                    .node_weight(node_id)
+                    .unwrap()
+                    .get_inst_ref()[0].clone();
+                if InstTy::phi != node_inst.borrow().inst_type().clone() {
+                    return None
+                } else {
+                    let x_id;
+                    let y_id;
+
+                    match node_inst.borrow().clone_x_val() {
+                        Some(x_val) => {
+                            if let ValTy::op(x_op) = x_val.get_value() {
+                                x_id = Some(self.inst_node_map.get(&x_op.borrow().get_inst_num()).unwrap().clone());
+                            } else {
+                                x_id = None;
+                            }
+                        },
+                        None => x_id = None,
+                    }
+
+                    match node_inst.borrow().clone_y_val() {
+                        Some(y_val) => {
+                            if let ValTy::op(y_op) = y_val.get_value() {
+                                y_id = Some(self.inst_node_map.get(&y_op.borrow().get_inst_num()).unwrap().clone());
+                            } else {
+                                y_id = None;
+                            }
+                        },
+                        None => y_id = None,
+                    }
+
+                    return Some((node_id, (x_id,y_id)))
+                }
+            }).collect::<Vec<(NodeIndex, (Option<NodeIndex>,Option<NodeIndex>))>>();
+
+        let mut values_to_coalesce = phi_nodes
             .iter()
             .filter(|(
                          phi_node_id, (
@@ -562,7 +599,7 @@ impl RecurseTraverse {
                     if let Some(x_id) = x_node_id {
                         // Check if there is an edge between x and phi
                         if let Some(edge) = self.interference_graph
-                            .find_edge_undirected(*phi_node_id.clone(),x_id.clone()) {
+                            .find_edge_undirected(phi_node_id.clone(),x_id.clone()) {
                             return false
                         }
 
@@ -580,7 +617,7 @@ impl RecurseTraverse {
                     if let Some(y_id) = y_node_id {
                         // Check for edge between phi and y
                         if let Some(edge) = self.interference_graph
-                            .find_edge_undirected(*phi_node_id.clone(), y_id.clone()) {
+                            .find_edge_undirected(phi_node_id.clone(), y_id.clone()) {
                             return false
                         }
                     }
@@ -590,8 +627,29 @@ impl RecurseTraverse {
             (op_node.clone(),(x_option.clone(),y_option.clone()))
         }).collect::<Vec<(NodeIndex,(Option<NodeIndex>,Option<NodeIndex>))>>();
 
-        for (phi_id, (x_op_id, y_op_id)) in values_to_coalesce {
+        let mut nodes_to_remove = Vec::new();
+
+        for (phi_id, (x_op_id, y_op_id)) in values_to_coalesce.clone() {
+            //println!("Phi to coalesce: {:?}: {:?} {:?}", self.interference_graph.node_weight(phi_id).unwrap().get_inst_ref()[0], x_op_id, y_op_id);
+            // check check to see if either value is a phi which will be skipped
+            if let Some(x_id) = x_op_id.clone() {
+                let x_op = self.interference_graph.node_weight(x_id.clone()).unwrap().get_inst_ref()[0].clone();
+                if InstTy::phi == x_op.borrow().inst_type().clone() {
+                    // Skip the phi instructions, do not coalesce (unless I have a ton of spare time later)
+                    continue
+                }
+            }
+
+            if let Some(y_id) = y_op_id.clone() {
+                let y_op = self.interference_graph.node_weight(y_id.clone()).unwrap().get_inst_ref()[0].clone();
+                if InstTy::phi == y_op.borrow().inst_type().clone() {
+                    // Skip the phi instructions, do not coalesce (unless I have a ton of spare time later)
+                    continue
+                }
+            }
+
             if let Some(x_id) = x_op_id {
+                nodes_to_remove.push(x_id.clone());
                 let x_op = self.interference_graph.node_weight(x_id.clone()).unwrap().get_inst_ref()[0].clone();
                 self.interference_graph.node_weight_mut(phi_id).unwrap().coalesce_inst(x_op);
 
@@ -609,6 +667,7 @@ impl RecurseTraverse {
             }
 
             if let Some(y_id) = y_op_id {
+                nodes_to_remove.push(y_id.clone());
                 let y_op = self.interference_graph.node_weight(y_id.clone()).unwrap().get_inst_ref()[0].clone();
                 self.interference_graph.node_weight_mut(phi_id).unwrap().coalesce_inst(y_op);
 
@@ -624,6 +683,17 @@ impl RecurseTraverse {
                     }
                 }
             }
+        }
+
+        // Sort the node_ids and then reverse so that
+        // the highest numbers are removed first
+        nodes_to_remove.sort_by_key(|node_id| {
+            node_id.index()
+        });
+        nodes_to_remove.reverse();
+
+        for node_id in nodes_to_remove {
+            self.interference_graph.remove_node(node_id);
         }
     }
 }
