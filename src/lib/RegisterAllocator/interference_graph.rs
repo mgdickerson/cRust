@@ -586,7 +586,9 @@ impl RecurseTraverse {
                     }
 
                     true
-            }).collect::<Vec<(NodeIndex,(Option<NodeIndex>,Option<NodeIndex>))>>();
+            }).map(|(op_node,(x_option,y_option))| {
+            (op_node.clone(),(x_option.clone(),y_option.clone()))
+        }).collect::<Vec<(NodeIndex,(Option<NodeIndex>,Option<NodeIndex>))>>();
 
         for (phi_id, (x_op_id, y_op_id)) in values_to_coalesce {
             if let Some(x_id) = x_op_id {
