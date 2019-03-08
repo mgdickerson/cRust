@@ -9,6 +9,7 @@ use petgraph::algo::dominators::simple_fast;
 use petgraph::algo::dominators::Dominators;
 use petgraph::prelude::NodeIndex;
 use petgraph::{Directed, Incoming, Outgoing};
+use core::borrow::Borrow;
 
 pub fn trace_common_expression(
     irgm: &mut IRGraphManager,
@@ -83,17 +84,26 @@ pub fn trace_common_expression(
                             .deactivate_instruction();
                         temp_manager.clean_instruction_uses(&inst_id);
                     }
-                }
+                },
+                InstTy::load => {
+                    if let ValTy::op(load_inst) = inst.borrow()
+                        .borrow()
+                        .clone_y_val()
+                        .unwrap()
+                        .get_value()
+                        .clone() {
+                        // Compare the operation being loaded. If they
+                        // are the same, then this load can be deactivated.
+
+                    }
+                },
+                InstTy::store => {
+
+                },
                 _ => {
                     // Do nothing.
                 }
             }
         }
     }
-
-    /*let mut dominators = dom_space.dominators(root_node).unwrap();
-    while let Some(value) = dominators.next() {
-        // Not giving me suggestions, but it works.
-        value.index();
-    }*/
 }

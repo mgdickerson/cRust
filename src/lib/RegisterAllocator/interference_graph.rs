@@ -337,18 +337,6 @@ impl RecurseTraverse {
             let inst_id = inst.borrow().get_inst_num();
             let inst_type = inst.borrow().inst_type().clone();
 
-            /*let inst_node;
-            match self.inst_node_map.get(&inst_id) {
-                Some(node_id) => {
-                    inst_node = Some(node_id.clone());
-                },
-                None => {
-                    inst_node = None;
-                }
-            }
-            let mut x_index = None;
-            let mut y_index = None;*/
-
             // Remove instruction from live range
             if self.live_inst_map.contains_key(&inst_id) {
                 self.live_inst_map.remove(&inst_id);
@@ -382,7 +370,7 @@ impl RecurseTraverse {
                             self.interference_graph
                                 .node_weight_mut(inst_node_id)
                                 .unwrap()
-                                .add_weight(10);
+                                .add_weight(20);
                         } else {
                             // It is not a loop, but it is a use.
                             // Add single point of weight
@@ -464,7 +452,7 @@ impl RecurseTraverse {
                             self.interference_graph
                                 .node_weight_mut(inst_node_id)
                                 .unwrap()
-                                .add_weight(10);
+                                .add_weight(20);
                         } else {
                             // It is not a loop, but it is a use.
                             // Add single point of weight
@@ -519,57 +507,7 @@ impl RecurseTraverse {
                     }
                 }
             }
-
-            /*match inst_node {
-                Some(node_id) => {
-                    self.coalescence_map.insert(node_id.clone(), (x_index,y_index));
-
-                    //if !self.coalescence_map.contains_key(&node_id) {}
-                },
-                None => {
-                    // Still not added to the graph, so dont do anything.
-                }
-            }*/
         }
-
-        /*println!(
-            "Live range ending at node {} [Type: {:?}]:",
-            irgm.graph_manager()
-                .get_ref_graph()
-                .node_weight(self.current_node)
-                .unwrap()
-                .get_node_id(),
-            block_type
-        );*/
-        /*let mut live_range_str = String::new();
-        for (_, live_inst) in self.live_inst_map.iter() {
-            if live_range_str.is_empty() {
-                live_range_str += &String::from(format!(
-                    "[ {:?}",
-                    self.interference_graph
-                        .node_weight(live_inst.clone())
-                        .unwrap()
-                        .get_inst_ref()
-                        .borrow()
-                        .get_inst_num()
-                ));
-            } else {
-                live_range_str += &String::from(format!(
-                    ", {:?}",
-                    self.interference_graph
-                        .node_weight(live_inst.clone())
-                        .unwrap()
-                        .get_inst_ref()
-                        .borrow()
-                        .get_inst_num()
-                ));
-            }
-        }
-        if !live_range_str.is_empty() {
-            live_range_str += " ]";
-        }
-
-        println!("{}", live_range_str);*/
     }
 
     pub fn coalesce_phis(&mut self) {

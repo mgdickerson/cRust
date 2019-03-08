@@ -25,11 +25,9 @@ impl OpDomHandler {
         self.op_manager
     }
 
-    /*pub fn get_op_graph(&mut self, op_type: InstTy) -> Option<&mut OpNode> {
-        self.op_manager.get_mut(&op_type)
-    }*/
-
-    // Dominance path
+    pub fn reset_op_set(&mut self) {
+        // TODO : I am here.
+    }
 
     // True means new one was added, should be added to instruction list
     // False means it was found in search, do not add instruction just use value
@@ -56,59 +54,8 @@ impl OpDomHandler {
             return (true, next_op);
         }
 
-        //let op_node_builder = self.op_manager.get_mut(&key).unwrap().clone();
-        //let mut op_node_checker = op_node_builder.clone().to_iter();
-        //println!("Previous ops: {:?}", op_node_checker);
-        //println!("Checking instruction: {:?}", next_op);
-
-        // This checks all previously added op_nodes to see if any match
-        // AND are on the same dominance path.
-        // TODO : Attempting to replace this
-        /*while let Some(op_node) = op_node_checker.next() {
-            println!("Checking op_node: {:?}", op_node);
-            if op_node.clone_op() == next_op {
-                //println!("Ops are the same!");
-                // First check if op is in the same node.
-                if op_node.get_node_id() == node_id {
-                    return (false, op_node.clone_op());
-                }
-                // Second, check if it is within the dominance path of nodes.
-                if dom_path.contains(&op_node.get_node_id()) {
-                    return (false, op_node.clone_op());
-                }
-
-                // If neither are true, it is not within the path of dominance,
-                // and must be added as a unique instruction.
-            }
-        }*/
-
         let mut inst_map = self.op_manager.get(&key).unwrap().clone();
         let contains_op = inst_map.contains_key(&next_op.borrow().get_active_base_op().unwrap());
-
-        /*match contains_op {
-            Some((op, op_vec)) => {
-                // Start searching for dominating op.
-                let node_id_list = op_vec.iter().map(|op_val| {
-                    (op_val.clone_node_id(), op_val.clone_op())
-                }).collect::<Vec<(NodeIndex, Rc<RefCell<Op>>)>>();
-
-                if let Some(mut dominance_iter) = dom_space.strict_dominators(node_id.clone()) {
-                    let
-
-                    while let Some(dominant_node_id) = dominance_iter.next() {
-
-                    }
-                }
-            },
-            None => {
-                let mut new_inst_vec = Vec::new();
-                let new_op_value = OpValue::new(Rc::clone(&next_op), &node_id);
-
-                new_inst_vec.push(new_op_value);
-
-                self.op_manager.get_mut(&key).unwrap().push((next_op.borrow().get_active_base_op().unwrap(), new_inst_vec));
-            }
-        }*/
 
         if !contains_op {
             let mut new_inst_vec = Vec::new();
@@ -131,7 +78,6 @@ impl OpDomHandler {
             }
 
             // Now we make a dominance path, as a very very last resort (should reduce time spent quite a bit)
-            let mut dominance_path: Vec<NodeIndex> = Vec::new();
             if let Some(mut dominance_iter) = dom_space.strict_dominators(node_id.clone()) {
                 while let Some(dominant_node_id) = dominance_iter.next() {
                     if search_map.contains_key(&dominant_node_id) {
