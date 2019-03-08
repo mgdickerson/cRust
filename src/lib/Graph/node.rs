@@ -75,6 +75,7 @@ pub enum NodeType {
     entrance,
     function_head,
     main_node,
+    while_loop_header,
     loop_header,
     if_node,
     else_node,

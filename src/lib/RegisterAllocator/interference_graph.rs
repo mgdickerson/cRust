@@ -14,6 +14,7 @@ use petgraph::{Directed, Incoming, Outgoing};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use lib::Optimizer::temp_value_manager::TempValManager;
+use lib::Graph::node::NodeType;
 
 #[derive(Clone)]
 pub struct OpNode {
@@ -148,6 +149,10 @@ impl RecurseTraverse {
         self.interference_graph
     }
 
+    pub fn set_starting_exit(&mut self, exit_id: NodeIndex) {
+        self.current_node = exit_id;
+    }
+
     /// Recursing options:
     /// 0-Parents                    -> End of recursion, return completed live range
     /// 1-Parent                     -> Continue directly up graph
@@ -155,7 +160,7 @@ impl RecurseTraverse {
     ///                                 Continue with the loop header after joining live range from left and right.
     /// 2-Parents (one dominates)    -> An else branch, loop through the branch dominated by loop twice, then traverse
     ///                                 up the dominating path.
-    pub fn recursive_traversal(&mut self, irgm: &mut IRGraphManager) {
+    pub fn recursive_traversal(&mut self, irgm: &mut IRGraphManager, spilled_inst: & Vec<usize>) {
         if let Some(node_id) = self.if_bp {
             if self.current_node == node_id.clone() {
                 return;
@@ -175,13 +180,13 @@ impl RecurseTraverse {
         match parents.len() {
             0 => {
                 // Final node, perform any required actions then simply return.
-                self.grab_live_ranges(irgm, BlockType::standard);
+                self.grab_live_ranges(irgm, BlockType::standard, spilled_inst);
                 return;
             }
             1 => {
-                self.grab_live_ranges(irgm, BlockType::standard);
+                self.grab_live_ranges(irgm, BlockType::standard, spilled_inst);
                 self.current_node = parents.pop().unwrap();
-                self.recursive_traversal(irgm);
+                self.recursive_traversal(irgm, spilled_inst);
                 return;
             }
             2 => {
@@ -189,14 +194,25 @@ impl RecurseTraverse {
                 let mut ordered_parents = Vec::new();
                 let mut is_while = false;
 
+                if NodeType::while_loop_header == irgm.graph_manager()
+                    .get_ref_graph()
+                    .node_weight(self.current_node)
+                    .unwrap()
+                    .get_node_type() {
+                    is_while = true;
+                }
+
                 // This gives both information as to which control flow type it
                 // is, as well as sorting for the while case.
                 for node_id in parents.iter() {
                     if self.dominators.immediate_dominator(self.current_node)
                         == Some(node_id.clone())
                     {
-                        ordered_parents.insert(0, node_id.clone());
-                        is_while = true;
+                        if is_while {
+                            ordered_parents.insert(0, node_id.clone());
+                        } else {
+                            ordered_parents.push(node_id.clone());
+                        }
                     } else {
                         ordered_parents.push(node_id.clone());
                     }
@@ -213,31 +229,34 @@ impl RecurseTraverse {
                         if self.current_node == node_id.clone() {
                             return;
                         }
+                        println!("Parent node id: {:?}", node_id);
                     }
+
+
 
                     // Make save point of previous while break point
                     let prev_while_bp = self.while_bp.clone();
                     let current_id_recovery = self.current_node.clone();
 
                     // Set while break point
-                    self.grab_live_ranges(irgm, BlockType::while_loop);
+                    self.grab_live_ranges(irgm, BlockType::while_loop, spilled_inst);
                     self.while_bp = Some(self.current_node.clone());
                     self.current_node = ordered_parents[1].clone();
-                    self.recursive_traversal(irgm);
+                    self.recursive_traversal(irgm, spilled_inst);
 
                     // Grab live ranges for the loop of the while
                     self.current_node = current_id_recovery;
-                    self.grab_live_ranges(irgm, BlockType::while_loop);
+                    self.grab_live_ranges(irgm, BlockType::while_loop, spilled_inst);
                     self.current_node = ordered_parents[1].clone();
-                    self.recursive_traversal(irgm);
+                    self.recursive_traversal(irgm, spilled_inst);
 
                     // This is the final run through the current node, this time only grab the right side of any phis.
                     // Grab live ranges for the loop of the while
                     self.current_node = current_id_recovery;
-                    self.grab_live_ranges(irgm, BlockType::while_cont);
+                    self.grab_live_ranges(irgm, BlockType::while_cont, spilled_inst);
                     self.while_bp = prev_while_bp;
                     self.current_node = ordered_parents[0].clone();
-                    self.recursive_traversal(irgm);
+                    self.recursive_traversal(irgm, spilled_inst);
                     return;
                 } else {
 
@@ -257,21 +276,21 @@ impl RecurseTraverse {
                     let current_node_recovery = self.current_node.clone();
 
                     // Grab live range of this block for right case
-                    self.grab_live_ranges(irgm, BlockType::if_phi_right);
+                    self.grab_live_ranges(irgm, BlockType::if_phi_right, spilled_inst);
                     self.if_bp = Some(immediate_dominator.clone());
                     self.current_node = ordered_parents[0].clone();
 
-                    self.recursive_traversal(irgm);
+                    self.recursive_traversal(irgm, spilled_inst);
 
                     // Save new live range, recover old one
                     let mut final_live_range = self.live_inst_map.clone();
                     self.live_inst_map = live_range_copy;
                     self.current_node = current_node_recovery;
 
-                    self.grab_live_ranges(irgm, BlockType::if_phi_left);
+                    self.grab_live_ranges(irgm, BlockType::if_phi_left, spilled_inst);
                     self.current_node = ordered_parents[1].clone();
 
-                    self.recursive_traversal(irgm);
+                    self.recursive_traversal(irgm, spilled_inst);
 
                     // The current live_inst_map should contain all the live range information from the if branch
                     // and so simply comparing with the stored final_live_range should get a completed list.
@@ -288,7 +307,7 @@ impl RecurseTraverse {
                     self.if_bp = if_bp_recovery;
                     self.current_node = immediate_dominator;
 
-                    self.recursive_traversal(irgm);
+                    self.recursive_traversal(irgm, spilled_inst);
 
                     return;
                 }
@@ -299,7 +318,7 @@ impl RecurseTraverse {
         }
     }
 
-    fn grab_live_ranges(&mut self, irgm: &mut IRGraphManager, block_type: BlockType) {
+    fn grab_live_ranges(&mut self, irgm: &mut IRGraphManager, block_type: BlockType, spilled_inst: & Vec<usize>) {
         // Get current node's instructions
         let mut inst_list = irgm
             .graph_manager()
@@ -346,11 +365,10 @@ impl RecurseTraverse {
                         if !self.inst_node_map.contains_key(&x_inst_id) {
                             // This instruction is not already part of the live range.
                             // Create new node and add to the graph.
-                            let weight = self.temp_val_manager
-                                .borrow_mut_inst(&x_inst_id)
-                                .borrow()
-                                .active_uses()
-                                .len();
+                            let mut weight = 2;
+                            if spilled_inst.contains(&x_inst_id) {
+                                weight += 1000000;
+                            }
                             let op_node = OpNode::new(Rc::clone(x_inst), weight * 2);
                             inst_node_id = self.interference_graph.add_node(op_node);
                             self.inst_node_map.insert(x_inst_id, inst_node_id.clone());
@@ -365,6 +383,13 @@ impl RecurseTraverse {
                                 .node_weight_mut(inst_node_id)
                                 .unwrap()
                                 .add_weight(10);
+                        } else {
+                            // It is not a loop, but it is a use.
+                            // Add single point of weight
+                            self.interference_graph
+                                .node_weight_mut(inst_node_id)
+                                .unwrap()
+                                .add_weight(1);
                         }
 
                         if inst_type == InstTy::phi {
@@ -422,11 +447,10 @@ impl RecurseTraverse {
                         if !self.inst_node_map.contains_key(&y_inst_id) {
                             // This instruction is not already part of the live range.
                             // Create new node and add to the graph.
-                            let weight = self.temp_val_manager
-                                .borrow_mut_inst(&y_inst_id)
-                                .borrow()
-                                .active_uses()
-                                .len();
+                            let mut weight = 2;
+                            if spilled_inst.contains(&y_inst_id) {
+                                weight += 1000000;
+                            }
                             let op_node = OpNode::new(Rc::clone(y_inst), weight * 2);
                             inst_node_id = self.interference_graph.add_node(op_node);
                             self.inst_node_map.insert(y_inst_id, inst_node_id.clone());
@@ -441,6 +465,13 @@ impl RecurseTraverse {
                                 .node_weight_mut(inst_node_id)
                                 .unwrap()
                                 .add_weight(10);
+                        } else {
+                            // It is not a loop, but it is a use.
+                            // Add single point of weight
+                            self.interference_graph
+                                .node_weight_mut(inst_node_id)
+                                .unwrap()
+                                .add_weight(1);
                         }
 
                         if inst_type == InstTy::phi {

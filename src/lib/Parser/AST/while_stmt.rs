@@ -119,7 +119,7 @@ impl WhileStmt {
         let main_node = irgm.graph_manager().clone_node_index();
 
         // Make loop header
-        irgm.new_node(String::from("While_Header"), NodeType::loop_header);
+        irgm.new_node(String::from("While_Header"), NodeType::while_loop_header);
         let loop_header = irgm.graph_manager().clone_node_index();
         //let loop_id = irgm.graph_manager().get_node_id(loop_header);
 

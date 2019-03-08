@@ -134,6 +134,19 @@ impl IRGraphManager {
         )
     }
 
+    pub fn build_op_y_in_block(&mut self, y_val: Value, inst_type: InstTy, block_id: usize) -> Op {
+        self.inc_inst_tracker();
+        Op::build_op(
+            None,
+            Some(y_val),
+            None,
+            block_id,
+            self.get_inst_num(),
+            inst_type,
+            &mut self.var_manager,
+        )
+    }
+
     pub fn build_spec_op(&mut self, special_val: &String, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
         Op::build_op(

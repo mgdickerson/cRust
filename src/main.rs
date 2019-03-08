@@ -44,6 +44,7 @@ use petgraph::dot::{Config, Dot};
 use petgraph::prelude::NodeIndex;
 use petgraph::visit::Dfs;
 use petgraph::Graph;
+use petgraph::{Directed, Incoming, Outgoing};
 
 fn main() {
     // TODO : Start building command line tool.
@@ -121,27 +122,62 @@ fn main() {
         optimizer.pass_4();
 
         /* // All of this is now handled by optimizer pass_0
-        lib::clean_graph(&mut irgmanager);
+        lib::clean_graph(&mut irgm);
 
-        Optimizer::constant_evaluation::eval_program_constants(&mut irgmanager);
+        Optimizer::constant_evaluation::eval_program_constants(&mut irgm);
 
         let mut temp_val_manager = Optimizer::temp_value_manager::TempValManager::new();
-        let main_node = irgmanager.graph_manager().get_main_node();
-        temp_val_manager.pull_temp_values(irgmanager.graph_manager(), main_node);
+        let main_node = irgm.graph_manager().get_main_node();
+        temp_val_manager.pull_temp_values(irgm.graph_manager(), main_node);
         */
 
         // Getting back irgm from the optimizer.
         let mut main_temp_manager = optimizer.get_main_temp();
-        let mut irgmanager = optimizer.get_irgm();
-        let root_node = irgmanager.graph_manager().get_main_node();
-        let entry_node = irgmanager.graph_manager().get_main_entrance_node();
-        let exit_nodes = irgmanager.graph_manager().get_exit_nodes(&root_node);
+        let mut func_temp_manager = optimizer.get_func_temp();
+        let mut irgm = optimizer.get_irgm();
+        let root_node = irgm.graph_manager().get_main_node();
+        let entry_node = irgm.graph_manager().get_main_entrance_node();
+        let exit_nodes = irgm.graph_manager().get_exit_nodes(&root_node);
 
-        for exit_id in exit_nodes {
-            analyze_live_range(&mut irgmanager, &mut main_temp_manager, entry_node.clone(), exit_id, path.clone(), entry.file_name().clone());
+        analyze_live_range(&mut irgm,
+                           &mut main_temp_manager,
+                           entry_node.clone(),
+                           exit_nodes,
+                           None,
+                           path.clone(),
+                           entry.file_name().clone());
+
+        for (func_name, func_root) in irgm.function_manager().list_functions() {
+            // Get entry node for function
+            let entry_id = irgm
+                .graph_manager()
+                .get_ref_graph()
+                .neighbors_directed(
+                    func_root,
+                    Incoming
+                )
+                .next()
+                .unwrap();
+
+            println!("Analyzing function: {} -> Entry: {:?}", func_name, entry_id);
+
+            let exit_nodes = irgm.graph_manager().get_exit_nodes(&func_root);
+
+            println!("Exit nodes: {:?}", exit_nodes);
+
+            analyze_live_range(&mut irgm,
+                               &mut func_temp_manager
+                                   .get_mut(&func_name)
+                                   .unwrap(),
+                               entry_id,
+                               exit_nodes,
+                               Some(func_name),
+                               path.clone(),
+                               entry.file_name().clone());
         }
 
-        /*let mut irgm = irgmanager.clone();
+
+        /*let mut irgm = irgm.clone();
 
         let root_node = irgm.graph_manager().get_main_node();
         let mut visit_order = irgm.graph_manager().graph_visitor(root_node.clone());
@@ -154,14 +190,14 @@ fn main() {
         /// TEST SPACE FOR Dominators
         ///
         /// It works!
-        let root = irgmanager.graph_manager().get_main_node();
-        let graph = irgmanager.graph_manager().get_mut_ref_graph().clone();
+        let root = irgm.graph_manager().get_main_node();
+        let graph = irgm.graph_manager().get_mut_ref_graph().clone();
         let dom_space = simple_fast(&graph, root);
         //println!("{:?}", dom_space);
         for node in graph.node_indices() {
             match dom_space.immediate_dominator(node) {
                 Some(parent_node) => {
-                    irgmanager
+                    irgm
                         .graph_manager()
                         .add_dominance_edge(node, parent_node);
                 }
@@ -181,14 +217,14 @@ fn main() {
             output,
             "{:?}",
             display::Dot::with_config(
-                &irgmanager.graph_manager().get_mut_ref_graph().clone(),
+                &irgm.graph_manager().get_mut_ref_graph().clone(),
                 &[display::Config::EdgeColor]
             )
         );
         fs::write(file_name, output);
-        //write!(file_name, "{:?}", display::Dot::with_config(&irgmanager.get_graph(), &[display::Config::EdgeNoLabel]) as [u8]).expect("File already existed");
+        //write!(file_name, "{:?}", display::Dot::with_config(&irgm.get_graph(), &[display::Config::EdgeNoLabel]) as [u8]).expect("File already existed");
 
-        //println!("{:?}", display::Dot::with_config(&irgmanager.get_graph(), &[display::Config::EdgeNoLabel]));
+        //println!("{:?}", display::Dot::with_config(&irgm.get_graph(), &[display::Config::EdgeNoLabel]));
 
         println!();
         println!();

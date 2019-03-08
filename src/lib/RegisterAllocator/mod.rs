@@ -25,12 +25,14 @@ use petgraph::Directed;
 use petgraph::algo::dominators::simple_fast;
 use lib::RegisterAllocator::color_graph::color;
 use lib::Optimizer::temp_value_manager::TempValManager;
+use lib::RegisterAllocator::spill_handler::SpillHandler;
 
 pub fn analyze_live_range(
     irgm: &mut IRGraphManager,
     temp_manager: &mut TempValManager,
     root_node: NodeIndex,
-    exit_node: NodeIndex,
+    exit_nodes: Vec<NodeIndex>,
+    func_name: Option<String>,
     path: PathBuf,
     entry: OsString,
 ) {
@@ -40,32 +42,63 @@ pub fn analyze_live_range(
 
     let graph = irgm.graph_manager().get_mut_ref_graph().clone();
     let dom_space = simple_fast(&graph, root_node.clone());
+    let mut spill_handler = SpillHandler::new();
 
-    let mut recurse_graph = RecurseTraverse::new(exit_node, temp_manager,dom_space);
+    let mut needs_coloring = true;
+    let mut spilled_instructions = Vec::new();
 
-    recurse_graph.recursive_traversal(irgm);
-    recurse_graph.coalesce_phis();
-    let mut interference_graph = recurse_graph.get_interference_graph();
+    let mut round_count = 0;
 
-    color(&mut interference_graph);
+    while needs_coloring {
+        println!("Round: {}", round_count);
+        round_count += 1;
+        let mut recurse_graph = RecurseTraverse::new(root_node, temp_manager,dom_space.clone());
 
-    /*for node in interference_graph.node_weights_mut() {
-        node.add_color(Color::gray);
-    }*/
+        for exit_node_id in exit_nodes.clone().iter() {
+            recurse_graph.set_starting_exit(exit_node_id.clone());
+            recurse_graph.recursive_traversal(irgm, &spilled_instructions);
+        }
 
-    let mut dot_graph_path = entry;
-    let mut file_name = path.to_str().unwrap().to_owned()
-        + "/"
-        + dot_graph_path.to_str().unwrap().trim_end_matches(".txt")
-        + "_interference.dot";
+        recurse_graph.coalesce_phis();
 
-    let mut output = String::new();
-    write!(
-        output,
-        "{:?}",
-        display::Dot::with_config(&interference_graph, &[display::Config::InterferenceGraph])
-    );
-    fs::write(file_name, output);
+        let mut interference_graph = recurse_graph.get_interference_graph();
+
+        let color_result = color(&mut interference_graph);
+
+        match color_result {
+            Ok(_) => {
+                needs_coloring = false;
+
+                let mut dot_graph_path = entry.clone();
+                let mut file_name = path.to_str().unwrap().to_owned()
+                    + "/"
+                    + dot_graph_path.to_str().unwrap().trim_end_matches(".txt");
+
+                if let Some(func_name) = &func_name {
+                    file_name += func_name;
+                }
+
+                file_name += "_interference.dot";
+
+                let mut output = String::new();
+                write!(
+                    output,
+                    "{:?}",
+                    display::Dot::with_config(&interference_graph, &[display::Config::InterferenceGraph])
+                );
+                fs::write(file_name, output);
+            },
+            Err(spill_node) => {
+                println!("Splitting instruction: {:?}", interference_graph.node_weight(spill_node)
+                    .unwrap().get_inst_ref()[0]);
+                let inst_id = interference_graph.node_weight(spill_node)
+                    .unwrap().get_inst_ref()[0].borrow().get_inst_num();
+                spill_handler.spill_value(irgm, temp_manager, inst_id.clone());
+                spilled_instructions.push(inst_id);
+                temp_manager.pull_temp_values(irgm.graph_manager(), root_node);
+            }
+        }
+    }
 }
 
 #[derive(Clone)]

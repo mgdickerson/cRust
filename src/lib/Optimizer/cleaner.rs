@@ -48,7 +48,7 @@ pub fn clean_graph(
     // Removing empty (or useless) nodes.
     // The order of removed nodes is very important as it can shift the numbers below them.
     // Thus reversing the traversal is important.
-    let mut reverse_node_visitor = irgm.graph_manager().graph_visitor(root_node);
+    /*let mut reverse_node_visitor = irgm.graph_manager().graph_visitor(root_node);
     reverse_node_visitor.sort_by_key(|node_index| node_index.index());
     reverse_node_visitor.reverse();
 
@@ -116,7 +116,7 @@ pub fn clean_graph(
                 .remove_node(node_index);
         }
         //println!("Removed Node {:?}", node_index);
-    }
+    }*/
 
     // Update branch commands
     // TODO : Update branch commands.

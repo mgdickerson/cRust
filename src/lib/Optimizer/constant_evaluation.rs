@@ -651,7 +651,7 @@ fn phi_handler(
         .get_node_type();
 
     match node_type {
-        NodeType::loop_header => {
+        NodeType::while_loop_header => {
             // If this case is reached, it means the path followed was through a
             // loop, thus the left value is no longer "valid" and thus should be
             // replaced with the value on the right.
