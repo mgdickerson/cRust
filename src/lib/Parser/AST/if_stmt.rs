@@ -137,7 +137,7 @@ impl IfStmt {
         // Clone Main Node Index + add relation statement
         let main_node = irgm.graph_manager().clone_node_index();
 
-        irgm.new_node(String::from("If_Header"), NodeType::loop_header);
+        irgm.new_node(String::from("If_Header"), NodeType::if_header);
         let loop_header = irgm.graph_manager().clone_node_index();
         irgm.graph_manager().add_edge(main_node, loop_header);
 

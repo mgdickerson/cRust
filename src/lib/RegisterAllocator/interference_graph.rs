@@ -229,7 +229,6 @@ impl RecurseTraverse {
                         if self.current_node == node_id.clone() {
                             return;
                         }
-                        println!("Parent node id: {:?}", node_id);
                     }
 
 

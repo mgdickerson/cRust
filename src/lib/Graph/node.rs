@@ -76,11 +76,12 @@ pub enum NodeType {
     function_head,
     main_node,
     while_loop_header,
-    loop_header,
+    if_header,
     if_node,
     else_node,
     while_node,
     phi_node,
+    bra_node,
     ignored,
     exit,
 }

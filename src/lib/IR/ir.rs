@@ -192,7 +192,7 @@ impl Op {
 
         match &inst_type.clone() {
             // Op //
-            InstTy::read | InstTy::end | InstTy::writeNL => {
+            InstTy::read | InstTy::end | InstTy::writeNL | InstTy::kill => {
                 p_command = inst_type.to_string();
             }
             // Op x //
@@ -532,6 +532,7 @@ pub enum InstTy {
     read,
     end,
     writeNL,
+    kill,
 
     /// Op x ///
     neg,
@@ -574,6 +575,7 @@ impl InstTy {
             InstTy::read => String::from("read"),
             InstTy::end => String::from("end"),
             InstTy::writeNL => String::from("writeNL"),
+            InstTy::kill => String::from("kill"),
 
             /// Op x ///
             InstTy::neg => String::from("neg"),

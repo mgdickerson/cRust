@@ -28,6 +28,8 @@ use super::petgraph::Graph;
 use super::{graph, petgraph};
 use lib::Optimizer::cleaner::clean_graph;
 use petgraph::prelude::NodeIndex;
+use petgraph::algo::dominators::simple_fast;
+use petgraph::algo::dominators::Dominators;
 
 pub struct Optimizer {
     irgm: IRGraphManager,
@@ -240,6 +242,13 @@ impl Optimizer {
             &mut self.main_temp_val_manager,
             root_node.clone(),
         );
+
+        let graph = self.irgm.graph_manager().get_mut_ref_graph().clone();
+        let dom_space = simple_fast(&graph, root_node.clone());
+
+        let mut load_remover = cse::CLE::new(&root_node, dom_space);
+        load_remover.remove_loads(&mut self.irgm);
+
         let graph_visitor = self.irgm.graph_manager().graph_visitor(root_node.clone());
 
         let new_root = clean_graph(

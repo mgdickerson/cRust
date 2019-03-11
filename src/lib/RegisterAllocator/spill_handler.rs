@@ -3,6 +3,7 @@ use lib::IR::ir::{Value, ValTy, InstTy};
 use lib::RegisterAllocator::RegisterAllocation;
 use std::cell::RefCell;
 use std::rc::Rc;
+use lib::IR::address_manager::AddressManager;
 
 pub struct SpillHandler {
     current_spill_counter: usize
@@ -47,8 +48,9 @@ impl SpillHandler {
             .clone();
         for (position, inst) in inst_list.iter().enumerate() {
             if inst.borrow().get_inst_num() == inst_id {
+                let fp_address = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
                 let add_op = irgm.build_op_x_y_in_block(
-                    Value::new(ValTy::reg(RegisterAllocation::allocate_R0())),
+                    fp_address,
                     spill_addr_value.clone(),
                     InstTy::add,
                     inst_def_block.clone()
@@ -95,8 +97,9 @@ impl SpillHandler {
             for (position, inst) in inst_list.iter().enumerate() {
                 let inst_block = inst.borrow().get_inst_block();
                 if inst.borrow().get_inst_num() == active_use.borrow().inst_num() {
+                    let fp_address = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
                     let add_op = irgm.build_op_x_y_in_block(
-                        Value::new(ValTy::reg(RegisterAllocation::allocate_R0())),
+                        fp_address,
                         spill_addr_value.clone(),
                         InstTy::add,
                         inst_block.clone()

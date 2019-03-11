@@ -35,7 +35,6 @@ use lib::IR::ir_manager::IRGraphManager;
 //extern crate core;
 /// External Lib
 extern crate petgraph;
-extern crate core;
 
 use petgraph::algo::dominators::simple_fast;
 use petgraph::algo::dominators::Dominators;

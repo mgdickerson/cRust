@@ -153,7 +153,7 @@ impl WhileStmt {
         let loop_node_bottom = irgm.graph_manager().clone_node_index();
 
         // Generate phi node
-        irgm.new_node(String::from("Bra_Node"), NodeType::phi_node);
+        irgm.new_node(String::from("Bra_Node"), NodeType::bra_node);
         let branch_node = irgm.graph_manager().clone_node_index();
 
         irgm.graph_manager().add_edge(loop_header, branch_node);
