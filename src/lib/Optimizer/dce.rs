@@ -33,6 +33,10 @@ pub fn dead_code_elimination(
 
             for inst in inst_list {
                 //println!("Checking instruction: {:?}", inst);
+                if InstTy::kill == inst.borrow().inst_type().clone() {
+                    continue
+                }
+
                 let active_uses = temp_manager
                     .borrow_inst(&inst.borrow().get_inst_num())
                     .borrow()

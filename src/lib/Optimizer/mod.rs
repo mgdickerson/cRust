@@ -246,7 +246,7 @@ impl Optimizer {
         let graph = self.irgm.graph_manager().get_mut_ref_graph().clone();
         let dom_space = simple_fast(&graph, root_node.clone());
 
-        let mut load_remover = cse::CLE::new(&root_node, dom_space);
+        let mut load_remover = cse::CLE::new(&mut self.irgm, &root_node, dom_space);
         load_remover.remove_loads(&mut self.irgm);
 
         let graph_visitor = self.irgm.graph_manager().graph_visitor(root_node.clone());
