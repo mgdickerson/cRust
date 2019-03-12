@@ -52,7 +52,7 @@ impl SpillHandler {
                 let add_op = irgm.build_op_x_y_in_block(
                     fp_address,
                     spill_addr_value.clone(),
-                    InstTy::add,
+                    InstTy::sadd,
                     inst_def_block.clone()
                 );
 
@@ -101,7 +101,7 @@ impl SpillHandler {
                     let add_op = irgm.build_op_x_y_in_block(
                         fp_address,
                         spill_addr_value.clone(),
-                        InstTy::add,
+                        InstTy::sadd,
                         inst_block.clone()
                     );
 
@@ -114,7 +114,7 @@ impl SpillHandler {
 
                     let load_op = irgm.build_op_y_in_block(
                         storage_location,
-                        InstTy::load,
+                        InstTy::sload,
                         inst_block.clone()
                     );
 

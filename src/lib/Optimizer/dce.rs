@@ -10,12 +10,11 @@ pub fn dead_code_elimination(
     let mut visitor = irgm.graph_manager().graph_visitor(root_node);
     visitor.reverse();
 
-    // TODO : Figure out how many times this needs to run to be accurate.
     let mut value_deactivated = true;
     let mut test_counter = 0;
     while value_deactivated {
         value_deactivated = false;
-        println!("DCE pass: {:?}", test_counter);
+        //println!("DCE pass: {:?}", test_counter);
         test_counter += 1;
 
         for node_id in &visitor {
@@ -34,6 +33,7 @@ pub fn dead_code_elimination(
             for inst in inst_list {
                 //println!("Checking instruction: {:?}", inst);
                 if InstTy::kill == inst.borrow().inst_type().clone() {
+                    inst.borrow_mut().deactivate();
                     continue
                 }
 

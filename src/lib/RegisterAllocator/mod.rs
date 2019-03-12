@@ -36,7 +36,6 @@ pub fn analyze_live_range(
     path: PathBuf,
     entry: OsString,
 ) {
-    // TODO: Expand to include function calls. (Also still have to fix function returns...)
     // Create a new graph which will contain each instruction as a node,
     // and edges between instructions represent the interference.
 
@@ -45,12 +44,14 @@ pub fn analyze_live_range(
     let mut spill_handler = SpillHandler::new();
 
     let mut needs_coloring = true;
-    let mut spilled_instructions = Vec::new();
+    let mut spilled_instructions = HashMap::new();
 
     let mut round_count = 0;
 
+    temp_manager.pull_temp_values(irgm.graph_manager(), root_node);
+
     while needs_coloring {
-        println!("Round: {}", round_count);
+        //println!("Round: {}", round_count);
         round_count += 1;
         let mut recurse_graph = RecurseTraverse::new(root_node, temp_manager,dom_space.clone());
 
@@ -63,6 +64,7 @@ pub fn analyze_live_range(
 
         let mut interference_graph = recurse_graph.get_interference_graph();
 
+        // TODO : Need to find a way to get consistent results as this is looping very occasionally on 24_b
         let color_result = color(&mut interference_graph);
 
         match color_result {
@@ -89,12 +91,17 @@ pub fn analyze_live_range(
                 fs::write(file_name, output);
             },
             Err(spill_node) => {
-                println!("Splitting instruction: {:?}", interference_graph.node_weight(spill_node)
-                    .unwrap().get_inst_ref()[0]);
+                //println!("Splitting instruction: {:?}", interference_graph.node_weight(spill_node)
+                //    .unwrap().get_inst_ref()[0]);
                 let inst_id = interference_graph.node_weight(spill_node)
                     .unwrap().get_inst_ref()[0].borrow().get_inst_num();
                 spill_handler.spill_value(irgm, temp_manager, inst_id.clone());
-                spilled_instructions.push(inst_id);
+                if !spilled_instructions.contains_key(&inst_id) {
+                    spilled_instructions.insert(inst_id, 1);
+                } else {
+                    let spill_num = spilled_instructions.get_mut(&inst_id).unwrap().clone();
+                    spilled_instructions.insert(inst_id, spill_num + 1);
+                }
                 temp_manager.pull_temp_values(irgm.graph_manager(), root_node);
             }
         }

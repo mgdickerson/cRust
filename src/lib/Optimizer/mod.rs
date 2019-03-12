@@ -247,7 +247,7 @@ impl Optimizer {
         let dom_space = simple_fast(&graph, root_node.clone());
 
         let mut load_remover = cse::CLE::new(&mut self.irgm, &root_node, dom_space);
-        load_remover.remove_loads(&mut self.irgm);
+        load_remover.remove_loads(&mut self.irgm, &mut self.main_temp_val_manager);
 
         let graph_visitor = self.irgm.graph_manager().graph_visitor(root_node.clone());
 
@@ -282,6 +282,12 @@ impl Optimizer {
             }
 
             cse::trace_common_expression(&mut self.irgm, temp_manager, root_node.clone());
+
+            let dom_space = simple_fast(&graph, root_node.clone());
+
+            let mut load_remover = cse::CLE::new(&mut self.irgm, &root_node, dom_space);
+            load_remover.remove_loads(&mut self.irgm, temp_manager);
+
             let function_visitor = self.irgm.graph_manager().graph_visitor(root_node.clone());
             let new_root = clean_graph(&mut self.irgm, root_node, temp_manager, &function_visitor);
             self.irgm

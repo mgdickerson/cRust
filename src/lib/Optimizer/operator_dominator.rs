@@ -21,12 +21,42 @@ impl OpDomHandler {
         }
     }
 
+    fn op_manager(&self) -> & HashMap<InstTy, HashMap<Op, Vec<OpValue>>> { &self.op_manager }
+
     fn get_op_manager(self) -> HashMap<InstTy, HashMap<Op, Vec<OpValue>>> {
         self.op_manager
     }
 
+    fn clone_op_manager(&self) -> HashMap<InstTy, HashMap<Op, Vec<OpValue>>> { self.op_manager.clone() }
+
+    // This is ONLY for when a kill instruction is encountered.
     pub fn reset_op_set(&mut self) {
-        // TODO : I am here.
+        self.op_manager = HashMap::new();
+    }
+
+    pub fn merge_op_doms(&mut self, other: &OpDomHandler) {
+        for (inst_key, inst_map) in other.clone_op_manager().iter() {
+            if self.op_manager.contains_key(inst_key) {
+                for (op_key, op_vec) in other.op_manager.get(inst_key).unwrap() {
+                    if self.op_manager.get(inst_key).unwrap().contains_key(op_key) {
+                        for op_val in op_vec {
+                            if !self.op_manager.get(inst_key).unwrap().get(op_key).unwrap().contains(op_val) {
+                                self.op_manager
+                                    .get_mut(inst_key)
+                                    .unwrap()
+                                    .get_mut(op_key)
+                                    .unwrap()
+                                    .push(op_val.clone());
+                            }
+                        }
+                    } else {
+                        self.op_manager.get_mut(inst_key).unwrap().insert(op_key.clone(), op_vec.clone());
+                    }
+                }
+            } else {
+                self.op_manager.insert(inst_key.clone(), inst_map.clone());
+            }
+        }
     }
 
     // True means new one was added, should be added to instruction list
@@ -95,7 +125,7 @@ impl OpDomHandler {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OpValue {
     op: Rc<RefCell<Op>>,
     node_id: NodeIndex,
@@ -119,7 +149,7 @@ impl OpValue {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OpNode {
     op: Rc<RefCell<Op>>,
     node_id: NodeIndex,

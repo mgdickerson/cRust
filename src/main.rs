@@ -160,11 +160,11 @@ fn main() {
                 .next()
                 .unwrap();
 
-            println!("Analyzing function: {} -> Entry: {:?}", func_name, entry_id);
+            //println!("Analyzing function: {} -> Entry: {:?}", func_name, entry_id);
 
             let exit_nodes = irgm.graph_manager().get_exit_nodes(&func_root);
 
-            println!("Exit nodes: {:?}", exit_nodes);
+            //println!("Exit nodes: {:?}", exit_nodes);
 
             analyze_live_range(&mut irgm,
                                &mut func_temp_manager

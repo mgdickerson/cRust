@@ -203,6 +203,7 @@ impl Op {
             }
             // Op x y //
             InstTy::add
+            | InstTy::sadd
             | InstTy::sub
             | InstTy::mul
             | InstTy::div
@@ -222,7 +223,7 @@ impl Op {
                     + &self.y_val.clone().unwrap().get_value().to_string();
             }
             // Op y //
-            InstTy::load | InstTy::bra => {
+            InstTy::load | InstTy::sload | InstTy::bra => {
                 p_command = inst_type.to_string()
                     + " "
                     + &self.y_val.clone().unwrap().get_value().to_string();
@@ -541,6 +542,7 @@ pub enum InstTy {
 
     /// Op x y ///
     add,
+    sadd,
     sub,
     mul,
     div,
@@ -558,6 +560,7 @@ pub enum InstTy {
 
     /// Op y ///
     load,
+    sload,
     bra,
 
     /// Op y x ///
@@ -584,6 +587,7 @@ impl InstTy {
 
             /// Op x y ///
             InstTy::add => String::from("add"),
+            InstTy::sadd => String::from("spill_add"),
             InstTy::sub => String::from("sub"),
             InstTy::mul => String::from("mul"),
             InstTy::div => String::from("div"),
@@ -601,6 +605,7 @@ impl InstTy {
 
             /// Op y ///
             InstTy::load => String::from("load"),
+            InstTy::sload => String::from("spill_load"),
             InstTy::bra => String::from("bra"),
 
             /// Op y x ///

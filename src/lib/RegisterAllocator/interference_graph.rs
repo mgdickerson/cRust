@@ -160,7 +160,7 @@ impl RecurseTraverse {
     ///                                 Continue with the loop header after joining live range from left and right.
     /// 2-Parents (one dominates)    -> An else branch, loop through the branch dominated by loop twice, then traverse
     ///                                 up the dominating path.
-    pub fn recursive_traversal(&mut self, irgm: &mut IRGraphManager, spilled_inst: & Vec<usize>) {
+    pub fn recursive_traversal(&mut self, irgm: &mut IRGraphManager, spilled_inst: & HashMap<usize, usize>) {
         if let Some(node_id) = self.if_bp {
             if self.current_node == node_id.clone() {
                 return;
@@ -317,7 +317,7 @@ impl RecurseTraverse {
         }
     }
 
-    fn grab_live_ranges(&mut self, irgm: &mut IRGraphManager, block_type: BlockType, spilled_inst: & Vec<usize>) {
+    fn grab_live_ranges(&mut self, irgm: &mut IRGraphManager, block_type: BlockType, spilled_inst: & HashMap<usize, usize>) {
         // Get current node's instructions
         let mut inst_list = irgm
             .graph_manager()
@@ -347,14 +347,23 @@ impl RecurseTraverse {
             if let Some(x_val) = inst.borrow().clone_x_val() {
                 if let ValTy::op(x_inst) = x_val.get_value() {
                     let x_inst_id = x_inst.borrow().get_inst_num();
+                    let x_inst_type = x_inst.borrow().inst_type().clone();
                     if !self.live_inst_map.contains_key(&x_inst_id) {
                         let inst_node_id;
                         if !self.inst_node_map.contains_key(&x_inst_id) {
                             // This instruction is not already part of the live range.
                             // Create new node and add to the graph.
                             let mut weight = 2;
-                            if spilled_inst.contains(&x_inst_id) {
-                                weight += 1000000;
+                            //weight += self.temp_val_manager.borrow_inst(&x_inst_id).borrow().active_uses().len();
+                            if spilled_inst.contains_key(&x_inst_id) {
+                                let modifier = spilled_inst.get(&x_inst_id).unwrap().clone();
+                                weight += 1000000 * modifier;
+                            }
+                            if x_inst_type == InstTy::sadd {
+                                weight += 100000;
+                            }
+                            if x_inst_type == InstTy::sload {
+                                weight += 100000;
                             }
                             let op_node = OpNode::new(Rc::clone(x_inst), weight * 2);
                             inst_node_id = self.interference_graph.add_node(op_node);
@@ -429,14 +438,23 @@ impl RecurseTraverse {
             if let Some(y_val) = inst.borrow().clone_y_val() {
                 if let ValTy::op(y_inst) = y_val.get_value() {
                     let y_inst_id = y_inst.borrow().get_inst_num();
+                    let y_inst_type = y_inst.borrow().inst_type().clone();
                     if !self.live_inst_map.contains_key(&y_inst_id) {
                         let inst_node_id;
                         if !self.inst_node_map.contains_key(&y_inst_id) {
                             // This instruction is not already part of the live range.
                             // Create new node and add to the graph.
                             let mut weight = 2;
-                            if spilled_inst.contains(&y_inst_id) {
-                                weight += 1000000;
+                            //weight += self.temp_val_manager.borrow_inst(&y_inst_id).borrow().active_uses().len();
+                            if spilled_inst.contains_key(&y_inst_id) {
+                                let modifier = spilled_inst.get(&y_inst_id).unwrap().clone();
+                                weight += 1000000 * modifier;
+                            }
+                            if y_inst_type == InstTy::sadd {
+                                weight += 100000;
+                            }
+                            if y_inst_type == InstTy::sload {
+                                weight += 100000;
                             }
                             let op_node = OpNode::new(Rc::clone(y_inst), weight * 2);
                             inst_node_id = self.interference_graph.add_node(op_node);

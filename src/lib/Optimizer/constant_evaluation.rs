@@ -91,7 +91,7 @@ pub fn eval_program_constants(
             }
         }
 
-        println!("Finished round {} of eval.", rounds);
+        //println!("Finished round {} of eval.", rounds);
         rounds += 1;
     }
 
