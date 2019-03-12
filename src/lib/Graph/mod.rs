@@ -1,6 +1,6 @@
 pub mod basic_block;
-pub mod node;
 pub mod graph_manager;
+pub mod node;
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;

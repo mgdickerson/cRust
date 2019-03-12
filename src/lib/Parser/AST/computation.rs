@@ -1,16 +1,17 @@
 use lib::Lexer::token::TokenCollection;
 use lib::Lexer::token::TokenType;
 
-use Parser::AST::var_decl::VarDecl;
-use Parser::AST::func_decl::FuncDecl;
 use Parser::AST::func_body::FuncBody;
+use Parser::AST::func_decl::FuncDecl;
+use Parser::AST::var_decl::VarDecl;
 
-use super::{Node, NodeType, NodeId, NodeData, IRGraphManager, Value, ValTy, Op, InstTy};
 use super::Graph;
+use super::{IRGraphManager, InstTy, Node, NodeData, NodeId, NodeType, Op, ValTy, Value};
 use lib::Graph::graph_manager::GraphManager;
+use lib::Graph::node::NodeType::exit;
 use lib::Utility::display;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Comp {
     node_type: TokenType,
     varDecl: Vec<VarDecl>,
@@ -20,15 +21,15 @@ pub struct Comp {
 
 impl Comp {
     pub fn new(tc: &mut TokenCollection) -> Self {
-        let mut varDecl = vec!();
-        let mut funcDecl = vec!();
+        let mut varDecl = vec![];
+        let mut funcDecl = vec![];
         let funcBody;
 
         while let Some(next_token) = tc.peek_next_token_type() {
             match next_token {
                 TokenType::Comment => {
                     tc.get_next_token();
-                },
+                }
                 _ => {
                     break;
                 }
@@ -39,12 +40,15 @@ impl Comp {
             TokenType::Computation => {
                 //program does in fact start with main.
                 //dont really need to do anything with that
-            },
+            }
             err => {
                 //How in the world did you not get a main token??
                 // Compiler Error :
-                panic!("Expecting file to start with keyword 'main', found unexpected Token: {:?}", err);
-            },
+                panic!(
+                    "Expecting file to start with keyword 'main', found unexpected Token: {:?}",
+                    err
+                );
+            }
         }
 
         //Start by getting next token.
@@ -53,21 +57,21 @@ impl Comp {
                 TokenType::Var | TokenType::Array => {
                     //found variable declaration
                     varDecl.push(VarDecl::new(tc));
-                },
+                }
                 TokenType::FuncDecl => {
                     //no variable declaration found, but Function delcaration found
                     //drop through
                     break;
-                },
+                }
                 TokenType::LeftBrace => {
                     //no declarations found
                     //drop through
                     break;
-                },
+                }
                 err => {
                     // Compiler Error :
                     panic!("Expected to find VarDecl, FuncDecl, or Main body start, but found unexpected Token: {:?}", err);
-                },
+                }
             }
         }
 
@@ -76,15 +80,18 @@ impl Comp {
                 TokenType::FuncDecl => {
                     //found funcDecl
                     funcDecl.push(FuncDecl::new(tc));
-                },
+                }
                 TokenType::LeftBrace => {
                     //no funcDecl found
                     break;
-                },
+                }
                 err => {
                     // Compiler Error :
-                    panic!("Expected FuncDecl or start of Main body, but found unexpected Token: {:?}", err);
-                },
+                    panic!(
+                        "Expected FuncDecl or start of Main body, but found unexpected Token: {:?}",
+                        err
+                    );
+                }
             }
         }
 
@@ -99,47 +106,62 @@ impl Comp {
                 match tc.peek_next_token_type() {
                     Some(TokenType::RightBrace) => {
                         tc.get_next_token();
-                    },
+                    }
                     None => {
                         // Compiler Error :
                         panic!("Expected '}}' Token at end of main body, found EOF.");
-                    },
+                    }
                     err => {
                         // Compiler Error :
-                        panic!("Expected '}}' Token at end of main body, found unexpected Token: {:?}", err);
-                    },
+                        panic!(
+                            "Expected '}}' Token at end of main body, found unexpected Token: {:?}",
+                            err
+                        );
+                    }
                 }
-            },
+            }
             None => {
                 // Compiler Error :
                 panic!("Expected start to main body, found EOF.");
-            },
+            }
             err => {
                 // Compiler Error :
-                panic!("Expected '{{' Token to indicate body start, found unexpected Token: {:?}", err);
-            },
+                panic!(
+                    "Expected '{{' Token to indicate body start, found unexpected Token: {:?}",
+                    err
+                );
+            }
         }
 
         match tc.peek_next_token_type() {
             Some(TokenType::ComputationEnd) => {
                 //found end of main computation
-                tc.get_next_token();    //consume '.', return
-            },
+                tc.get_next_token(); //consume '.', return
+            }
             None => {
                 // Compiler Error :
                 panic!("Expected end of main body Token '.', found EOF.");
-            },
+            }
             err => {
                 // Compiler Error :
                 panic!("Expected end of// fall through, as I cant access var_counter main body Token '.', found unexpected Token: {:?}", err);
-            },
+            }
         }
 
-        Comp { node_type: TokenType::Computation, varDecl, funcDecl, funcBody }
+        Comp {
+            node_type: TokenType::Computation,
+            varDecl,
+            funcDecl,
+            funcBody,
+        }
     }
 
-    pub fn get_value(&self) -> (Vec<VarDecl>, Vec<FuncDecl>, FuncBody)  {
-        return (self.varDecl.to_vec(), self.funcDecl.to_vec(), self.funcBody.clone())
+    pub fn get_value(&self) -> (Vec<VarDecl>, Vec<FuncDecl>, FuncBody) {
+        return (
+            self.varDecl.to_vec(),
+            self.funcDecl.to_vec(),
+            self.funcBody.clone(),
+        );
     }
 
     pub fn get_type(&self) -> TokenType {
@@ -160,12 +182,23 @@ impl Comp {
             func.to_ir(&mut ir_graph_manager);
         }
 
-        //let main_index = ir_graph_manager.new_node(String::from("Main"), NodeType::main_node).clone();
         ir_graph_manager.graph_manager().set_main_node();
         self.funcBody.to_ir(&mut ir_graph_manager);
 
         let ret_0 = ir_graph_manager.build_op_x(Value::new(ValTy::con(0)), InstTy::ret);
         ir_graph_manager.graph_manager().add_instruction(ret_0);
+
+        let bottom_node = ir_graph_manager
+            .graph_manager()
+            .get_mut_ref_current_node_index()
+            .clone();
+        let exit_index = ir_graph_manager
+            .new_node(String::from("Exit"), NodeType::exit)
+            .clone();
+
+        ir_graph_manager
+            .graph_manager()
+            .add_edge(bottom_node, exit_index);
 
         //println!("{:?}", ir_graph_manager.variable_manager().clone().get_var_map());
         //graph_manager.add_current_node_to_graph();

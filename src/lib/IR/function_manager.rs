@@ -1,26 +1,30 @@
-use lib::IR::variable_manager::{VariableManager, UniqueVariable};
-use std::collections::HashMap;
+use lib::IR::variable_manager::{UniqueVariable, VariableManager};
 use petgraph::prelude::NodeIndex;
+use std::collections::HashMap;
 
-use super::{Rc,RefCell};
+use super::{Rc, RefCell};
 use lib::Graph::node::Node;
 
 #[derive(Debug, Clone)]
 pub struct FunctionManager {
-    func_manager: HashMap<String,UniqueFunction>,
+    func_manager: HashMap<String, UniqueFunction>,
 }
 
 impl FunctionManager {
     pub fn new() -> Self {
-        FunctionManager { func_manager: HashMap::new() }
+        FunctionManager {
+            func_manager: HashMap::new(),
+        }
     }
 
-    pub fn new_function(&mut self, func_name: &String, func_index: & NodeIndex) -> UniqueFunction {
+    pub fn new_function(&mut self, func_name: &String, func_index: &NodeIndex) -> UniqueFunction {
         UniqueFunction::new(func_name.clone(), func_index)
     }
 
-    pub fn get_mut_function(&mut self, func_name: & String) -> &mut UniqueFunction {
-        self.func_manager.get_mut(func_name).expect("Attempted to get non-existent function.")
+    pub fn get_mut_function(&mut self, func_name: &String) -> &mut UniqueFunction {
+        self.func_manager
+            .get_mut(func_name)
+            .expect("Attempted to get non-existent function.")
     }
 
     pub fn add_func_to_manager(&mut self, func: UniqueFunction) {
@@ -28,13 +32,17 @@ impl FunctionManager {
     }
 
     pub fn get_function(&self, func_name: &String) -> UniqueFunction {
-        self.func_manager.get(func_name).expect("Attempted to get non-existent function.").clone()
+        self.func_manager
+            .get(func_name)
+            .expect("Attempted to get non-existent function.")
+            .clone()
     }
 
     pub fn list_functions(&self) -> Vec<(String, NodeIndex)> {
-        self.func_manager.iter().map(|(func_name, uniq_func)| {
-            (func_name.clone(), uniq_func.clone_index())
-        }).collect::<Vec<_>>()
+        self.func_manager
+            .iter()
+            .map(|(func_name, uniq_func)| (func_name.clone(), uniq_func.clone_index()))
+            .collect::<Vec<_>>()
     }
 }
 
@@ -42,7 +50,10 @@ impl FunctionManager {
 pub struct UniqueFunction {
     func_name: String,
     func_index: NodeIndex,
-    recovery_point: Option<(HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>, HashMap<String, Rc<RefCell<UniqueVariable>>>)>,
+    recovery_point: Option<(
+        HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>,
+        HashMap<String, Rc<RefCell<UniqueVariable>>>,
+    )>,
     params_to_load: Vec<String>,
     affected_globals: Vec<String>,
     assigned_globals: Vec<String>,
@@ -50,8 +61,9 @@ pub struct UniqueFunction {
 }
 
 impl UniqueFunction {
-    pub fn new(func_name: String, func_index: & NodeIndex) -> Self {
-        UniqueFunction { func_name,
+    pub fn new(func_name: String, func_index: &NodeIndex) -> Self {
+        UniqueFunction {
+            func_name,
             recovery_point: None,
             func_index: func_index.clone(),
             params_to_load: Vec::new(),
@@ -91,7 +103,7 @@ impl UniqueFunction {
 
     pub fn add_assigned_global(&mut self, global_base: &String) {
         if self.assigned_globals.contains(global_base) {
-            return
+            return;
         }
 
         self.assigned_globals.push(global_base.clone());
@@ -113,12 +125,25 @@ impl UniqueFunction {
         self.assigned_globals.clone()
     }
 
-    pub fn add_checkpoint(&mut self, checkpoint: (HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>, HashMap<String, Rc<RefCell<UniqueVariable>>>)) {
+    pub fn add_checkpoint(
+        &mut self,
+        checkpoint: (
+            HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>,
+            HashMap<String, Rc<RefCell<UniqueVariable>>>,
+        ),
+    ) {
         self.recovery_point = Some(checkpoint);
     }
 
-    pub fn recover_checkpoint(&self) -> (HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>, HashMap<String, Rc<RefCell<UniqueVariable>>>) {
-        self.recovery_point.clone().expect("Should have a recovery point before requesting one.")
+    pub fn recover_checkpoint(
+        &self,
+    ) -> (
+        HashMap<String, Vec<Rc<RefCell<UniqueVariable>>>>,
+        HashMap<String, Rc<RefCell<UniqueVariable>>>,
+    ) {
+        self.recovery_point
+            .clone()
+            .expect("Should have a recovery point before requesting one.")
     }
 
     pub fn has_return(&self) -> bool {

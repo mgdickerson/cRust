@@ -1,9 +1,9 @@
-use lib::IR::function_manager::{FunctionManager,UniqueFunction};
-use lib::IR::ir::{Value,ValTy};
-use std::collections::HashMap;
+use lib::IR::function_manager::{FunctionManager, UniqueFunction};
 use lib::IR::ir::Op;
+use lib::IR::ir::{ValTy, Value};
+use std::collections::HashMap;
 
-use super::{Rc,RefCell};
+use super::{Rc, RefCell};
 
 /// General VariableManager Layout
 ///
@@ -27,7 +27,13 @@ pub struct VariableManager {
 
 impl VariableManager {
     pub fn new() -> Self {
-        VariableManager { var_manager: HashMap::new(), var_counter: HashMap::new(), current_vars: HashMap::new(), global_vars: Vec::new(), active_func: None }
+        VariableManager {
+            var_manager: HashMap::new(),
+            var_counter: HashMap::new(),
+            current_vars: HashMap::new(),
+            global_vars: Vec::new(),
+            active_func: None,
+        }
     }
 
     pub fn clone_self(&self) -> VariableManager {
@@ -51,16 +57,14 @@ impl VariableManager {
         match &mut self.active_func {
             Some(uniq_func) => {
                 uniq_func.add_checkpoint((self.var_manager.clone(), self.current_vars.clone()));
-            },
+            }
             None => panic!("Just added, this should not fail."),
         }
     }
 
     pub fn active_function(&mut self) -> &mut UniqueFunction {
         match &mut self.active_func {
-            Some(func) => {
-                func
-            },
+            Some(func) => func,
             None => {
                 panic!("Should have active function before referencing it.");
             }
@@ -68,13 +72,16 @@ impl VariableManager {
     }
 
     pub fn get_active_function(&mut self) -> UniqueFunction {
-        let uniq_func = self.active_func.clone().expect("Should have function to recover.");
+        let uniq_func = self
+            .active_func
+            .clone()
+            .expect("Should have function to recover.");
         match &mut self.active_func {
             Some(func) => {
                 let (var_manager, current_vars) = func.recover_checkpoint();
                 self.var_manager = var_manager;
                 self.current_vars = current_vars;
-            },
+            }
             None => panic!("Should have failed when cloning."),
         }
         self.active_func = None;
@@ -86,9 +93,10 @@ impl VariableManager {
     }
 
     pub fn var_list(&self) -> Vec<String> {
-        self.var_manager.iter().map(|(key,value)| {
-            key.clone()
-        }).collect::<Vec<String>>()
+        self.var_manager
+            .iter()
+            .map(|(key, value)| key.clone())
+            .collect::<Vec<String>>()
     }
 
     pub fn var_checkpoint(&self) -> HashMap<String, Rc<RefCell<UniqueVariable>>> {
@@ -99,10 +107,13 @@ impl VariableManager {
         self.current_vars = checkpoint;
     }
 
-    pub fn build_phi_pairs(left_set: HashMap<String, Rc<RefCell<UniqueVariable>>>, right_set: HashMap<String, Rc<RefCell<UniqueVariable>>>)
-        -> Vec<(Rc<RefCell<UniqueVariable>>, Rc<RefCell<UniqueVariable>>)> {
-        let mut set = left_set.iter()
-            .filter_map(|(left_ident,left_val)| {
+    pub fn build_phi_pairs(
+        left_set: HashMap<String, Rc<RefCell<UniqueVariable>>>,
+        right_set: HashMap<String, Rc<RefCell<UniqueVariable>>>,
+    ) -> Vec<(Rc<RefCell<UniqueVariable>>, Rc<RefCell<UniqueVariable>>)> {
+        let mut set = left_set
+            .iter()
+            .filter_map(|(left_ident, left_val)| {
                 let right_val = right_set
                     .get(left_ident)
                     .expect("Build Phi Error: Should be present in both.");
@@ -114,10 +125,11 @@ impl VariableManager {
                 }
 
                 Some((Rc::clone(left_val), Rc::clone(right_val)))
-            }).collect::<Vec<_>>();
-        set.sort_by_key(|(left_key, _right_key)| {
-            left_key.borrow().base_ident.clone()
-        });
+            })
+            .collect::<Vec<_>>();
+
+        // TODO : This was removed because apparently sorting the phis is bad
+        //set.sort_by_key(|(left_key, _right_key)| left_key.borrow().base_ident.clone());
 
         set
     }
@@ -134,51 +146,79 @@ impl VariableManager {
                                     //println!("Found a match~! [{:?}] == [{:?}]", old_var, uniq);
                                     uniq.borrow_mut().update_value(new_val.clone());
                                 }
-                            },
+                            }
                             _ => {
                                 // do nothing,
-                            },
+                            }
                         }
-                    },
+                    }
                     _ => {
                         // Do nothing, like usual.
-                    },
+                    }
                 }
             }
         }
-
     }
 
-    pub fn make_unique_variable(&mut self, ident: String, value: Value, def_block: usize, def_inst: usize) -> Rc<RefCell<UniqueVariable>> {
+    pub fn make_unique_variable(
+        &mut self,
+        ident: String,
+        value: Value,
+        def_block: usize,
+        def_inst: usize,
+    ) -> Rc<RefCell<UniqueVariable>> {
         match self.var_counter.get_mut(&ident) {
             Some(ref mut count) => {
                 let current_count = count.clone();
                 **count += 1;
-                let uniq = Rc::new(RefCell::new(UniqueVariable::new(ident.clone(),value,current_count,def_block,def_inst)));
+                let uniq = Rc::new(RefCell::new(UniqueVariable::new(
+                    ident.clone(),
+                    value,
+                    current_count,
+                    def_block,
+                    def_inst,
+                )));
                 let key = ident;
-                self.var_manager.get_mut(&key).expect("Expected established key, found none.").push(Rc::clone(&uniq));
+                self.var_manager
+                    .get_mut(&key)
+                    .expect("Expected established key, found none.")
+                    .push(Rc::clone(&uniq));
 
                 // Add/Update to current_vars map
                 self.current_vars.insert(key.clone(), Rc::clone(&uniq));
 
                 //println!("Current Key: {}\tCurrent Count: {}", key, current_count);
 
-                return Rc::clone(self.var_manager.get(&key).unwrap().last().expect("There should be a last as one was just inserted."));
+                return Rc::clone(
+                    self.var_manager
+                        .get(&key)
+                        .unwrap()
+                        .last()
+                        .expect("There should be a last as one was just inserted."),
+                );
             }
             None => {
                 // variable not found in list, throw error
-                panic!("Error: variable ({}) not found within list of variables.", ident);
+                panic!(
+                    "Error: variable ({}) not found within list of variables.",
+                    ident
+                );
             }
         }
     }
 
     pub fn get_current_unique(&mut self, ident: String) -> Rc<RefCell<UniqueVariable>> {
-        let current_uniq =  self.current_vars.get(&ident).expect("Expected variable, found none.");
+        let current_uniq = self
+            .current_vars
+            .get(&ident)
+            .expect("Expected variable, found none.");
         Rc::clone(current_uniq)
     }
 
     pub fn get_latest_unique(&mut self, ident: String) -> Rc<RefCell<UniqueVariable>> {
-        let latest_unique = self.var_manager.get(&ident)
+        let latest_unique = self
+            .var_manager
+            .get(&ident)
             .expect("Expected variable to be constained, none was found.")
             .last()
             .expect("Should have at least one variable when getting latest.");
@@ -189,14 +229,14 @@ impl VariableManager {
         match &mut self.active_func {
             Some(active_func) => {
                 self.var_counter.insert(var.clone(), 0);
-            },
+            }
             None => {
                 let var_already_added = self.var_counter.insert(var.clone(), 0);
 
                 if var_already_added != None {
                     panic!("Variable {} already used", var.clone());
                 }
-            },
+            }
         }
 
         self.var_manager.insert(var.clone(), Vec::new());
@@ -209,10 +249,15 @@ impl VariableManager {
     }
 
     // Make this a general add use?
-    pub fn add_var_use(&mut self, uniq: Rc<RefCell<UniqueVariable>>, block_num: usize, inst_num: usize) {
+    pub fn add_var_use(
+        &mut self,
+        uniq: Rc<RefCell<UniqueVariable>>,
+        block_num: usize,
+        inst_num: usize,
+    ) {
         // This is currently just for use in the Phi construction, thus I want to return
         // the uniq value just before i add the usage at the Phi site.
-        uniq.borrow_mut().add_use(block_num,inst_num);
+        uniq.borrow_mut().add_use(block_num, inst_num);
     }
 
     pub fn is_valid_variable(&self, var: String) -> bool {
@@ -228,27 +273,44 @@ pub struct UniqueVariable {
     value: Value,
     def_block: usize,
     def_inst: usize,
-    used: Option<Vec<(usize,usize)>>,
+    used: Option<Vec<(usize, usize)>>,
 }
 
 impl UniqueVariable {
-    pub fn new(ident: String, value: Value, count: usize, def_block: usize, def_inst: usize) -> Self {
+    pub fn new(
+        ident: String,
+        value: Value,
+        count: usize,
+        def_block: usize,
+        def_inst: usize,
+    ) -> Self {
         let base_ident = ident.clone();
         let unique_ident = String::from("%") + &ident + "_" + &count.to_string();
-        UniqueVariable { unique_ident, base_ident, value, def_block, def_inst, used: None }
+        UniqueVariable {
+            unique_ident,
+            base_ident,
+            value,
+            def_block,
+            def_inst,
+            used: None,
+        }
     }
 
     pub fn get_ident(&self) -> String {
         self.unique_ident.clone()
     }
 
-    pub fn get_base_ident(&self) -> String { self.base_ident.clone() }
+    pub fn get_base_ident(&self) -> String {
+        self.base_ident.clone()
+    }
 
     pub fn update_value(&mut self, new_val: Value) {
         self.value = new_val;
     }
 
-    pub fn get_value(&self) -> Value { self.value.clone() }
+    pub fn get_value(&self) -> Value {
+        self.value.clone()
+    }
 
     pub fn value_to_string(&self) -> String {
         self.value.get_value().to_string()
@@ -262,21 +324,23 @@ impl UniqueVariable {
         ret_string
     }
 
-    pub fn get_uses(&self) -> Option<Vec<(usize,usize)>> {
+    pub fn get_uses(&self) -> Option<Vec<(usize, usize)>> {
         self.used.clone()
     }
 
-    pub fn get_block(&self) -> usize { self.def_block.clone() }
+    pub fn get_block(&self) -> usize {
+        self.def_block.clone()
+    }
 
     pub fn add_use(&mut self, block_num: usize, inst_num: usize) {
         match &mut self.used {
             Some(uses_vec) => {
                 if uses_vec.contains(&(block_num, inst_num)) {
-                    return
+                    return;
                 }
-                uses_vec.push((block_num,inst_num));
-                return
-            },
+                uses_vec.push((block_num, inst_num));
+                return;
+            }
             None => {
                 // pass through
             }
@@ -285,8 +349,8 @@ impl UniqueVariable {
         // this will only hit if use vector is not already present
         self.used = Some(Vec::new());
         match &mut self.used {
-            Some(some) => some.push((block_num,inst_num)),
-            None => { panic!("Unreachable Error.") },
+            Some(some) => some.push((block_num, inst_num)),
+            None => panic!("Unreachable Error."),
         }
     }
 

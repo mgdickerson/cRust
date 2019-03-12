@@ -14,9 +14,9 @@ impl AddressManager {
     pub fn new() -> Self {
         AddressManager {
             register_manager: HashMap::new(),
-            current_available_addr : 0,
-            base_addr : 0,
-            global_addr : 0,
+            current_available_addr: 0,
+            base_addr: 0,
+            global_addr: 0,
             frame_pointer: 0,
             stack_pointer: 0,
         }
@@ -54,7 +54,10 @@ pub struct UniqueAddress {
 
 impl UniqueAddress {
     pub fn new(ident: String, reg_val: usize) -> Self {
-        UniqueAddress { base_ident: ident, register_value: reg_val }
+        UniqueAddress {
+            base_ident: ident,
+            register_value: reg_val,
+        }
     }
 
     pub fn to_string(&self) -> String {

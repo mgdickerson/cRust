@@ -1,22 +1,22 @@
+use super::{Rc, RefCell};
 use lib::Parser::AST::number::Number;
-use lib::IR::ir::{Value,ValTy,Op,InstTy};
+use lib::IR::ir::{InstTy, Op, ValTy, Value};
 use std::collections::HashMap;
-use super::{Rc,RefCell};
 
 use lib::Graph::graph_manager::GraphManager;
-use lib::Graph::node::{Node,NodeId,NodeData,NodeType};
+use lib::Graph::node::{Node, NodeData, NodeId, NodeType};
 
+use super::address_manager::{AddressManager, UniqueAddress};
+use super::array_manager::{ArrayManager, UniqueArray};
+use super::function_manager::{FunctionManager, UniqueFunction};
+use super::variable_manager::{UniqueVariable, VariableManager};
 use super::Graph;
-use super::variable_manager::{VariableManager, UniqueVariable};
-use super::array_manager::{ArrayManager,UniqueArray};
-use super::address_manager::{AddressManager,UniqueAddress};
-use super::function_manager::{FunctionManager,UniqueFunction};
-use petgraph::graph::NodeIndex;
-use petgraph::algo::dominators::Dominators;
 use petgraph::algo::dominators;
+use petgraph::algo::dominators::Dominators;
+use petgraph::graph::NodeIndex;
 
 /// Rough Draft of IR_Manager Rewrite
-
+#[derive(Clone)]
 pub struct IRGraphManager {
     // Tracker for BlockId, which should match NodeId
     bt: BlockTracker,
@@ -49,9 +49,7 @@ impl IRGraphManager {
         let mut it = InstTracker::new();
         let mut bt = BlockTracker::new();
 
-        let graph_manager = GraphManager::
-        new(graph, &mut it, &mut bt);
-
+        let graph_manager = GraphManager::new(graph, &mut bt);
 
         IRGraphManager {
             bt,
@@ -73,36 +71,112 @@ impl IRGraphManager {
 
     pub fn build_op(&mut self, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
-        Op::build_op(None, None, None, self.get_block_num(), self.get_inst_num(), inst_type, &mut self.var_manager)
+        Op::build_op(
+            None,
+            None,
+            None,
+            self.get_block_num(),
+            self.get_inst_num(),
+            inst_type,
+            &mut self.var_manager,
+        )
+    }
+
+    pub fn build_op_in_block(&mut self, inst_type: InstTy, block_id: usize) -> Op {
+        self.inc_inst_tracker();
+        Op::build_op(
+            None,
+            None,
+            None,
+            block_id,
+            self.get_inst_num(),
+            inst_type,
+            &mut self.var_manager,
+        )
     }
 
     pub fn build_op_x(&mut self, x_val: Value, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
-        Op::build_op(Some(x_val), None, None, self.get_block_num(), self.get_inst_num(), inst_type, &mut self.var_manager)
+        Op::build_op(
+            Some(x_val),
+            None,
+            None,
+            self.get_block_num(),
+            self.get_inst_num(),
+            inst_type,
+            &mut self.var_manager,
+        )
     }
 
     pub fn build_op_x_y(&mut self, x_val: Value, y_val: Value, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
-        Op::build_op(Some(x_val),
-                     Some(y_val),
-                     None,
-                     self.get_block_num(),
-                     self.get_inst_num(),
-                     inst_type,
-                     &mut self.var_manager)
+        Op::build_op(
+            Some(x_val),
+            Some(y_val),
+            None,
+            self.get_block_num(),
+            self.get_inst_num(),
+            inst_type,
+            &mut self.var_manager,
+        )
+    }
+
+    pub fn build_op_x_y_in_block(&mut self, x_val: Value, y_val: Value, inst_type: InstTy, block_id: usize) -> Op {
+        self.inc_inst_tracker();
+        Op::build_op(
+            Some(x_val),
+            Some(y_val),
+            None,
+            block_id,
+            self.get_inst_num(),
+            inst_type,
+            &mut self.var_manager,
+        )
     }
 
     pub fn build_op_y(&mut self, y_val: Value, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
-        Op::build_op(None, Some(y_val), None, self.get_block_num(), self.get_inst_num(), inst_type, &mut self.var_manager)
+        Op::build_op(
+            None,
+            Some(y_val),
+            None,
+            self.get_block_num(),
+            self.get_inst_num(),
+            inst_type,
+            &mut self.var_manager,
+        )
+    }
+
+    pub fn build_op_y_in_block(&mut self, y_val: Value, inst_type: InstTy, block_id: usize) -> Op {
+        self.inc_inst_tracker();
+        Op::build_op(
+            None,
+            Some(y_val),
+            None,
+            block_id,
+            self.get_inst_num(),
+            inst_type,
+            &mut self.var_manager,
+        )
     }
 
     pub fn build_spec_op(&mut self, special_val: &String, inst_type: InstTy) -> Op {
         self.inc_inst_tracker();
-        Op::build_op(None, None, Some(special_val.clone()), self.get_block_num(), self.get_inst_num(), inst_type, &mut self.var_manager)
+        Op::build_op(
+            None,
+            None,
+            Some(special_val.clone()),
+            self.get_block_num(),
+            self.get_inst_num(),
+            inst_type,
+            &mut self.var_manager,
+        )
     }
 
-    pub fn loop_variable_correction(&mut self, vars: Vec<(Rc<RefCell<UniqueVariable>>,usize)>) -> Vec<(Rc<RefCell<UniqueVariable>>,usize,usize)> {
+    pub fn loop_variable_correction(
+        &mut self,
+        vars: Vec<(Rc<RefCell<UniqueVariable>>, usize)>,
+    ) -> Vec<(Rc<RefCell<UniqueVariable>>, usize, usize)> {
         // Grab current_node ID so that we dont alter any uses before the occurrence of this node.
         let current_node = self.graph_manager.clone_node_index();
         let node_starting_point = self.graph_manager.get_node_id(current_node);
@@ -112,47 +186,53 @@ impl IRGraphManager {
         let mut local_var_manager = self.var_manager.clone_self();
 
         // Make map of current graph.
-        let mut graph_map = self.graph_manager.get_mut_ref_graph()
+        let mut graph_map = self
+            .graph_manager
+            .get_mut_ref_graph()
             .node_weights_mut()
             .map(|node| {
                 let block_num = node.get_node_id();
                 (block_num, node)
-            }).collect::<HashMap<usize,&mut Node>>();
+            })
+            .collect::<HashMap<usize, &mut Node>>();
 
         // Perform iteration and correction
-        vars.iter().filter_map(|(uniq, phi_inst)| {
-            match uniq.borrow().get_uses() {
+        vars.iter()
+            .filter_map(|(uniq, phi_inst)| match uniq.borrow().get_uses() {
                 Some(uses) => Some((uniq, uses, phi_inst)),
                 None => None,
-            }
-        }).for_each(|(uniq, uses, phi_inst)| {
-            // TODO : Issue being run in to, is that because assignments dont make instructions, they are not updating their phi's correctly.
-            // TODO : Need to go through the variable manager and check to see if any matching assignments were made in the block. If so, update them.
+            })
+            .for_each(|(uniq, uses, phi_inst)| {
+                // TODO : Issue being run in to, is that because assignments dont make instructions, they are not updating their phi's correctly.
+                // TODO : Need to go through the variable manager and check to see if any matching assignments were made in the block. If so, update them.
 
-            //????
-            // TODO : Forgot to add the uses for when build is called....
+                //????
+                // TODO : Forgot to add the uses for when build is called....
 
-            //println!("Current Node Id: {}\tPhi Inst: {}", node_starting_point.clone(), phi_inst);
-            for (block_num, inst_num) in uses {
-                //println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.borrow().get_ident(), block_num, inst_num);
-                if block_num >= node_starting_point {
-                    remove_use_vec.push((Rc::clone(uniq),block_num,inst_num));
-                    vars_to_correct.push(Rc::clone(uniq));
-                    let node = graph_map.get_mut(&block_num).expect("Block number should exist");
-                    for inst in node.get_mut_data_ref().get_mut_inst_list_ref() {
-                        if inst.borrow().get_inst_num() != phi_inst.clone() {
-                            let uniq_base = uniq.borrow().get_base_ident();
-                            let old_val = Value::new(ValTy::var(Rc::clone(uniq)));
-                            let new_val = Value::new(ValTy::var(Rc::clone(&local_var_manager.get_latest_unique(uniq_base))));
-                            //println!("Inst before: {:?}", inst.borrow());
-                            inst.borrow_mut().var_cleanup(old_val,new_val);
-                            //println!("Inst after: {:?}", inst.borrow());
+                //println!("Current Node Id: {}\tPhi Inst: {}", node_starting_point.clone(), phi_inst);
+                for (block_num, inst_num) in uses {
+                    //println!("Uniq: {}\tBlock: {}\tInst: {}", uniq.borrow().get_ident(), block_num, inst_num);
+                    if block_num >= node_starting_point {
+                        remove_use_vec.push((Rc::clone(uniq), block_num, inst_num));
+                        vars_to_correct.push(Rc::clone(uniq));
+                        let node = graph_map
+                            .get_mut(&block_num)
+                            .expect("Block number should exist");
+                        for inst in node.get_mut_data_ref().get_mut_inst_list_ref() {
+                            if inst.borrow().get_inst_num() != phi_inst.clone() {
+                                let uniq_base = uniq.borrow().get_base_ident();
+                                let old_val = Value::new(ValTy::var(Rc::clone(uniq)));
+                                let new_val = Value::new(ValTy::var(Rc::clone(
+                                    &local_var_manager.get_latest_unique(uniq_base),
+                                )));
+                                //println!("Inst before: {:?}", inst.borrow());
+                                inst.borrow_mut().var_cleanup(old_val, new_val);
+                                //println!("Inst after: {:?}", inst.borrow());
+                            }
                         }
                     }
                 }
-            }
-
-        });
+            });
 
         //println!("Uses to Remove: {:?}", remove_use_vec.clone());
         self.var_manager = local_var_manager;
@@ -160,7 +240,9 @@ impl IRGraphManager {
         for uniq in vars_to_correct {
             let uniq_base = uniq.borrow().get_base_ident();
             let old_val = Value::new(ValTy::var(Rc::clone(&uniq)));
-            let new_val = Value::new(ValTy::var(Rc::clone(&self.var_manager.get_latest_unique(uniq_base))));
+            let new_val = Value::new(ValTy::var(Rc::clone(
+                &self.var_manager.get_latest_unique(uniq_base),
+            )));
 
             self.var_manager.loop_correction(old_val, new_val);
         }
@@ -174,10 +256,13 @@ impl IRGraphManager {
         &mut self.graph_manager
     }
 
+    pub fn graph_manager_ref(&self) -> &GraphManager {
+        &self.graph_manager
+    }
+
     pub fn new_node(&mut self, node_tag: String, node_type: NodeType) -> &NodeIndex {
-        let it = &mut self.it;
         let bt = &mut self.bt;
-        self.graph_manager.new_node(node_tag, it, bt, node_type)
+        self.graph_manager.new_node(node_tag, bt, node_type)
     }
 
     /// Tracker Specific Functions ///
@@ -206,31 +291,34 @@ impl IRGraphManager {
     }
 
     pub fn add_global(&mut self, var: &String) {
-        let add_var_inst = self.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(0)), InstTy::add);
-        let init_val = self.graph_manager.add_instruction(add_var_inst);
+        let init_val = Value::new(ValTy::con(0));
 
         let block_num = self.get_block_num();
         let inst_num = self.get_inst_num();
-        self.var_manager.add_global(var, init_val, block_num, inst_num);
+        self.var_manager
+            .add_global(var, init_val, block_num, inst_num);
     }
 
     pub fn add_variable(&mut self, var: &String) {
-        let add_var_inst = self.build_op_x_y(Value::new(ValTy::con(0)), Value::new(ValTy::con(0)), InstTy::add);
-        let init_val = self.graph_manager.add_instruction(add_var_inst);
+        let init_val = Value::new(ValTy::con(0));
 
         let block_num = self.get_block_num();
         let inst_num = self.get_inst_num();
-        self.var_manager.add_variable(var, init_val, block_num, inst_num);
+        self.var_manager
+            .add_variable(var, init_val, block_num, inst_num);
     }
 
-    pub fn get_current_unique(&mut self, ident: & String) -> Rc<RefCell<UniqueVariable>> {
+    pub fn get_current_unique(&mut self, ident: &String) -> Rc<RefCell<UniqueVariable>> {
         let mut block_num = self.get_block_num();
         let mut inst_num = self.get_inst_num() + 1;
         self.var_manager.get_current_unique(ident.clone())
     }
 
-    pub fn insert_phi_inst(&mut self, left_set: HashMap<String, Rc<RefCell<UniqueVariable>>>, right_set: HashMap<String, Rc<RefCell<UniqueVariable>>>)
-        -> Vec<(Rc<RefCell<UniqueVariable>>, usize)> {
+    pub fn insert_phi_inst(
+        &mut self,
+        left_set: HashMap<String, Rc<RefCell<UniqueVariable>>>,
+        right_set: HashMap<String, Rc<RefCell<UniqueVariable>>>,
+    ) -> Vec<(Rc<RefCell<UniqueVariable>>, usize)> {
         let phi_set = VariableManager::build_phi_pairs(left_set, right_set);
         let mut inst_position = 0;
         let mut while_touch_up_vars = Vec::new();
@@ -239,8 +327,10 @@ impl IRGraphManager {
             let block_num = self.get_block_num();
             let inst_num = self.it.get();
 
-            self.var_manager.add_var_use(Rc::clone(&left_var), block_num, inst_num + 1);
-            self.var_manager.add_var_use(Rc::clone(&right_var), block_num, inst_num + 1);
+            self.var_manager
+                .add_var_use(Rc::clone(&left_var), block_num, inst_num + 1);
+            self.var_manager
+                .add_var_use(Rc::clone(&right_var), block_num, inst_num + 1);
 
             let left_val = Value::new(ValTy::var(Rc::clone(&left_var)));
             let right_val = Value::new(ValTy::var(Rc::clone(&right_var)));
@@ -248,14 +338,15 @@ impl IRGraphManager {
             let inst_val = self.graph_manager.insert_instruction(inst_position, inst);
 
             // make new unique variable with phi value
-            self.var_manager.make_unique_variable(left_var.borrow().get_base_ident(),
+            self.var_manager.make_unique_variable(
+                left_var.borrow().get_base_ident(),
                 inst_val,
                 block_num,
-                inst_num + 1);
+                inst_num + 1,
+            );
 
             //while_touch_up_vars.push(left_uniq.clone());
             while_touch_up_vars.push((Rc::clone(&right_var), inst_num + 1));
-
 
             inst_position += 1;
         }
@@ -269,7 +360,12 @@ impl IRGraphManager {
         &mut self.array_manager
     }
 
-    pub fn build_array_inst(&mut self, uniq_array: UniqueArray, val_vec: Vec<Value>, val_to_assign: Option<Value>) -> Value {
+    pub fn build_array_inst(
+        &mut self,
+        uniq_array: UniqueArray,
+        val_vec: Vec<Value>,
+        val_to_assign: Option<Value>,
+    ) -> Value {
         ArrayManager::build_inst(self, uniq_array, val_vec, val_to_assign)
     }
 
@@ -286,7 +382,7 @@ impl IRGraphManager {
         &mut self.func_manager
     }
 
-    pub fn new_function(&mut self, func_name: String, func_index: & NodeIndex) {
+    pub fn new_function(&mut self, func_name: String, func_index: &NodeIndex) {
         self.is_func = true;
         let func = self.func_manager.new_function(&func_name, func_index);
         self.array_manager.add_active_function(func.clone());
@@ -301,7 +397,7 @@ impl IRGraphManager {
     pub fn get_func_call(&mut self, func_name: &String) -> UniqueFunction {
         if self.is_func {
             if func_name.clone() == self.var_manager.active_function().get_name() {
-                return self.var_manager.active_function().clone()
+                return self.var_manager.active_function().clone();
             }
         }
 

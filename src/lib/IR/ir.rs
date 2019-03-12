@@ -1,12 +1,15 @@
-use lib::IR::variable_manager::{UniqueVariable, VariableManager};
-use lib::IR::array_manager::UniqueArray;
 use lib::IR::address_manager::UniqueAddress;
+use lib::IR::array_manager::UniqueArray;
 use lib::IR::ret_register::RetRegister;
+use lib::IR::variable_manager::{UniqueVariable, VariableManager};
 
-use super::{Rc,RefCell};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use super::{Rc, RefCell};
+use lib::RegisterAllocator::RegisterAllocation;
 use petgraph::graph::NodeIndex;
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub struct Value {
     val: ValTy,
 }
@@ -40,7 +43,7 @@ impl Value {
     }
 }
 
-#[derive(Debug,Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ValTy {
     op(Rc<RefCell<Op>>),
     node_id(NodeIndex),
@@ -49,26 +52,55 @@ pub enum ValTy {
     adr(UniqueAddress),
     arr(UniqueArray),
     ret(RetRegister),
+    reg(RegisterAllocation),
+}
+
+impl Hash for ValTy {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match &self {
+            ValTy::op(op) => {
+                op.borrow().get_inst_num().hash(state);
+            }
+            ValTy::node_id(node_id) => {
+                node_id.index().hash(state);
+            },
+            ValTy::con(con) => {
+                con.clone().hash(state);
+            },
+            ValTy::var(var) => {
+                0.hash(state);
+            },
+            ValTy::adr(adr) => {
+                adr.to_string().hash(state);
+            },
+            ValTy::arr(arr) => {
+                arr.to_string().hash(state);
+            },
+            ValTy::ret(ret) => {
+                ret.to_string().hash(state);
+            },
+            ValTy::reg(reg) => {
+                reg.to_string().hash(state);
+            },
+        }
+    }
 }
 
 impl ValTy {
     pub fn to_string(&self) -> String {
         match &self {
             ValTy::op(op) => op.borrow().get_return_value(),
-            ValTy::node_id(id) => {
-                String::from("[") + &id.index().to_string() + "]"
-            },
-            ValTy::con(con) => {
-                String::from("#") + &con.to_string()
-            },
+            ValTy::node_id(id) => String::from("[") + &id.index().to_string() + "]",
+            ValTy::con(con) => String::from("#") + &con.to_string(),
             ValTy::var(var) => {
                 // Temporarily, I want it to output var name
                 var.borrow().value_to_string()
                 //var.borrow().get_ident()
-            },
+            }
             ValTy::adr(adr) => adr.to_string(),
             ValTy::arr(arr) => arr.to_string(),
             ValTy::ret(ret) => ret.to_string(),
+            ValTy::reg(reg) => reg.to_string(),
         }
     }
 }
@@ -91,56 +123,66 @@ pub struct Op {
 }
 
 impl Op {
-    pub fn new(x_val: Option<Value>,
-               y_val: Option<Value>,
-               special_val: Option<String>,
-               inst_number: usize,
-               block_number: usize,
-               inst_type: InstTy) -> Self
-    {
+    pub fn new(
+        x_val: Option<Value>,
+        y_val: Option<Value>,
+        special_val: Option<String>,
+        inst_number: usize,
+        block_number: usize,
+        inst_type: InstTy,
+    ) -> Self {
         let mut p_command = String::new();
 
-        Op { x_val , y_val , special_val, inst_number, block_number, inst_type, is_active: true, p_command }
+        Op {
+            x_val,
+            y_val,
+            special_val,
+            inst_number,
+            block_number,
+            inst_type,
+            is_active: true,
+            p_command,
+        }
     }
 
-    pub fn build_op(x_val: Option<Value>,
-                    y_val: Option<Value>,
-                    special_val: Option<String>,
-                    block_number: usize,
-                    inst_number: usize,
-                    inst_type: InstTy,
-                    var_manager: &mut VariableManager) -> Op {
+    pub fn build_op(
+        x_val: Option<Value>,
+        y_val: Option<Value>,
+        special_val: Option<String>,
+        block_number: usize,
+        inst_number: usize,
+        inst_type: InstTy,
+        var_manager: &mut VariableManager,
+    ) -> Op {
         // TODO : now I can add uses to variables as the operation is being built. should make the numbers far more accurate.
         match &x_val {
-            Some(val) => {
-                match val.get_value() {
-                    ValTy::var(var) => {
-                        var.borrow_mut().add_use(block_number, inst_number);
-                    },
-                    _ => {},
+            Some(val) => match val.get_value() {
+                ValTy::var(var) => {
+                    var.borrow_mut().add_use(block_number, inst_number);
                 }
+                _ => {}
             },
-            None => {},
+            None => {}
         }
 
         match &y_val {
-            Some(val) => {
-                match val.get_value() {
-                    ValTy::var(var) => {
-                        var.borrow_mut().add_use(block_number, inst_number);
-                    }
-                    _ => {},
+            Some(val) => match val.get_value() {
+                ValTy::var(var) => {
+                    var.borrow_mut().add_use(block_number, inst_number);
                 }
+                _ => {}
             },
-            None => {},
+            None => {}
         }
 
-        Op::new(x_val,
-                y_val,
-                special_val,
-                inst_number,
-                block_number,
-                inst_type)
+        Op::new(
+            x_val,
+            y_val,
+            special_val,
+            inst_number,
+            block_number,
+            inst_type,
+        )
     }
 
     // TODO : Switch string building out of initialization and make it part of this command.
@@ -150,30 +192,49 @@ impl Op {
 
         match &inst_type.clone() {
             // Op //
-            InstTy::read | InstTy::end | InstTy::writeNL => {
+            InstTy::read | InstTy::end | InstTy::writeNL | InstTy::kill => {
                 p_command = inst_type.to_string();
             }
             // Op x //
             InstTy::neg | InstTy::write | InstTy::ret => {
-                p_command = inst_type.to_string() + " " + &self.x_val.clone().unwrap().get_value().to_string();
+                p_command = inst_type.to_string()
+                    + " "
+                    + &self.x_val.clone().unwrap().get_value().to_string();
             }
             // Op x y //
-            InstTy::add | InstTy::sub | InstTy::mul |
-            InstTy::div | InstTy::cmp | InstTy::adda |
-            InstTy::bne | InstTy::beq | InstTy::ble |
-            InstTy::blt | InstTy::bge | InstTy::bgt |
-            InstTy::phi => {
-                p_command = inst_type.to_string() + " " + &self.x_val.clone().unwrap().get_value().to_string()
-                    + " " + &self.y_val.clone().unwrap().get_value().to_string();
+            InstTy::add
+            | InstTy::sadd
+            | InstTy::sub
+            | InstTy::mul
+            | InstTy::div
+            | InstTy::cmp
+            | InstTy::adda
+            | InstTy::bne
+            | InstTy::beq
+            | InstTy::ble
+            | InstTy::blt
+            | InstTy::bge
+            | InstTy::bgt
+            | InstTy::phi => {
+                p_command = inst_type.to_string()
+                    + " "
+                    + &self.x_val.clone().unwrap().get_value().to_string()
+                    + " "
+                    + &self.y_val.clone().unwrap().get_value().to_string();
             }
             // Op y //
-            InstTy::load | InstTy::bra => {
-                p_command = inst_type.to_string() + " " + &self.y_val.clone().unwrap().get_value().to_string();
+            InstTy::load | InstTy::sload | InstTy::bra => {
+                p_command = inst_type.to_string()
+                    + " "
+                    + &self.y_val.clone().unwrap().get_value().to_string();
             }
             // Op y x //
             InstTy::store | InstTy::mov => {
-                p_command = inst_type.to_string() + " " + &self.y_val.clone().unwrap().get_value().to_string() +
-                    " " + &self.x_val.clone().unwrap().get_value().to_string();
+                p_command = inst_type.to_string()
+                    + " "
+                    + &self.y_val.clone().unwrap().get_value().to_string()
+                    + " "
+                    + &self.x_val.clone().unwrap().get_value().to_string();
             }
             // Op [x] //
             InstTy::call => {
@@ -181,17 +242,27 @@ impl Op {
                 match &self.special_val {
                     Some(val_str) => {
                         p_command += &val_str;
-                    },
+                    }
                     None => {
                         panic!("Should probably always have a string value.");
-                    },
+                    }
                 }
             }
 
-            _ => { panic!("Error in Op construction, unexpected inst_type found."); }
+            _ => {
+                panic!("Error in Op construction, unexpected inst_type found.");
+            }
         }
 
         p_command
+    }
+
+    pub fn get_active_base_op(&self) -> Option<Op> {
+        if !self.is_active {
+            None
+        } else {
+            Some(self.clone())
+        }
     }
 
     pub fn update_inst_ty(&mut self, new_inst_ty: InstTy) {
@@ -211,7 +282,11 @@ impl Op {
     }
 
     pub fn get_values(&self) -> (Option<Value>, Option<Value>, Option<String>) {
-        (self.x_val.clone(), self.y_val.clone(), self.special_val.clone())
+        (
+            self.x_val.clone(),
+            self.y_val.clone(),
+            self.special_val.clone(),
+        )
     }
 
     pub fn get_val_ty(&self) -> (Option<ValTy>, Option<ValTy>) {
@@ -221,19 +296,19 @@ impl Op {
         match &self.x_val {
             Some(x_value) => {
                 x_val = Some(x_value.get_value().clone());
-            },
+            }
             None => {
                 x_val = None;
-            },
+            }
         }
 
         match &self.y_val {
             Some(y_value) => {
                 y_val = Some(y_value.get_value().clone());
-            },
+            }
             None => {
                 y_val = None;
-            },
+            }
         }
 
         (x_val, y_val)
@@ -285,9 +360,11 @@ impl Op {
         self.block_number.clone()
     }
 
-    pub fn get_inst_num(&self) -> usize { self.inst_number.clone() }
+    pub fn get_inst_num(&self) -> usize {
+        self.inst_number.clone()
+    }
 
-    pub fn update_inst_num(&mut self, new_inst_num: & usize) {
+    pub fn update_inst_num(&mut self, new_inst_num: &usize) {
         self.inst_number = new_inst_num.clone();
     }
 
@@ -329,7 +406,7 @@ impl Op {
                     //println!("Clean cycle reaches x_val replacement for {}.", var_to_clean.get_value().to_string());
                     self.x_val = Some(replacement_var.clone());
                 }
-            },
+            }
             None => {
                 // There is no variable to clean, pass through.
             }
@@ -342,7 +419,7 @@ impl Op {
                     //println!("Clean cycle reaches y_val replacement for {}.", var_to_clean.get_value().to_string());
                     self.y_val = Some(replacement_var.clone());
                 }
-            },
+            }
             None => {
                 // There is no variable to clean, pass through.
             }
@@ -355,6 +432,30 @@ impl std::fmt::Debug for Op {
         write!(f, "({}): {}; \\l ", self.inst_number, self.to_string())
     }
 }
+
+impl Hash for Op {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.inst_type.hash(state);
+        match &self.x_val {
+            Some(x_val) => {
+                x_val.clone().hash(state);
+            },
+            None => {
+                0.hash(state);
+            }
+        }
+        match &self.y_val {
+            Some(y_val) => {
+                y_val.clone().hash(state);
+            },
+            None => {
+                0.hash(state);
+            }
+        }
+    }
+}
+
+impl Eq for Op {}
 
 impl PartialEq for Op {
     fn eq(&self, other: &Op) -> bool {
@@ -378,7 +479,8 @@ impl PartialEq for Op {
                                         if let ValTy::op(self_op_y) = self_some_y {
                                             let y_inst_num = self_op_y.borrow().get_inst_num();
                                             if let ValTy::op(other_op_y) = other_some_y {
-                                                let y_other_inst_num = other_op_y.borrow().get_inst_num();
+                                                let y_other_inst_num =
+                                                    other_op_y.borrow().get_inst_num();
                                                 if y_inst_num == y_other_inst_num {
                                                     return true;
                                                 } else {
@@ -388,10 +490,10 @@ impl PartialEq for Op {
                                                 return false;
                                             }
                                         }
-                                    },
+                                    }
                                     (None, None) => {
                                         return true;
-                                    },
+                                    }
                                     _ => {
                                         return false;
                                     }
@@ -403,10 +505,10 @@ impl PartialEq for Op {
                             return false;
                         }
                     }
-                },
+                }
                 (None, None) => {
                     return true;
-                },
+                }
                 _ => {
                     return false;
                 }
@@ -431,6 +533,7 @@ pub enum InstTy {
     read,
     end,
     writeNL,
+    kill,
 
     /// Op x ///
     neg,
@@ -439,6 +542,7 @@ pub enum InstTy {
 
     /// Op x y ///
     add,
+    sadd,
     sub,
     mul,
     div,
@@ -456,6 +560,7 @@ pub enum InstTy {
 
     /// Op y ///
     load,
+    sload,
     bra,
 
     /// Op y x ///
@@ -470,44 +575,49 @@ impl InstTy {
     pub fn to_string(&self) -> String {
         match self {
             /// Op ///
-            InstTy::read => { String::from("read") },
-            InstTy::end => { String::from("end") },
-            InstTy::writeNL => { String::from("writeNL") },
+            InstTy::read => String::from("read"),
+            InstTy::end => String::from("end"),
+            InstTy::writeNL => String::from("writeNL"),
+            InstTy::kill => String::from("kill"),
 
             /// Op x ///
-            InstTy::neg => { String::from("neg") },
-            InstTy::write => { String::from("write") },
-            InstTy::ret => { String::from("ret") },
+            InstTy::neg => String::from("neg"),
+            InstTy::write => String::from("write"),
+            InstTy::ret => String::from("ret"),
 
             /// Op x y ///
-            InstTy::add => { String::from("add") },
-            InstTy::sub => { String::from("sub") },
-            InstTy::mul => { String::from("mul") },
-            InstTy::div => { String::from("div") },
-            InstTy::cmp => { String::from("cmp") },
-            InstTy::adda => { String::from("adda") },
+            InstTy::add => String::from("add"),
+            InstTy::sadd => String::from("spill_add"),
+            InstTy::sub => String::from("sub"),
+            InstTy::mul => String::from("mul"),
+            InstTy::div => String::from("div"),
+            InstTy::cmp => String::from("cmp"),
+            InstTy::adda => String::from("adda"),
 
-            InstTy::bne => { String::from("bne") },
-            InstTy::beq => { String::from("beq") },
-            InstTy::ble => { String::from("ble") },
-            InstTy::blt => { String::from("blt") },
-            InstTy::bge => { String::from("bge") },
-            InstTy::bgt => { String::from("bgt") },
+            InstTy::bne => String::from("bne"),
+            InstTy::beq => String::from("beq"),
+            InstTy::ble => String::from("ble"),
+            InstTy::blt => String::from("blt"),
+            InstTy::bge => String::from("bge"),
+            InstTy::bgt => String::from("bgt"),
 
-            InstTy::phi => { String::from("phi") },
+            InstTy::phi => String::from("phi"),
 
             /// Op y ///
-            InstTy::load => { String::from("load") },
-            InstTy::bra => { String::from("bra") },
+            InstTy::load => String::from("load"),
+            InstTy::sload => String::from("spill_load"),
+            InstTy::bra => String::from("bra"),
 
             /// Op y x ///
-            InstTy::store => { String::from("store") },
-            InstTy::mov => { String::from("move") },
+            InstTy::store => String::from("store"),
+            InstTy::mov => String::from("move"),
 
             /// Op [x] ///
-            InstTy::call => { String::from("call") },
+            InstTy::call => String::from("call"),
 
-            _ => { panic!("Error occurred, was not a default type."); }
+            _ => {
+                panic!("Error occurred, was not a default type.");
+            }
         }
     }
 }
