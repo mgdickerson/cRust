@@ -202,6 +202,18 @@ impl RegisterAllocation {
         RegisterAllocation { reg: 0 }
     }
 
+    pub fn allocate_R28() -> Self {
+        RegisterAllocation{ reg: 28 }
+    }
+
+    pub fn allocate_R29() -> Self {
+        RegisterAllocation{ reg: 29 }
+    }
+
+    pub fn allocate_R31() -> Self {
+        RegisterAllocation{ reg: 31 }
+    }
+
     pub fn to_string(&self) -> String {
         String::from("R") + &self.reg.to_string()
     }

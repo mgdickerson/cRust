@@ -45,6 +45,8 @@ pub fn clean_graph(
         irgm.graph_manager().remove_inactive_inst(node_index);
     }
 
+    // TODO : Add a pass for checking if a branch is necessary.
+
     // Removing empty (or useless) nodes.
     // The order of removed nodes is very important as it can shift the numbers below them.
     // Thus reversing the traversal is important.

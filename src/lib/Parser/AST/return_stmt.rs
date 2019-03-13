@@ -6,6 +6,7 @@ use super::Graph;
 use super::{IRGraphManager, InstTy, Node, NodeData, NodeId, Op, ValTy, Value};
 use lib::Graph::node::NodeType;
 use lib::Graph::node::NodeType::exit;
+use lib::RegisterAllocator::RegisterAllocation;
 
 #[derive(Debug, Clone)]
 pub struct ReturnStmt {
@@ -108,9 +109,28 @@ impl ReturnStmt {
             let new_global_val = irgm.graph_manager().add_instruction(inst);
         }
 
-        // This will be a special instruction that always returns values on register R27;
-        let ret_inst = irgm.build_op_x(
+        // If unique function has a return, pre-load space for a return.
+        let param_addr_val =
+            Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+
+        let return_address_val = Value::new(ValTy::adr(
+            irgm.address_manager().get_addr_assignment(&String::from("return"), 4),
+        ));
+
+        // For the stack based approach to function calls, all returns are passed to the return spot in stack
+        let add_inst = irgm.build_op_x_y(param_addr_val, return_address_val, InstTy::adda);
+        let add_val = irgm.graph_manager().add_instruction(add_inst);
+
+        let r0_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R0()));
+        let store_inst = irgm.build_op_x_y(
+            add_val,
             ret_val.expect("return calls should always return an expr"),
+            InstTy::store);
+        irgm.graph_manager().add_instruction(store_inst);
+
+        // This will be a special instruction that always returns from branch location on register R31;
+        let ret_inst = irgm.build_op_x(
+            Value::new(ValTy::reg(RegisterAllocation::allocate_R31())),
             InstTy::ret,
         );
         irgm.graph_manager().add_instruction(ret_inst);

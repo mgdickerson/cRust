@@ -8,6 +8,7 @@ use super::{IRGraphManager, InstTy, Node, NodeData, NodeId, Op, ValTy, Value};
 use super::{Rc, RefCell};
 use lib::Parser::AST::factor::FactorType::expr;
 use lib::IR::ret_register::RetRegister;
+use lib::RegisterAllocator::RegisterAllocation;
 
 #[derive(Debug, Clone)]
 pub struct FuncCall {
@@ -149,6 +150,30 @@ impl FuncCall {
             func_name => {
                 let uniq_func = irgm.get_func_call(&String::from(func_name));
 
+                // TODO : I am not sure if this is the correct way to do this.
+                // Store R28, R29, R31
+                let r28_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R28()));
+                let r29_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R29()));
+                let r31_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R31()));
+                // TODO : Is this necessary?
+
+                if uniq_func.has_return() {
+                    // If unique function has a return, pre-load space for a return.
+                    let param_addr_val =
+                        Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+
+                    let return_address_val = Value::new(ValTy::adr(
+                        irgm.address_manager().get_addr_assignment(&String::from("return"), 4),
+                    ));
+
+                    let add_inst = irgm.build_op_x_y(param_addr_val, return_address_val, InstTy::adda);
+                    let add_val = irgm.graph_manager().add_instruction(add_inst);
+
+                    let r0_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R0()));
+                    let store_inst = irgm.build_op_x_y(add_val, r0_val, InstTy::store);
+                    irgm.graph_manager().add_instruction(store_inst);
+                }
+
                 //println!("{} : \tGlobals {:?}\n\tParams: {:?}", func_name, &uniq_func.load_globals_list(), &uniq_func.load_param_list());
 
                 // Store all global parameters affected.
@@ -162,7 +187,7 @@ impl FuncCall {
                         irgm.address_manager().get_addr_assignment(global, 4),
                     ));
 
-                    let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
+                    let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::adda);
                     let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
 
                     let inst;
@@ -200,7 +225,7 @@ impl FuncCall {
                         irgm.address_manager().get_addr_assignment(param, 4),
                     ));
 
-                    let add_inst = irgm.build_op_x_y(param_addr_val, var_addr_val, InstTy::add);
+                    let add_inst = irgm.build_op_x_y(param_addr_val, var_addr_val, InstTy::adda);
                     let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
 
                     let inst;
@@ -230,7 +255,7 @@ impl FuncCall {
                         irgm.address_manager().get_addr_assignment(global, 4),
                     ));
 
-                    let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
+                    let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::adda);
                     let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
 
                     let inst = irgm.build_op_y(add_reg_val, InstTy::load);
@@ -246,10 +271,21 @@ impl FuncCall {
                     );
                 }
 
-                // println!("Called function {} has return: {}", func_name, uniq_func.has_return());
-                // TODO : I think I want to change how this is handled to a stack based approach. Not sure.
                 if uniq_func.has_return() {
-                    return Some(Value::new(ValTy::ret(RetRegister::new())));
+                    // If unique function has a return, pre-load space for a return.
+                    let param_addr_val =
+                        Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+
+                    let return_address_val = Value::new(ValTy::adr(
+                        irgm.address_manager().get_addr_assignment(&String::from("return"), 4),
+                    ));
+
+                    let add_inst = irgm.build_op_x_y(param_addr_val, return_address_val, InstTy::adda);
+                    let add_val = irgm.graph_manager().add_instruction(add_inst);
+
+                    let r0_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R0()));
+                    let store_inst = irgm.build_op_y(add_val, InstTy::load);
+                    return Some(irgm.graph_manager().add_instruction(store_inst))
                 }
             }
         }

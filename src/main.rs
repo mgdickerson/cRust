@@ -31,6 +31,7 @@ use lib::Utility::display;
 use lib::IR::ir;
 use lib::IR::ir::{InstTy, Op, ValTy, Value};
 use lib::IR::ir_manager::IRGraphManager;
+use lib::CodeGen::phi_absolver;
 
 //extern crate core;
 extern crate core;
@@ -140,7 +141,7 @@ fn main() {
         let entry_node = irgm.graph_manager().get_main_entrance_node();
         let exit_nodes = irgm.graph_manager().get_exit_nodes(&root_node);
 
-        let inst_register_mapping = analyze_live_range(
+        let mut inst_register_mapping = analyze_live_range(
             &mut irgm,
             &mut main_temp_manager,
             entry_node.clone(),
@@ -150,9 +151,7 @@ fn main() {
             entry.file_name().clone(),
         );
 
-        if inst_register_mapping.len() != 0 {
-            println!("Main has some register mapping.");
-        }
+
 
         for (func_name, func_root) in irgm.function_manager().list_functions() {
             // Get entry node for function
@@ -169,7 +168,7 @@ fn main() {
 
             //println!("Exit nodes: {:?}", exit_nodes);
 
-            analyze_live_range(
+            let func_register_mapping = analyze_live_range(
                 &mut irgm,
                 &mut func_temp_manager.get_mut(&func_name).unwrap(),
                 entry_id,
@@ -178,6 +177,17 @@ fn main() {
                 path.clone(),
                 entry.file_name().clone(),
             );
+
+            for (key, val) in func_register_mapping.iter() {
+                if !inst_register_mapping.contains_key(key) {
+                    inst_register_mapping.insert(key.clone(), val.clone());
+                }
+            }
+        }
+
+        if inst_register_mapping.len() != 0 {
+            phi_absolver::remove_phis(&mut irgm, &mut inst_register_mapping);
+            println!("Main has some register mapping.");
         }
 
         /*let mut irgm = irgm.clone();

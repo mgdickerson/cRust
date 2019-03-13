@@ -9,6 +9,7 @@ use super::{IRGraphManager, InstTy, Node, NodeData, NodeId, NodeType, Op, ValTy,
 use super::{Rc, RefCell};
 use lib::Graph::graph_manager::GraphManager;
 use lib::Graph::node::NodeType::exit;
+use lib::RegisterAllocator::RegisterAllocation;
 
 #[derive(Debug, Clone)]
 pub struct FuncDecl {
@@ -277,17 +278,18 @@ impl FuncDecl {
                 let new_global_val = irgm.graph_manager().add_instruction(inst);
             }
 
-            let stack_pointer = Value::new(ValTy::adr(irgm.address_manager().get_stack_pointer()));
-            let bra_inst = irgm.build_op_y(stack_pointer, InstTy::bra);
-            irgm.graph_manager().add_instruction(bra_inst);
+            // This will be a special instruction that always returns from branch location on register R31;
+            let ret_inst = irgm.build_op_x(
+                Value::new(ValTy::reg(RegisterAllocation::allocate_R31())),
+                InstTy::ret,
+            );
+            irgm.graph_manager().add_instruction(ret_inst);
 
             // In this case there is a need to add an exit
             let current_id = irgm.graph_manager().get_current_id();
             let exit_id = irgm.new_node(String::from("Exit"), NodeType::exit).clone();
             irgm.graph_manager().add_edge(current_id, exit_id);
         }
-
-        // TODO : Add exit to end of function and also wherever there are rets
 
         let uniq_func = irgm.end_function();
         irgm.function_manager().add_func_to_manager(uniq_func);
