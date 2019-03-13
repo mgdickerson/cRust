@@ -78,7 +78,9 @@ impl GraphManager {
         self.main_node_index.clone()
     }
 
-    pub fn get_main_entrance_node(&self) -> NodeIndex { self.entrance_index.clone() }
+    pub fn get_main_entrance_node(&self) -> NodeIndex {
+        self.entrance_index.clone()
+    }
 
     pub fn get_exit_nodes(&self, root_node: &NodeIndex) -> Vec<NodeIndex> {
         let search_path = self.graph_visitor(root_node.clone());
@@ -96,10 +98,7 @@ impl GraphManager {
     pub fn map_blocks_to_node_ids(&mut self) {
         let mut node_index_list = self.graph.node_indices();
         for node_id in node_index_list {
-            let block_num = self.graph
-                .node_weight(node_id)
-                .unwrap()
-                .get_node_id();
+            let block_num = self.graph.node_weight(node_id).unwrap().get_node_id();
 
             self.block_to_id_map.insert(block_num, node_id);
         }
@@ -170,7 +169,7 @@ impl GraphManager {
         Value::new(ValTy::op(Rc::clone(&inst_ref)))
     }
 
-    pub fn add_instruction_in_node(&mut self, inst: Op, node_id: & NodeIndex) -> Value {
+    pub fn add_instruction_in_node(&mut self, inst: Op, node_id: &NodeIndex) -> Value {
         let inst_ref = Rc::new(RefCell::new(inst));
         self.graph
             .node_weight_mut(node_id.clone())
@@ -191,7 +190,12 @@ impl GraphManager {
         Value::new(ValTy::op(Rc::clone(&inst_ref)))
     }
 
-    pub fn insert_instruction_in_node(&mut self, position: usize, inst: Op, node_id: & NodeIndex) -> Value {
+    pub fn insert_instruction_in_node(
+        &mut self,
+        position: usize,
+        inst: Op,
+        node_id: &NodeIndex,
+    ) -> Value {
         let inst_ref = Rc::new(RefCell::new(inst));
         self.graph
             .node_weight_mut(node_id.clone())

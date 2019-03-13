@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::env;
 use std::fmt::Write;
 use std::fs::OpenOptions;
@@ -6,7 +7,6 @@ use std::io::prelude::*;
 use std::io::{BufRead, BufReader, Result};
 use std::path::Path;
 use std::path::PathBuf;
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use self::Utility::display;
@@ -24,6 +24,7 @@ use petgraph::algo::dominators::simple_fast;
 use petgraph::algo::dominators::Dominators;
 use petgraph::prelude::NodeIndex;
 
+pub mod CodeGen;
 pub mod Graph;
 pub mod IR;
 pub mod Lexer;
@@ -31,7 +32,6 @@ pub mod Optimizer;
 pub mod Parser;
 pub mod RegisterAllocator;
 pub mod Utility;
-pub mod CodeGen;
 
 #[cfg(test)]
 pub mod tests {
@@ -329,7 +329,6 @@ pub fn extract_constants(irgm: &mut IRGraphManager, root_id: NodeIndex) {
     //    continue with other functions. Should
     //    behave... hopefully.
 
-
     let dom_space = simple_fast(&irgm.graph_manager_ref().get_ref_graph(), root_id.clone());
     let visit_pattern = irgm.graph_manager().graph_visitor(root_id.clone());
 
@@ -484,16 +483,25 @@ pub fn extract_constants(irgm: &mut IRGraphManager, root_id: NodeIndex) {
         // First handle all instructions that need to be added within this block
         std_inst_insert.reverse();
         for (val, position, inst_clone, x_y) in std_inst_insert.iter() {
-            let block_id = irgm.graph_manager().get_ref_graph().node_weight(node_id.clone()).unwrap().get_node_id();
+            let block_id = irgm
+                .graph_manager()
+                .get_ref_graph()
+                .node_weight(node_id.clone())
+                .unwrap()
+                .get_node_id();
 
             let add_inst = irgm.build_op_x_y_in_block(
                 Value::new(ValTy::reg(RegisterAllocation::allocate_R0())),
                 Value::new(ValTy::con(val.clone())),
                 InstTy::add,
-                block_id
+                block_id,
             );
 
-            let inst_val = irgm.graph_manager().insert_instruction_in_node(position.clone(), add_inst, node_id);
+            let inst_val = irgm.graph_manager().insert_instruction_in_node(
+                position.clone(),
+                add_inst,
+                node_id,
+            );
             if x_y.clone() == 0 {
                 // Replacing the x instruction
                 inst_clone.borrow_mut().update_x_val(inst_val);
@@ -508,15 +516,15 @@ pub fn extract_constants(irgm: &mut IRGraphManager, root_id: NodeIndex) {
         if x_inst_push_list.is_empty() && y_inst_push_list.is_empty() {
             // Early bail out if there are no x or y phi values to adjust
             //println!("Returning Early!");
-            continue
+            continue;
         }
 
-        let parents = irgm.graph_manager()
+        let parents = irgm
+            .graph_manager()
             .get_ref_graph()
             .neighbors_directed(node_id.clone(), Incoming)
-            .map(|node_id| {
-                node_id
-            }).collect::<Vec<NodeIndex>>();
+            .map(|node_id| node_id)
+            .collect::<Vec<NodeIndex>>();
 
         let mut is_while = false;
         let mut ordered_parents = Vec::new();
@@ -524,9 +532,7 @@ pub fn extract_constants(irgm: &mut IRGraphManager, root_id: NodeIndex) {
         // This gives both information as to which control flow type it
         // is, as well as sorting for the while case.
         for parent_id in parents.iter() {
-            if dom_space.immediate_dominator(node_id.clone())
-                == Some(parent_id.clone())
-            {
+            if dom_space.immediate_dominator(node_id.clone()) == Some(parent_id.clone()) {
                 ordered_parents.insert(0, parent_id.clone());
                 is_while = true;
             } else {
@@ -543,7 +549,8 @@ pub fn extract_constants(irgm: &mut IRGraphManager, root_id: NodeIndex) {
         for (val, inst_clone) in x_inst_push_list.iter() {
             let parent_node_id = ordered_parents[0].clone();
 
-            let parent_block_id = irgm.graph_manager()
+            let parent_block_id = irgm
+                .graph_manager()
                 .get_ref_graph()
                 .node_weight(parent_node_id)
                 .unwrap()
@@ -553,9 +560,11 @@ pub fn extract_constants(irgm: &mut IRGraphManager, root_id: NodeIndex) {
                 Value::new(ValTy::reg(RegisterAllocation::allocate_R0())),
                 Value::new(ValTy::con(val.clone())),
                 InstTy::add,
-                parent_block_id
+                parent_block_id,
             );
-            let inst_val = irgm.graph_manager().add_instruction_in_node(add_inst, &parent_node_id);
+            let inst_val = irgm
+                .graph_manager()
+                .add_instruction_in_node(add_inst, &parent_node_id);
 
             inst_clone.borrow_mut().update_x_val(inst_val);
         }
@@ -565,7 +574,8 @@ pub fn extract_constants(irgm: &mut IRGraphManager, root_id: NodeIndex) {
         for (val, inst_clone) in y_inst_push_list.iter() {
             let parent_node_id = ordered_parents[1].clone();
 
-            let parent_block_id = irgm.graph_manager()
+            let parent_block_id = irgm
+                .graph_manager()
                 .get_ref_graph()
                 .node_weight(parent_node_id)
                 .unwrap()
@@ -575,14 +585,14 @@ pub fn extract_constants(irgm: &mut IRGraphManager, root_id: NodeIndex) {
                 Value::new(ValTy::reg(RegisterAllocation::allocate_R0())),
                 Value::new(ValTy::con(val.clone())),
                 InstTy::add,
-                parent_block_id
+                parent_block_id,
             );
 
-            let inst_val = irgm.graph_manager().add_instruction_in_node(add_inst, &parent_node_id);
+            let inst_val = irgm
+                .graph_manager()
+                .add_instruction_in_node(add_inst, &parent_node_id);
 
             inst_clone.borrow_mut().update_y_val(inst_val);
         }
     }
-
-
 }

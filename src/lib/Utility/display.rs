@@ -92,9 +92,9 @@ pub enum Config {
 }
 
 use petgraph::graph::edge_index;
+use petgraph::visit::Control::Continue;
 use petgraph::visit::{Data, GraphProp, NodeRef};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences, NodeIndexable};
-use petgraph::visit::Control::Continue;
 
 impl<'a, G> Dot<'a, G> {
     fn graph_fmt<NF, EF, NW, EW>(
@@ -153,8 +153,7 @@ impl<'a, G> Dot<'a, G> {
             } else if self.config.contains(&Config::InterferenceGraph) {
                 try!(write!(f, " [arrowhead=none]"));
                 try!(writeln!(f, ""));
-            }
-            else {
+            } else {
                 try!(write!(f, " [label=\""));
                 try!(edge_fmt(edge.weight(), &mut |d| Escaped(d).fmt(f)));
                 try!(writeln!(f, "\"]"));

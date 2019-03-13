@@ -1,28 +1,31 @@
 use super::{IRGraphManager, TempValManager};
-use lib::IR::ir::{Value, ValTy, InstTy};
 use lib::RegisterAllocator::RegisterAllocation;
+use lib::IR::address_manager::AddressManager;
+use lib::IR::ir::{InstTy, ValTy, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
-use lib::IR::address_manager::AddressManager;
 
 pub struct SpillHandler {
-    current_spill_counter: usize
+    current_spill_counter: usize,
 }
 
 impl SpillHandler {
     pub fn new() -> Self {
-        SpillHandler { current_spill_counter: 0 }
+        SpillHandler {
+            current_spill_counter: 0,
+        }
     }
 
     pub fn spill_value(
         &mut self,
         irgm: &mut IRGraphManager,
         temp_manager: &mut TempValManager,
-        inst_id: usize
+        inst_id: usize,
     ) {
         // Grab definition block from temp_manager
         let inst_def_block = temp_manager.borrow_inst(&inst_id).borrow().block_num();
-        let inst_node_id = irgm.graph_manager()
+        let inst_node_id = irgm
+            .graph_manager()
             .block_node_map()
             .get(&inst_def_block)
             .unwrap()
@@ -31,15 +34,12 @@ impl SpillHandler {
         let spill_string = String::from("spill_val") + &self.current_spill_counter.to_string();
         self.current_spill_counter += 1;
 
-        let uniq_spill_addr = irgm.address_manager()
-            .get_addr_assignment(
-                &spill_string,
-                4
-            );
+        let uniq_spill_addr = irgm.address_manager().get_addr_assignment(&spill_string, 4);
 
         let spill_addr_value = Value::new(ValTy::adr(uniq_spill_addr.clone()));
 
-        let mut inst_list = irgm.graph_manager()
+        let mut inst_list = irgm
+            .graph_manager()
             .get_ref_graph()
             .node_weight(inst_node_id)
             .unwrap()
@@ -53,40 +53,40 @@ impl SpillHandler {
                     fp_address,
                     spill_addr_value.clone(),
                     InstTy::sadd,
-                    inst_def_block.clone()
+                    inst_def_block.clone(),
                 );
 
-                let storage_location = irgm.graph_manager()
-                    .insert_instruction_in_node(
-                        position + 1,
-                        add_op,
-                        &inst_node_id
-                    );
+                let storage_location = irgm.graph_manager().insert_instruction_in_node(
+                    position + 1,
+                    add_op,
+                    &inst_node_id,
+                );
 
                 let store_op = irgm.build_op_x_y_in_block(
                     storage_location,
                     Value::new(ValTy::op(Rc::clone(inst))),
                     InstTy::store,
-                    inst_def_block.clone()
+                    inst_def_block.clone(),
                 );
 
-                irgm.graph_manager()
-                    .insert_instruction_in_node(
-                        position + 2,
-                        store_op,
-                        &inst_node_id
-                    );
+                irgm.graph_manager().insert_instruction_in_node(
+                    position + 2,
+                    store_op,
+                    &inst_node_id,
+                );
             }
         }
 
         for active_use in temp_manager.borrow_inst(&inst_id).borrow().active_uses() {
-            let inst_use_node_id = irgm.graph_manager()
+            let inst_use_node_id = irgm
+                .graph_manager()
                 .block_node_map()
                 .get(&active_use.borrow().block_num())
                 .unwrap()
                 .clone();
 
-            let mut inst_list = irgm.graph_manager()
+            let mut inst_list = irgm
+                .graph_manager()
                 .get_ref_graph()
                 .node_weight(inst_use_node_id)
                 .unwrap()
@@ -97,33 +97,32 @@ impl SpillHandler {
             for (position, inst) in inst_list.iter().enumerate() {
                 let inst_block = inst.borrow().get_inst_block();
                 if inst.borrow().get_inst_num() == active_use.borrow().inst_num() {
-                    let fp_address = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+                    let fp_address =
+                        Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
                     let add_op = irgm.build_op_x_y_in_block(
                         fp_address,
                         spill_addr_value.clone(),
                         InstTy::sadd,
-                        inst_block.clone()
+                        inst_block.clone(),
                     );
 
-                    let storage_location = irgm.graph_manager()
-                        .insert_instruction_in_node(
-                            position,
-                            add_op,
-                            &inst_use_node_id
-                        );
+                    let storage_location = irgm.graph_manager().insert_instruction_in_node(
+                        position,
+                        add_op,
+                        &inst_use_node_id,
+                    );
 
                     let load_op = irgm.build_op_y_in_block(
                         storage_location,
                         InstTy::sload,
-                        inst_block.clone()
+                        inst_block.clone(),
                     );
 
-                    let load_value = irgm.graph_manager()
-                        .insert_instruction_in_node(
-                            position + 1,
-                            load_op,
-                            &inst_use_node_id
-                        );
+                    let load_value = irgm.graph_manager().insert_instruction_in_node(
+                        position + 1,
+                        load_op,
+                        &inst_use_node_id,
+                    );
 
                     inst.borrow_mut().op_cleanup(inst_id, load_value);
                 }

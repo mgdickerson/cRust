@@ -33,9 +33,9 @@ use lib::IR::ir::{InstTy, Op, ValTy, Value};
 use lib::IR::ir_manager::IRGraphManager;
 
 //extern crate core;
+extern crate core;
 /// External Lib
 extern crate petgraph;
-extern crate core;
 
 use petgraph::algo::dominators::simple_fast;
 use petgraph::algo::dominators::Dominators;
@@ -140,13 +140,15 @@ fn main() {
         let entry_node = irgm.graph_manager().get_main_entrance_node();
         let exit_nodes = irgm.graph_manager().get_exit_nodes(&root_node);
 
-        let inst_register_mapping = analyze_live_range(&mut irgm,
-                           &mut main_temp_manager,
-                           entry_node.clone(),
-                           exit_nodes,
-                           None,
-                           path.clone(),
-                           entry.file_name().clone());
+        let inst_register_mapping = analyze_live_range(
+            &mut irgm,
+            &mut main_temp_manager,
+            entry_node.clone(),
+            exit_nodes,
+            None,
+            path.clone(),
+            entry.file_name().clone(),
+        );
 
         if inst_register_mapping.len() != 0 {
             println!("Main has some register mapping.");
@@ -157,10 +159,7 @@ fn main() {
             let entry_id = irgm
                 .graph_manager()
                 .get_ref_graph()
-                .neighbors_directed(
-                    func_root,
-                    Incoming
-                )
+                .neighbors_directed(func_root, Incoming)
                 .next()
                 .unwrap();
 
@@ -170,17 +169,16 @@ fn main() {
 
             //println!("Exit nodes: {:?}", exit_nodes);
 
-            analyze_live_range(&mut irgm,
-                               &mut func_temp_manager
-                                   .get_mut(&func_name)
-                                   .unwrap(),
-                               entry_id,
-                               exit_nodes,
-                               Some(func_name),
-                               path.clone(),
-                               entry.file_name().clone());
+            analyze_live_range(
+                &mut irgm,
+                &mut func_temp_manager.get_mut(&func_name).unwrap(),
+                entry_id,
+                exit_nodes,
+                Some(func_name),
+                path.clone(),
+                entry.file_name().clone(),
+            );
         }
-
 
         /*let mut irgm = irgm.clone();
 
@@ -202,9 +200,7 @@ fn main() {
         for node in graph.node_indices() {
             match dom_space.immediate_dominator(node) {
                 Some(parent_node) => {
-                    irgm
-                        .graph_manager()
-                        .add_dominance_edge(node, parent_node);
+                    irgm.graph_manager().add_dominance_edge(node, parent_node);
                 }
                 None => {}
             }

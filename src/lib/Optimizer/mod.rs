@@ -27,9 +27,9 @@ use self::temp_value_manager::TempValManager;
 use super::petgraph::Graph;
 use super::{graph, petgraph};
 use lib::Optimizer::cleaner::clean_graph;
-use petgraph::prelude::NodeIndex;
 use petgraph::algo::dominators::simple_fast;
 use petgraph::algo::dominators::Dominators;
+use petgraph::prelude::NodeIndex;
 
 pub struct Optimizer {
     irgm: IRGraphManager,
@@ -87,9 +87,9 @@ impl Optimizer {
             .function_manager()
             .list_functions()
             .iter()
-            {
-                extract_constants(&mut self.irgm, func_index.clone());
-            }
+        {
+            extract_constants(&mut self.irgm, func_index.clone());
+        }
 
         // Create locals for easier access to them without worrying about borrowing
         let mut local_main_manager = self.get_main_manager();

@@ -15,8 +15,8 @@ use petgraph::algo::dominators::simple_fast;
 use petgraph::algo::dominators::Dominators;
 use petgraph::algo::has_path_connecting;
 
+use lib::RegisterAllocator::RegisterAllocation;
 use lib::Utility::display;
-use lib::RegisterAllocator::{RegisterAllocation};
 
 // TODO : on while const evaluation, evaluate if the loop will ever even be taken by comparing the right side value of the phi in the cmp inst.
 pub fn eval_program_constants(
@@ -147,11 +147,10 @@ fn generic_type_eval(
                     }
                     _ => return Ok(false),
                 }
-            } else{
+            } else {
                 return Ok(false);
             }
-
-        },
+        }
         // x_val is an Op, y_val is const
         (Some(ValTy::op(x_op)), Some(ValTy::con(y_val))) => {
             let x_inst_id = x_op.borrow().get_inst_num();
@@ -240,7 +239,8 @@ fn generic_type_eval(
     } else {
         inst.borrow_mut().update_inst_ty(InstTy::add);
     }
-    inst.borrow_mut().update_x_val(Value::new(ValTy::reg(RegisterAllocation::allocate_R0())));
+    inst.borrow_mut()
+        .update_x_val(Value::new(ValTy::reg(RegisterAllocation::allocate_R0())));
     inst.borrow_mut().update_y_val(Value::new(ValTy::con(val)));
 
     // Add instruction to value_sub_map
@@ -688,9 +688,8 @@ fn phi_handler(
                 op.borrow_mut()
                     .op_cleanup(inst_id.clone(), active_y_val.clone());
 
-
-                if let ValTy::reg(reg) = & y_type {
-                    continue
+                if let ValTy::reg(reg) = &y_type {
+                    continue;
                 }
 
                 // Get instruction id
@@ -756,7 +755,7 @@ fn phi_handler(
                             .op_cleanup(inst_id.clone(), active_x_val.clone());
 
                         if let ValTy::reg(reg) = &x_type {
-                            continue
+                            continue;
                         }
 
                         // Get instruction id
@@ -810,8 +809,8 @@ fn phi_handler(
                         op.borrow_mut()
                             .op_cleanup(inst_id.clone(), active_y_val.clone());
 
-                        if let ValTy::reg(reg) = & y_type {
-                            continue
+                        if let ValTy::reg(reg) = &y_type {
+                            continue;
                         }
 
                         // Get instruction id
@@ -857,8 +856,8 @@ fn phi_handler(
                         op.borrow_mut()
                             .op_cleanup(inst_id.clone(), active_x_val.clone());
 
-                        if let ValTy::reg(reg) = & x_type {
-                            continue
+                        if let ValTy::reg(reg) = &x_type {
+                            continue;
                         }
 
                         // Get instruction id

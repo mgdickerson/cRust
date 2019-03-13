@@ -1,16 +1,14 @@
 pub mod color_graph;
 pub mod spill_handler;
 
-
 pub mod interference_graph;
-use self::interference_graph::{OpNode,RecurseTraverse};
+use self::interference_graph::{OpNode, RecurseTraverse};
 
 use lib::IR::ir_manager::IRGraphManager;
 use std::ffi::OsString;
-use std::path::PathBuf;
-use std::fs::{self};
 use std::fmt::Write;
-
+use std::fs;
+use std::path::PathBuf;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -20,12 +18,12 @@ use lib::Graph::node::Node;
 use lib::Utility::display;
 
 use super::{petgraph, Graph};
+use lib::Optimizer::temp_value_manager::TempValManager;
+use lib::RegisterAllocator::color_graph::color;
+use lib::RegisterAllocator::spill_handler::SpillHandler;
+use petgraph::algo::dominators::simple_fast;
 use petgraph::prelude::NodeIndex;
 use petgraph::Directed;
-use petgraph::algo::dominators::simple_fast;
-use lib::RegisterAllocator::color_graph::color;
-use lib::Optimizer::temp_value_manager::TempValManager;
-use lib::RegisterAllocator::spill_handler::SpillHandler;
 
 pub fn analyze_live_range(
     irgm: &mut IRGraphManager,
@@ -35,7 +33,7 @@ pub fn analyze_live_range(
     func_name: Option<String>,
     path: PathBuf,
     entry: OsString,
-) -> HashMap<usize,usize> {
+) -> HashMap<usize, usize> {
     // Create a new graph which will contain each instruction as a node,
     // and edges between instructions represent the interference.
 
@@ -54,7 +52,7 @@ pub fn analyze_live_range(
     while needs_coloring {
         //println!("Round: {}", round_count);
         round_count += 1;
-        let mut recurse_graph = RecurseTraverse::new(root_node, temp_manager,dom_space.clone());
+        let mut recurse_graph = RecurseTraverse::new(root_node, temp_manager, dom_space.clone());
 
         for exit_node_id in exit_nodes.clone().iter() {
             recurse_graph.set_starting_exit(exit_node_id.clone());
@@ -88,24 +86,39 @@ pub fn analyze_live_range(
                 write!(
                     output,
                     "{:?}",
-                    display::Dot::with_config(&interference_graph, &[display::Config::InterferenceGraph])
+                    display::Dot::with_config(
+                        &interference_graph,
+                        &[display::Config::InterferenceGraph]
+                    )
                 );
                 fs::write(file_name, output);
 
                 // TODO : return mapping of instructions to registers
                 let node_indicies = interference_graph.node_indices().clone();
                 for node_id in node_indicies {
-                    let register = interference_graph.node_weight(node_id.clone()).unwrap().get_register();
-                    for op_inst in interference_graph.node_weight(node_id).unwrap().get_inst_ref().clone() {
+                    let register = interference_graph
+                        .node_weight(node_id.clone())
+                        .unwrap()
+                        .get_register();
+                    for op_inst in interference_graph
+                        .node_weight(node_id)
+                        .unwrap()
+                        .get_inst_ref()
+                        .clone()
+                    {
                         inst_register_map.insert(op_inst.borrow().get_inst_num(), register.clone());
                     }
                 }
-            },
+            }
             Err(spill_node) => {
                 //println!("Splitting instruction: {:?}", interference_graph.node_weight(spill_node)
                 //    .unwrap().get_inst_ref()[0]);
-                let inst_id = interference_graph.node_weight(spill_node)
-                    .unwrap().get_inst_ref()[0].borrow().get_inst_num();
+                let inst_id = interference_graph
+                    .node_weight(spill_node)
+                    .unwrap()
+                    .get_inst_ref()[0]
+                    .borrow()
+                    .get_inst_num();
                 spill_handler.spill_value(irgm, temp_manager, inst_id.clone());
                 if !spilled_instructions.contains_key(&inst_id) {
                     spilled_instructions.insert(inst_id, 1);
@@ -157,38 +170,20 @@ impl Color {
         }
     }
 
-    pub fn get_color(register: & RegisterAllocation) -> Color {
+    pub fn get_color(register: &RegisterAllocation) -> Color {
         match register.to_usize() {
             0 => {
                 panic!("Registers should not be assigned to 0 in register allocation.");
-            },
-            1 => {
-                Color::aquamarine
-            },
-            2 => {
-                Color::peru
-            },
-            3 => {
-                Color::brown
-            },
-            4 => {
-                Color::red
-            },
-            5 => {
-                Color::purple
-            },
-            6 => {
-                Color::orange
-            },
-            7 => {
-                Color::green
-            },
-            8 => {
-                Color::lightblue
-            },
-            _ => {
-                Color::gray
-            },
+            }
+            1 => Color::aquamarine,
+            2 => Color::peru,
+            3 => Color::brown,
+            4 => Color::red,
+            5 => Color::purple,
+            6 => Color::orange,
+            7 => Color::green,
+            8 => Color::lightblue,
+            _ => Color::gray,
         }
     }
 }
@@ -200,7 +195,7 @@ pub struct RegisterAllocation {
 
 impl RegisterAllocation {
     pub fn allocate_register(reg_id: usize) -> Self {
-        RegisterAllocation{ reg: reg_id }
+        RegisterAllocation { reg: reg_id }
     }
 
     pub fn allocate_R0() -> Self {

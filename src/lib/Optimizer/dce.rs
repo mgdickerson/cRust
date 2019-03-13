@@ -34,7 +34,7 @@ pub fn dead_code_elimination(
                 //println!("Checking instruction: {:?}", inst);
                 if InstTy::kill == inst.borrow().inst_type().clone() {
                     inst.borrow_mut().deactivate();
-                    continue
+                    continue;
                 }
 
                 let active_uses = temp_manager

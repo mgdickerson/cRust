@@ -1,6 +1,6 @@
 use super::{Graph, IRGraphManager, InstTy, Node, Op, TempValManager, ValTy, Value};
-use lib::Optimizer::operator_dominator::OpDomHandler;
 use lib::Graph::node::NodeType;
+use lib::Optimizer::operator_dominator::OpDomHandler;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -49,7 +49,7 @@ pub fn trace_common_expression(
                     let (is_uniq, replacement_inst) = local_op_handler.search_or_add_inst(
                         inst.clone(),
                         node_id.clone(),
-                        & dom_space
+                        &dom_space,
                     );
 
                     if !is_uniq {
@@ -106,11 +106,15 @@ pub struct CLE {
     if_kill_prop: Vec<NodeIndex>,
     if_to_phi_map: HashMap<NodeIndex, NodeIndex>,
     propagate_kill: bool,
-    load_map: HashMap<usize,Rc<RefCell<Op>>>,
+    load_map: HashMap<usize, Rc<RefCell<Op>>>,
 }
 
 impl CLE {
-    pub fn new(irgm: &mut IRGraphManager, root_node: & NodeIndex, dominators: Dominators<NodeIndex>) -> Self {
+    pub fn new(
+        irgm: &mut IRGraphManager,
+        root_node: &NodeIndex,
+        dominators: Dominators<NodeIndex>,
+    ) -> Self {
         CLE {
             starting_node: root_node.clone(),
             current_node: root_node.clone(),
@@ -143,18 +147,26 @@ impl CLE {
         self.recurse_remove_loads(irgm, &mut op_dom_handler, temp_manager);
     }
 
-    fn recurse_remove_loads(&mut self, irgm: &mut IRGraphManager, op_dom_handler: &mut OpDomHandler, temp_manager: &mut TempValManager) {
-        let mut children = irgm.graph_manager()
+    fn recurse_remove_loads(
+        &mut self,
+        irgm: &mut IRGraphManager,
+        op_dom_handler: &mut OpDomHandler,
+        temp_manager: &mut TempValManager,
+    ) {
+        let mut children = irgm
+            .graph_manager()
             .get_ref_graph()
             .neighbors_directed(self.current_node, Outgoing)
             .detach();
 
-        let node_id = irgm.graph_manager()
+        let node_id = irgm
+            .graph_manager()
             .get_ref_graph()
             .node_weight(self.current_node)
             .unwrap()
             .get_node_id();
-        let node_type = irgm.graph_manager()
+        let node_type = irgm
+            .graph_manager()
             .get_ref_graph()
             .node_weight(self.current_node)
             .unwrap()
@@ -163,7 +175,7 @@ impl CLE {
         match node_type {
             NodeType::while_loop_header => {
                 if self.while_bp.contains(&self.current_node) {
-                    return
+                    return;
                 }
 
                 self.remove_common_loads(irgm, op_dom_handler, temp_manager);
@@ -173,13 +185,19 @@ impl CLE {
                 let mut loop_node = self.current_node.clone();
                 let mut bra_node = self.current_node.clone();
                 while let Some(next_node_id) = children.next_node(&self.walkable_graph) {
-                    match irgm.graph_manager().get_ref_graph().node_weight(next_node_id.clone()).unwrap().get_node_type() {
+                    match irgm
+                        .graph_manager()
+                        .get_ref_graph()
+                        .node_weight(next_node_id.clone())
+                        .unwrap()
+                        .get_node_type()
+                    {
                         NodeType::while_node => {
                             loop_node = next_node_id;
-                        },
+                        }
                         NodeType::bra_node => {
                             bra_node = next_node_id;
-                        },
+                        }
                         NodeType::exit => {
                             // This is an exit, likely due to a removed path, just give it the exit
                             bra_node = next_node_id;
@@ -187,7 +205,7 @@ impl CLE {
                         _ => {
                             // Probably panic here?
                             panic!("Probably should not reach this.");
-                        },
+                        }
                     }
                 }
 
@@ -211,7 +229,7 @@ impl CLE {
 
                 self.current_node = bra_node;
                 self.recurse_remove_loads(irgm, &mut local_op_dom.clone(), temp_manager);
-            },
+            }
             NodeType::if_header => {
                 self.remove_common_loads(irgm, op_dom_handler, temp_manager);
 
@@ -221,19 +239,25 @@ impl CLE {
                 let mut if_bra = self.current_node.clone();
                 let mut else_bra = self.current_node.clone();
                 while let Some(next_node_id) = children.next_node(&self.walkable_graph) {
-                    match irgm.graph_manager().get_ref_graph().node_weight(next_node_id.clone()).unwrap().get_node_type() {
+                    match irgm
+                        .graph_manager()
+                        .get_ref_graph()
+                        .node_weight(next_node_id.clone())
+                        .unwrap()
+                        .get_node_type()
+                    {
                         NodeType::if_node => {
                             if_bra = next_node_id;
-                        },
+                        }
                         NodeType::else_node => {
                             else_bra = next_node_id;
-                        },
+                        }
                         NodeType::phi_node => {
                             else_bra = next_node_id;
-                        },
+                        }
                         _ => {
                             // Do nothing here
-                        },
+                        }
                     }
                 }
 
@@ -254,7 +278,8 @@ impl CLE {
                 }
 
                 // Quick sanity check to make sure we are on the phi node before continuing.
-                let node_type = irgm.graph_manager()
+                let node_type = irgm
+                    .graph_manager()
                     .get_ref_graph()
                     .node_weight(self.current_node)
                     .unwrap()
@@ -277,18 +302,21 @@ impl CLE {
                     // I dont think this case should ever be reached
                     panic!("Reached end of if statement without a phi being reached.");
                 }
-
-            },
+            }
             NodeType::phi_node => {
                 if let Some(if_node) = self.if_bp.last() {
-                    if Some(if_node.clone()) == self.dominators.immediate_dominator(self.current_node.clone()) {
+                    if Some(if_node.clone())
+                        == self
+                            .dominators
+                            .immediate_dominator(self.current_node.clone())
+                    {
                         // Nodes match, return
-                        return
+                        return;
                     } else {
                         // Nodes did not match, I am assuming this is a removed constant case.
                         // Print it out just to check and be sure.
                         //println!("Immediate Dominator: {:?}", self.dominators.immediate_dominator(self.current_node.clone()));
-                        return
+                        return;
                     }
                 }
 
@@ -302,7 +330,7 @@ impl CLE {
                 } else {
                     // End of program.
                 }
-            },
+            }
             _ => {
                 self.remove_common_loads(irgm, op_dom_handler, temp_manager);
 
@@ -316,13 +344,18 @@ impl CLE {
                 }
 
                 // If this point is reached, program has successfully completed.
-            },
+            }
         }
-
     }
 
-    fn remove_common_loads(&mut self, irgm: &mut IRGraphManager, op_dom_handler: &mut OpDomHandler, temp_manager: &mut TempValManager) {
-        let inst_list = irgm.graph_manager()
+    fn remove_common_loads(
+        &mut self,
+        irgm: &mut IRGraphManager,
+        op_dom_handler: &mut OpDomHandler,
+        temp_manager: &mut TempValManager,
+    ) {
+        let inst_list = irgm
+            .graph_manager()
             .get_ref_graph()
             .node_weight(self.current_node.clone())
             .unwrap()
@@ -340,7 +373,7 @@ impl CLE {
                 InstTy::kill => {
                     // Gets killed in dce by name specifically
                     op_dom_handler.reset_op_set();
-                },
+                }
                 InstTy::load => {
                     let load_inst = inst.borrow().clone_y_val()
                         .expect("All valid load instructions should have valid adda or add instructions referenced");
@@ -349,7 +382,7 @@ impl CLE {
                         let (is_uniq, replacement_inst) = op_dom_handler.search_or_add_inst(
                             ref_op.clone(),
                             self.current_node.clone(),
-                            & self.dominators,
+                            &self.dominators,
                         );
 
                         if !is_uniq {
@@ -363,7 +396,10 @@ impl CLE {
 
                             for op in active_uses {
                                 // First clean up the old Phi value at instruction site
-                                let load_op = self.load_map.get(&replacement_inst.borrow_mut().get_inst_num()).unwrap();
+                                let load_op = self
+                                    .load_map
+                                    .get(&replacement_inst.borrow_mut().get_inst_num())
+                                    .unwrap();
                                 let replacement_value = Value::new(ValTy::op(load_op.clone()));
                                 op.borrow_mut()
                                     .op_cleanup(inst_id.clone(), replacement_value);
@@ -381,9 +417,9 @@ impl CLE {
 
                             inst.borrow_mut().deactivate();
                             ref_op.borrow_mut().deactivate();
-
                         } else {
-                            self.load_map.insert(replacement_inst.borrow_mut().get_inst_num(), inst.clone());
+                            self.load_map
+                                .insert(replacement_inst.borrow_mut().get_inst_num(), inst.clone());
                         }
                     } else {
                         // I dont think any load has a value other than an op, lets test
@@ -395,21 +431,30 @@ impl CLE {
                 }
                 _ => {
                     // Do nothing.
-                },
+                }
             }
         }
     }
 
     fn recurse_insert_kills(&mut self, irgm: &mut IRGraphManager) {
-        let mut children = irgm.graph_manager().get_ref_graph().neighbors_directed(self.current_node, Outgoing).detach();
+        let mut children = irgm
+            .graph_manager()
+            .get_ref_graph()
+            .neighbors_directed(self.current_node, Outgoing)
+            .detach();
 
-        let node_type = irgm.graph_manager().get_ref_graph().node_weight(self.current_node).unwrap().get_node_type();
+        let node_type = irgm
+            .graph_manager()
+            .get_ref_graph()
+            .node_weight(self.current_node)
+            .unwrap()
+            .get_node_type();
 
         match node_type {
             NodeType::while_loop_header => {
                 // If this node is reached and it is already marked in the bp, then return to call site.
                 if self.while_bp.contains(&self.current_node) {
-                    return
+                    return;
                 }
 
                 // Search the node for kill instructions
@@ -421,13 +466,19 @@ impl CLE {
                 let mut loop_node = self.current_node.clone();
                 let mut bra_node = self.current_node.clone();
                 while let Some(next_node_id) = children.next_node(&self.walkable_graph) {
-                    match irgm.graph_manager().get_ref_graph().node_weight(next_node_id.clone()).unwrap().get_node_type() {
+                    match irgm
+                        .graph_manager()
+                        .get_ref_graph()
+                        .node_weight(next_node_id.clone())
+                        .unwrap()
+                        .get_node_type()
+                    {
                         NodeType::while_node => {
                             loop_node = next_node_id;
-                        },
+                        }
                         NodeType::bra_node => {
                             bra_node = next_node_id;
-                        },
+                        }
                         NodeType::exit => {
                             // This is an exit, likely due to a removed path, just give it the exit
                             bra_node = next_node_id;
@@ -435,14 +486,13 @@ impl CLE {
                         _ => {
                             // Probably panic here?
                             panic!("Probably should not reach this.");
-                        },
+                        }
                     }
                 }
 
                 let local_current = self.current_node.clone();
 
                 // Make some save points.
-
 
                 // First recurse through the loop of the while
                 self.current_node = loop_node;
@@ -460,7 +510,7 @@ impl CLE {
 
                 self.current_node = bra_node;
                 self.recurse_insert_kills(irgm);
-            },
+            }
             NodeType::if_header => {
                 // first traverse the node
                 self.search_kill_inst(irgm);
@@ -472,19 +522,25 @@ impl CLE {
                 let mut if_bra = self.current_node.clone();
                 let mut else_bra = self.current_node.clone();
                 while let Some(next_node_id) = children.next_node(&self.walkable_graph) {
-                    match irgm.graph_manager().get_ref_graph().node_weight(next_node_id.clone()).unwrap().get_node_type() {
+                    match irgm
+                        .graph_manager()
+                        .get_ref_graph()
+                        .node_weight(next_node_id.clone())
+                        .unwrap()
+                        .get_node_type()
+                    {
                         NodeType::if_node => {
                             if_bra = next_node_id;
-                        },
+                        }
                         NodeType::else_node => {
                             else_bra = next_node_id;
-                        },
+                        }
                         NodeType::phi_node => {
                             else_bra = next_node_id;
-                        },
+                        }
                         _ => {
                             // Do nothing here
-                        },
+                        }
                     }
                 }
 
@@ -503,7 +559,8 @@ impl CLE {
                 }
 
                 // Quick sanity check to make sure we are on the phi node before continuing.
-                let node_type = irgm.graph_manager()
+                let node_type = irgm
+                    .graph_manager()
                     .get_ref_graph()
                     .node_weight(self.current_node)
                     .unwrap()
@@ -517,25 +574,29 @@ impl CLE {
                         // Some error occured, perhaps wrong item popped.
                         panic!("Popped wrong item for if-else.");
                     }
-                    self.if_to_phi_map.insert(local_current, self.current_node.clone());
+                    self.if_to_phi_map
+                        .insert(local_current, self.current_node.clone());
 
                     self.recurse_insert_kills(irgm);
                 } else {
                     // I dont think this case should ever be reached
                     panic!("Reached end of if statement without a phi being reached.");
                 }
-
-            },
+            }
             NodeType::phi_node => {
                 if let Some(if_node) = self.if_bp.last() {
-                    if Some(if_node.clone()) == self.dominators.immediate_dominator(self.current_node.clone()) {
+                    if Some(if_node.clone())
+                        == self
+                            .dominators
+                            .immediate_dominator(self.current_node.clone())
+                    {
                         // Nodes match, return
-                        return
+                        return;
                     } else {
                         // Nodes did not match, I am assuming this is a removed constant case.
                         // Print it out just to check and be sure.
                         //println!("Immediate Dominator: {:?}", self.dominators.immediate_dominator(self.current_node.clone()));
-                        return
+                        return;
                     }
                 }
 
@@ -551,7 +612,7 @@ impl CLE {
                 } else {
                     // End of program.
                 }
-            },
+            }
             _ => {
                 self.search_kill_inst(irgm);
 
@@ -565,14 +626,16 @@ impl CLE {
                 }
 
                 // If this point is reached, program has successfully completed.
-            },
+            }
         }
 
         // Do something for phi node case inside of loop.
     }
 
     fn search_kill_inst(&mut self, irgm: &mut IRGraphManager) {
-        let inst_list = irgm.graph_manager().get_ref_graph()
+        let inst_list = irgm
+            .graph_manager()
+            .get_ref_graph()
             .node_weight(self.current_node)
             .unwrap()
             .get_data_ref()
@@ -581,31 +644,32 @@ impl CLE {
 
         let mut adjustment = 1;
 
-        for (position, inst) in inst_list
-            .iter()
-            .enumerate()
-            {
-                let inst_ty = inst.borrow().inst_type().clone();
-                if InstTy::store == inst_ty {
-                    let block_id = inst.borrow().get_inst_block();
-                    let kill_inst = irgm.build_op_in_block(InstTy::kill, block_id);
-                    irgm.graph_manager().insert_instruction_in_node(position + adjustment.clone(), kill_inst, &self.current_node);
-                    adjustment += 1;
+        for (position, inst) in inst_list.iter().enumerate() {
+            let inst_ty = inst.borrow().inst_type().clone();
+            if InstTy::store == inst_ty {
+                let block_id = inst.borrow().get_inst_block();
+                let kill_inst = irgm.build_op_in_block(InstTy::kill, block_id);
+                irgm.graph_manager().insert_instruction_in_node(
+                    position + adjustment.clone(),
+                    kill_inst,
+                    &self.current_node,
+                );
+                adjustment += 1;
 
-                    // A store instruction was found, if inside of any depth loop propagate the kill instruction to all loop depths.
-                    for node_id in self.while_bp.iter() {
-                        if !self.while_kill_prop.contains(node_id) {
-                            self.while_kill_prop.push(node_id.clone());
-                        }
+                // A store instruction was found, if inside of any depth loop propagate the kill instruction to all loop depths.
+                for node_id in self.while_bp.iter() {
+                    if !self.while_kill_prop.contains(node_id) {
+                        self.while_kill_prop.push(node_id.clone());
                     }
+                }
 
-                    for node_id in self.if_bp.iter() {
-                        if !self.if_kill_prop.contains(node_id) {
-                            self.if_kill_prop.push(node_id.clone());
-                        }
+                for node_id in self.if_bp.iter() {
+                    if !self.if_kill_prop.contains(node_id) {
+                        self.if_kill_prop.push(node_id.clone());
                     }
                 }
             }
+        }
     }
 
     pub fn add_kills(&mut self, irgm: &mut IRGraphManager) {
@@ -614,13 +678,15 @@ impl CLE {
             let phi_id = self.if_to_phi_map.get(&node_id).unwrap().clone();
 
             let kill_op = irgm.build_op_in_block(InstTy::kill, phi_id.index());
-            irgm.graph_manager().insert_instruction_in_node(0, kill_op, &phi_id);
+            irgm.graph_manager()
+                .insert_instruction_in_node(0, kill_op, &phi_id);
         }
 
         // Insert kill instruction to while headers
         for node_id in self.while_kill_prop.iter() {
             let kill_op = irgm.build_op_in_block(InstTy::kill, node_id.index());
-            irgm.graph_manager().insert_instruction_in_node(0, kill_op, &node_id);
+            irgm.graph_manager()
+                .insert_instruction_in_node(0, kill_op, &node_id);
         }
     }
 }

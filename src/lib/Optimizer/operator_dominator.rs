@@ -21,13 +21,17 @@ impl OpDomHandler {
         }
     }
 
-    fn op_manager(&self) -> & HashMap<InstTy, HashMap<Op, Vec<OpValue>>> { &self.op_manager }
+    fn op_manager(&self) -> &HashMap<InstTy, HashMap<Op, Vec<OpValue>>> {
+        &self.op_manager
+    }
 
     fn get_op_manager(self) -> HashMap<InstTy, HashMap<Op, Vec<OpValue>>> {
         self.op_manager
     }
 
-    fn clone_op_manager(&self) -> HashMap<InstTy, HashMap<Op, Vec<OpValue>>> { self.op_manager.clone() }
+    fn clone_op_manager(&self) -> HashMap<InstTy, HashMap<Op, Vec<OpValue>>> {
+        self.op_manager.clone()
+    }
 
     // This is ONLY for when a kill instruction is encountered.
     pub fn reset_op_set(&mut self) {
@@ -40,7 +44,14 @@ impl OpDomHandler {
                 for (op_key, op_vec) in other.op_manager.get(inst_key).unwrap() {
                     if self.op_manager.get(inst_key).unwrap().contains_key(op_key) {
                         for op_val in op_vec {
-                            if !self.op_manager.get(inst_key).unwrap().get(op_key).unwrap().contains(op_val) {
+                            if !self
+                                .op_manager
+                                .get(inst_key)
+                                .unwrap()
+                                .get(op_key)
+                                .unwrap()
+                                .contains(op_val)
+                            {
                                 self.op_manager
                                     .get_mut(inst_key)
                                     .unwrap()
@@ -50,7 +61,10 @@ impl OpDomHandler {
                             }
                         }
                     } else {
-                        self.op_manager.get_mut(inst_key).unwrap().insert(op_key.clone(), op_vec.clone());
+                        self.op_manager
+                            .get_mut(inst_key)
+                            .unwrap()
+                            .insert(op_key.clone(), op_vec.clone());
                     }
                 }
             } else {
@@ -65,7 +79,7 @@ impl OpDomHandler {
         &mut self,
         next_op: Rc<RefCell<Op>>,
         node_id: NodeIndex,
-        dom_space: & Dominators<NodeIndex>,
+        dom_space: &Dominators<NodeIndex>,
     ) -> (bool, Rc<RefCell<Op>>) {
         let key = next_op.borrow().inst_type().clone();
         let contains_key = self.op_manager.contains_key(&key);
@@ -93,32 +107,41 @@ impl OpDomHandler {
 
             new_inst_vec.push(new_op_value);
 
-            self.op_manager.get_mut(&key).unwrap().insert(next_op.borrow().get_active_base_op().unwrap(), new_inst_vec);
+            self.op_manager
+                .get_mut(&key)
+                .unwrap()
+                .insert(next_op.borrow().get_active_base_op().unwrap(), new_inst_vec);
         } else {
-            let inst_vec = inst_map.get_mut(&next_op.borrow().get_active_base_op().unwrap()).unwrap();
+            let inst_vec = inst_map
+                .get_mut(&next_op.borrow().get_active_base_op().unwrap())
+                .unwrap();
 
             let search_map = inst_vec
                 .iter()
-                .map(|value| {
-                    (value.clone_node_id(), value.clone_op())
-                }).collect::<HashMap<NodeIndex,Rc<RefCell<Op>>>>();
+                .map(|value| (value.clone_node_id(), value.clone_op()))
+                .collect::<HashMap<NodeIndex, Rc<RefCell<Op>>>>();
 
             if search_map.contains_key(&node_id) {
-                return (false, Rc::clone(search_map.get(&node_id).unwrap()))
+                return (false, Rc::clone(search_map.get(&node_id).unwrap()));
             }
 
             // Now we make a dominance path, as a very very last resort (should reduce time spent quite a bit)
             if let Some(mut dominance_iter) = dom_space.strict_dominators(node_id.clone()) {
                 while let Some(dominant_node_id) = dominance_iter.next() {
                     if search_map.contains_key(&dominant_node_id) {
-                        return (false, Rc::clone(search_map.get(&dominant_node_id).unwrap()))
+                        return (false, Rc::clone(search_map.get(&dominant_node_id).unwrap()));
                     }
                 }
             }
 
             // If is reaches this point, there are no dominating nodes and it should be added
             let new_op_val = OpValue::new(Rc::clone(&next_op), &node_id);
-            self.op_manager.get_mut(&key).unwrap().get_mut(&next_op.borrow().get_active_base_op().unwrap()).unwrap().push(new_op_val);
+            self.op_manager
+                .get_mut(&key)
+                .unwrap()
+                .get_mut(&next_op.borrow().get_active_base_op().unwrap())
+                .unwrap()
+                .push(new_op_val);
         }
 
         (true, next_op)
@@ -133,10 +156,13 @@ pub struct OpValue {
 
 impl OpValue {
     pub fn new(op: Rc<RefCell<Op>>, node_id: &NodeIndex) -> Self {
-        OpValue { op, node_id: node_id.clone() }
+        OpValue {
+            op,
+            node_id: node_id.clone(),
+        }
     }
 
-    pub fn check_node_id(&self) -> & NodeIndex {
+    pub fn check_node_id(&self) -> &NodeIndex {
         &self.node_id
     }
 

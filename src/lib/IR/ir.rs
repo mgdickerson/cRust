@@ -3,11 +3,11 @@ use lib::IR::array_manager::UniqueArray;
 use lib::IR::ret_register::RetRegister;
 use lib::IR::variable_manager::{UniqueVariable, VariableManager};
 
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use super::{Rc, RefCell};
 use lib::RegisterAllocator::RegisterAllocation;
 use petgraph::graph::NodeIndex;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct Value {
@@ -63,25 +63,25 @@ impl Hash for ValTy {
             }
             ValTy::node_id(node_id) => {
                 node_id.index().hash(state);
-            },
+            }
             ValTy::con(con) => {
                 con.clone().hash(state);
-            },
+            }
             ValTy::var(var) => {
                 0.hash(state);
-            },
+            }
             ValTy::adr(adr) => {
                 adr.to_string().hash(state);
-            },
+            }
             ValTy::arr(arr) => {
                 arr.to_string().hash(state);
-            },
+            }
             ValTy::ret(ret) => {
                 ret.to_string().hash(state);
-            },
+            }
             ValTy::reg(reg) => {
                 reg.to_string().hash(state);
-            },
+            }
         }
     }
 }
@@ -439,7 +439,7 @@ impl Hash for Op {
         match &self.x_val {
             Some(x_val) => {
                 x_val.clone().hash(state);
-            },
+            }
             None => {
                 0.hash(state);
             }
@@ -447,7 +447,7 @@ impl Hash for Op {
         match &self.y_val {
             Some(y_val) => {
                 y_val.clone().hash(state);
-            },
+            }
             None => {
                 0.hash(state);
             }
