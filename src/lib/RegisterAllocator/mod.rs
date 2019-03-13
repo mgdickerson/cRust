@@ -35,7 +35,7 @@ pub fn analyze_live_range(
     func_name: Option<String>,
     path: PathBuf,
     entry: OsString,
-) {
+) -> HashMap<usize,usize> {
     // Create a new graph which will contain each instruction as a node,
     // and edges between instructions represent the interference.
 
@@ -47,6 +47,7 @@ pub fn analyze_live_range(
     let mut spilled_instructions = HashMap::new();
 
     let mut round_count = 0;
+    let mut inst_register_map = HashMap::new();
 
     temp_manager.pull_temp_values(irgm.graph_manager(), root_node);
 
@@ -64,7 +65,8 @@ pub fn analyze_live_range(
 
         let mut interference_graph = recurse_graph.get_interference_graph();
 
-        // TODO : Need to find a way to get consistent results as this is looping very occasionally on 24_b
+        // It appears to have stabilized, though it very consistently
+        // drops about 3 instructions on 24, which seems like a lot
         let color_result = color(&mut interference_graph);
 
         match color_result {
@@ -89,6 +91,15 @@ pub fn analyze_live_range(
                     display::Dot::with_config(&interference_graph, &[display::Config::InterferenceGraph])
                 );
                 fs::write(file_name, output);
+
+                // TODO : return mapping of instructions to registers
+                let node_indicies = interference_graph.node_indices().clone();
+                for node_id in node_indicies {
+                    let register = interference_graph.node_weight(node_id.clone()).unwrap().get_register();
+                    for op_inst in interference_graph.node_weight(node_id).unwrap().get_inst_ref().clone() {
+                        inst_register_map.insert(op_inst.borrow().get_inst_num(), register.clone());
+                    }
+                }
             },
             Err(spill_node) => {
                 //println!("Splitting instruction: {:?}", interference_graph.node_weight(spill_node)
@@ -106,6 +117,8 @@ pub fn analyze_live_range(
             }
         }
     }
+
+    inst_register_map
 }
 
 #[derive(Clone)]

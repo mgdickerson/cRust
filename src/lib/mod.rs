@@ -31,6 +31,7 @@ pub mod Optimizer;
 pub mod Parser;
 pub mod RegisterAllocator;
 pub mod Utility;
+pub mod CodeGen;
 
 #[cfg(test)]
 pub mod tests {

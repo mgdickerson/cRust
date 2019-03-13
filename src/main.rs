@@ -140,13 +140,17 @@ fn main() {
         let entry_node = irgm.graph_manager().get_main_entrance_node();
         let exit_nodes = irgm.graph_manager().get_exit_nodes(&root_node);
 
-        analyze_live_range(&mut irgm,
+        let inst_register_mapping = analyze_live_range(&mut irgm,
                            &mut main_temp_manager,
                            entry_node.clone(),
                            exit_nodes,
                            None,
                            path.clone(),
                            entry.file_name().clone());
+
+        if inst_register_mapping.len() != 0 {
+            println!("Main has some register mapping.");
+        }
 
         for (func_name, func_root) in irgm.function_manager().list_functions() {
             // Get entry node for function
