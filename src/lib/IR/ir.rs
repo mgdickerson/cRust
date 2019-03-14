@@ -572,6 +572,16 @@ pub enum InstTy {
     store,
     mov,
 
+    // Indicate that function store register
+    // value for function parameter.
+    // Same layout as store.
+    param,
+
+    // Indicate that function store register value
+    // for a global affected within the function.
+    // Same layout as store.
+    global,
+
     /// Op Str ///
     call,
 }

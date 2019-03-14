@@ -150,6 +150,19 @@ impl FuncCall {
             func_name => {
                 let uniq_func = irgm.get_func_call(&String::from(func_name));
 
+                /// TODO : Actions as follow:
+                /// - Instead of the current store instructions,
+                ///   switch to param instruction for loading parameters
+                ///   and global for loading globals.
+                /// - Track global usage so that at time of
+                ///   codegen a static slot can be set aside for
+                ///   all global variables that will be used.
+                /// - All functions will have a prologue and
+                ///   an epilogue, which will be also handled
+                ///   in codegen and will do things such as store
+                ///   all register values in memory and then
+                ///   reload them after function execution.
+
                 // Store R28, R31
                 let r28_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R28()));
                 let r31_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R31()));
