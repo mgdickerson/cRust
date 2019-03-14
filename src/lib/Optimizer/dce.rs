@@ -1,4 +1,4 @@
-use super::{IRGraphManager, InstTy, Node, NodeIndex, TempValManager};
+use super::{IRGraphManager, InstTy, Node, NodeIndex, TempValManager, ValTy};
 
 /// Dead Code Elimination
 pub fn dead_code_elimination(
@@ -35,6 +35,26 @@ pub fn dead_code_elimination(
                 if InstTy::kill == inst.borrow().inst_type().clone() {
                     inst.borrow_mut().deactivate();
                     continue;
+                }
+
+                let x_value = inst.borrow().clone_x_val();
+                if let Some(x_value) = x_value {
+                    if let ValTy::op(x_op) = x_value.get_value().clone() {
+                        if !x_op.borrow().is_active() {
+                            inst.borrow_mut().deactivate();
+                            continue;
+                        }
+                    }
+                }
+
+                let y_value = inst.borrow().clone_y_val();
+                if let Some(y_value) = y_value {
+                    if let ValTy::op(y_op) = y_value.get_value().clone() {
+                        if !y_op.borrow().is_active() {
+                            inst.borrow_mut().deactivate();
+                            continue;
+                        }
+                    }
                 }
 
                 let active_uses = temp_manager

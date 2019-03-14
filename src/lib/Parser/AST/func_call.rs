@@ -150,12 +150,12 @@ impl FuncCall {
             func_name => {
                 let uniq_func = irgm.get_func_call(&String::from(func_name));
 
-                // TODO : I am not sure if this is the correct way to do this.
-                // Store R28, R29, R31
+                // Store R28, R31
                 let r28_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R28()));
-                let r29_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R29()));
                 let r31_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R31()));
-                // TODO : Is this necessary?
+
+                // First save return address (R31)
+
 
                 if uniq_func.has_return() {
                     // If unique function has a return, pre-load space for a return.

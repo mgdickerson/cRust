@@ -6,6 +6,8 @@ use core::borrow::Borrow;
 use petgraph::prelude::NodeIndex;
 use std::collections::HashMap;
 
+const NUM_OF_REGISTERS: usize = 8;
+
 pub fn color(int_graph: &mut Graph<OpNode, String, Directed, u32>) -> Result<(), NodeIndex> {
     // Keep track of what has been colored
     let mut walkable_graph = int_graph.clone();
@@ -84,7 +86,7 @@ pub fn color(int_graph: &mut Graph<OpNode, String, Directed, u32>) -> Result<(),
             reg_assignment += 1;
         }
 
-        if reg_assignment > 8 {
+        if reg_assignment > NUM_OF_REGISTERS {
             // What if we always spill the last one (or the one with least weight)
             let (lowest_node_id, _) = secondary_color_nodes.last().unwrap();
 
@@ -94,6 +96,7 @@ pub fn color(int_graph: &mut Graph<OpNode, String, Directed, u32>) -> Result<(),
                 .get_weight();
             let current_inst_weight = int_graph.node_weight(node_id.clone()).unwrap().get_weight();
 
+            // TODO : Is this a good metric?
             if current_inst_weight < (lowest_weight * 2) {
                 // Spilling the lowest one every time seems to generate a lot more spills.
                 // Perhaps if spilling only if the lowest is a factor of 3 lower in weight

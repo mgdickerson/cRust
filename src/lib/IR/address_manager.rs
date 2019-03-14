@@ -40,6 +40,7 @@ impl AddressManager {
 
     pub fn get_addr_assignment(&mut self, addr_name: &String, size: usize) -> UniqueAddress {
         let current_clone = self.current_available_addr.clone();
+        // TODO : Not sure this is going to work out for assignment.
         self.current_available_addr += size;
 
         UniqueAddress::new(addr_name.clone(), current_clone)

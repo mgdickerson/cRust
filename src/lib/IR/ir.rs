@@ -527,6 +527,11 @@ impl PartialEq for Op {
     }
 }
 
+// TODO : Need to add some instructions to make function calls easier
+// Ex: - param (var)
+//     - affect-global (var)
+//     - All functions need a prologue and epilogue (This can be done in codegen)
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum InstTy {
     /// Op ///
