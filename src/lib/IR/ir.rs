@@ -223,7 +223,8 @@ impl Op {
                     + &self.y_val.clone().unwrap().get_value().to_string();
             }
             // Op y //
-            InstTy::load | InstTy::sload | InstTy::bra => {
+            InstTy::load | InstTy::sload | InstTy::pload |
+            InstTy::gload | InstTy::bra => {
                 p_command = inst_type.to_string()
                     + " "
                     + &self.y_val.clone().unwrap().get_value().to_string();

@@ -150,24 +150,18 @@ impl FuncCall {
             func_name => {
                 let uniq_func = irgm.get_func_call(&String::from(func_name));
 
-                /// TODO : Actions as follow:
-                /// - Instead of the current store instructions,
-                ///   switch to param instruction for loading parameters
-                ///   and global for loading globals.
-                /// - Track global usage so that at time of
-                ///   codegen a static slot can be set aside for
-                ///   all global variables that will be used.
-                /// - All functions will have a prologue and
-                ///   an epilogue, which will be also handled
-                ///   in codegen and will do things such as store
-                ///   all register values in memory and then
-                ///   reload them after function execution.
-
-                // Store R28, R31
-//                let r28_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R28()));
-//                let r31_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R31()));
-
-                // First save return address (R31)
+//                 TODO : Actions as follow:
+//                 - Instead of the current store instructions,
+//                   switch to param instruction for loading parameters
+//                   and global for loading globals.
+//                 - Track global usage so that at time of
+//                   codegen a static slot can be set aside for
+//                   all global variables that will be used.
+//                 - All functions will have a prologue and
+//                   an epilogue, which will be also handled
+//                   in codegen and will do things such as store
+//                   all register values in memory and then
+//                   reload them after function execution.
 
 
                 if uniq_func.has_return() {
@@ -251,7 +245,7 @@ impl FuncCall {
                         irgm.address_manager().get_addr_assignment(global, 4),
                     ));
 
-                    let inst = irgm.build_op_y(var_addr_val, InstTy::load);
+                    let inst = irgm.build_op_y(var_addr_val, InstTy::gload);
                     let new_global_val = irgm.graph_manager().add_instruction(inst);
 
                     let block_num = irgm.get_block_num();
@@ -273,11 +267,7 @@ impl FuncCall {
                         irgm.address_manager().get_addr_assignment(&String::from("return"), 4),
                     ));
 
-                    let add_inst = irgm.build_op_x_y(param_addr_val, return_address_val, InstTy::adda);
-                    let add_val = irgm.graph_manager().add_instruction(add_inst);
-
-                    let r0_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R0()));
-                    let store_inst = irgm.build_op_y(add_val, InstTy::load);
+                    let store_inst = irgm.build_op_y(return_address_val, InstTy::pload);
                     return Some(irgm.graph_manager().add_instruction(store_inst))
                 }
             }
