@@ -229,7 +229,8 @@ impl Op {
                     + &self.y_val.clone().unwrap().get_value().to_string();
             }
             // Op y x //
-            InstTy::store | InstTy::mov => {
+            InstTy::store | InstTy::mov |
+            InstTy::pstore | InstTy::gstore => {
                 p_command = inst_type.to_string()
                     + " "
                     + &self.y_val.clone().unwrap().get_value().to_string()
@@ -566,6 +567,8 @@ pub enum InstTy {
     /// Op y ///
     load,
     sload,
+    pload,
+    gload,
     bra,
 
     /// Op y x ///
@@ -575,12 +578,14 @@ pub enum InstTy {
     // Indicate that function store register
     // value for function parameter.
     // Same layout as store.
-    param,
+    // param (x) location (y) value
+    pstore,
 
     // Indicate that function store register value
     // for a global affected within the function.
     // Same layout as store.
-    global,
+    // global (x) location (y) value
+    gstore,
 
     /// Op Str ///
     call,
@@ -623,9 +628,17 @@ impl InstTy {
             InstTy::sload => String::from("spill_load"),
             InstTy::bra => String::from("bra"),
 
+            InstTy::gload => String::from("global_load"),
+
+            // This will only be used for the return result
+            InstTy::pload => String::from("param_load"),
+
             /// Op y x ///
             InstTy::store => String::from("store"),
             InstTy::mov => String::from("move"),
+
+            InstTy::pstore => String::from("param_store"),
+            InstTy::gstore => String::from("global_store"),
 
             /// Op [x] ///
             InstTy::call => String::from("call"),
