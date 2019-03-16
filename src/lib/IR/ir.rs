@@ -461,44 +461,18 @@ impl Eq for Op {}
 impl PartialEq for Op {
     fn eq(&self, other: &Op) -> bool {
         if self.inst_type == other.inst_type {
-            let (self_x, self_y) = self.get_val_ty();
-            let (other_x, other_y) = other.get_val_ty();
+            let mut x_match_checked = false;
+            let mut y_match_checked = false;
 
-            match (self_x, other_x) {
-                (Some(self_some_x), Some(other_some_x)) => {
-                    if let ValTy::op(self_op_x) = self_some_x {
-                        let x_inst_num = self_op_x.borrow().get_inst_num();
-                        //println!("Passes first op_check: {}", x_inst_num);
-                        if let ValTy::op(other_op_x) = other_some_x {
-                            //println!("Passes second op check");
-                            let x_other_inst_num = other_op_x.borrow().get_inst_num();
-                            //println!("{} == {} ?", x_inst_num, x_other_inst_num);
-                            if x_inst_num == x_other_inst_num {
-                                //println!("X_inst is same as Other_x_inst");
-                                match (self_y, other_y) {
-                                    (Some(self_some_y), Some(other_some_y)) => {
-                                        if let ValTy::op(self_op_y) = self_some_y {
-                                            let y_inst_num = self_op_y.borrow().get_inst_num();
-                                            if let ValTy::op(other_op_y) = other_some_y {
-                                                let y_other_inst_num =
-                                                    other_op_y.borrow().get_inst_num();
-                                                if y_inst_num == y_other_inst_num {
-                                                    return true;
-                                                } else {
-                                                    return false;
-                                                }
-                                            } else {
-                                                return false;
-                                            }
-                                        }
-                                    }
-                                    (None, None) => {
-                                        return true;
-                                    }
-                                    _ => {
-                                        return false;
-                                    }
-                                }
+            let x_values = (self.clone_x_val(), other.clone_x_val());
+
+            match x_values {
+                (Some(self_val), Some(other_val)) => {
+                    if let ValTy::op(self_op) = self_val.get_value() {
+                        if let ValTy::op(other_op) = other_val.get_value() {
+                            if self_op.borrow().get_inst_num() == other_op.borrow().get_inst_num() {
+                                // both x ops match, check for y now.
+                                x_match_checked = true;
                             } else {
                                 return false;
                             }
@@ -506,15 +480,59 @@ impl PartialEq for Op {
                             return false;
                         }
                     }
-                }
+                },
                 (None, None) => {
-                    return true;
-                }
+                    x_match_checked = true;
+                },
                 _ => {
-                    return false;
+                    return false
+                },
+            }
+
+            let y_values = (self.clone_y_val(), other.clone_y_val());
+
+            match y_values {
+                (Some(self_val), Some(other_val)) => {
+                    if let ValTy::op(self_op) = self_val.get_value() {
+                        if let ValTy::op(other_op) = other_val.get_value() {
+                            if self_op.borrow().get_inst_num() == other_op.borrow().get_inst_num() {
+                                // both x ops match, check for y now.
+                                y_match_checked = true;
+                            } else {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
+                },
+                (None, None) => {
+                    if x_match_checked == true {
+                        return true
+                    } else {
+                        y_match_checked = true;
+                    }
+                },
+                _ => {
+                    return false
+                },
+            }
+
+            // First check for the case where x is an op, but y is not.
+            if x_match_checked {
+                if self.y_val == other.y_val {
+                    return true;
                 }
             }
 
+            // Check for case where y is an op, but x is not.
+            if y_match_checked {
+                if self.x_val == other.x_val {
+                    return true;
+                }
+            }
+
+            // Case where neither x or y is an op
             if self.x_val == other.x_val {
                 if self.y_val == other.y_val {
                     if self.special_val == other.special_val {

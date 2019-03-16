@@ -18,7 +18,7 @@ impl InstructionBuilder {
     pub fn build_instruction(&mut self, op: Rc<RefCell<Op>>) {
         let op_type = op.borrow().inst_type().clone();
         match op_type {
-            InstTy::neg | InstTy::mov |
+            InstTy::neg |
             InstTy::end => {
                 // Dont think this was used anywhere...
                 panic!("Encountered instruction expected to not be used.");
@@ -42,6 +42,9 @@ impl InstructionBuilder {
 
         match op_type {
             /// Arithmetic ///
+            InstTy::mov => {
+                return (OpCode::ADD, FMT::F1)
+            },
             InstTy::add | InstTy::adda => {
                 if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
                     return (OpCode::ADDI, FMT::F1)

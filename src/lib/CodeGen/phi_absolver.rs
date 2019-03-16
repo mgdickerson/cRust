@@ -81,6 +81,7 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                 }
 
                 let r0_value = Value::new(ValTy::reg(RegisterAllocation::allocate_R0()));
+                let phi_register_val = Value::new(ValTy::reg(RegisterAllocation::allocate_register(phi_register.clone())));
 
                 // If function reaches this point, it means
                 // there will be a need to add instructions
@@ -91,9 +92,9 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                         if phi_register != x_register {
                             // x-register does not match and needs to be added
                             let x_add_op = irgm.build_op_x_y_in_block(
-                                r0_value.clone(),
+                                phi_register_val.clone(),
                                 inst.borrow().clone_x_val().unwrap(),
-                                InstTy::add,
+                                InstTy::mov,
                                 x_parent_node.index());
 
                             irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
@@ -101,9 +102,9 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                         }
 
                         let y_add_op = irgm.build_op_x_y_in_block(
-                            r0_value.clone(),
+                            phi_register_val.clone(),
                             inst.borrow().clone_y_val().unwrap(),
-                            InstTy::add,
+                            InstTy::mov,
                             y_parent_node.index());
 
                         irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
@@ -115,9 +116,9 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                         if phi_register != y_register {
                             // y-register does not match and needs to be added
                             let y_add_op = irgm.build_op_x_y_in_block(
-                                r0_value.clone(),
+                                phi_register_val.clone(),
                                 inst.borrow().clone_y_val().unwrap(),
-                                InstTy::add,
+                                InstTy::mov,
                                 y_parent_node.index());
 
                             irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
@@ -125,9 +126,9 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                         }
 
                         let x_add_op = irgm.build_op_x_y_in_block(
-                            r0_value.clone(),
+                            phi_register_val.clone(),
                             inst.borrow().clone_x_val().unwrap(),
-                            InstTy::add,
+                            InstTy::mov,
                             x_parent_node.index());
 
                         irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
@@ -136,9 +137,9 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                     _ => {
                         // x-register does not match and needs to be added
                         let x_add_op = irgm.build_op_x_y_in_block(
-                            r0_value.clone(),
+                            phi_register_val.clone(),
                             inst.borrow().clone_x_val().unwrap(),
-                            InstTy::add,
+                            InstTy::mov,
                             x_parent_node.index());
 
                         irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
@@ -146,9 +147,9 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
 
                         // y-register does not match and needs to be added
                         let y_add_op = irgm.build_op_x_y_in_block(
-                            r0_value.clone(),
+                            phi_register_val.clone(),
                             inst.borrow().clone_y_val().unwrap(),
-                            InstTy::add,
+                            InstTy::mov,
                             y_parent_node.index());
 
                         irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
