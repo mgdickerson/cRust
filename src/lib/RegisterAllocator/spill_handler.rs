@@ -50,28 +50,15 @@ impl SpillHandler {
             if inst.borrow().get_inst_num() == inst_id {
                 let fp_address = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
                 let add_op = irgm.build_op_x_y_in_block(
-                    fp_address,
                     spill_addr_value.clone(),
-                    InstTy::sadd,
+                    Value::new(ValTy::op(Rc::clone(inst))),
+                    InstTy::spill,
                     inst_def_block.clone(),
                 );
 
                 let storage_location = irgm.graph_manager().insert_instruction_in_node(
                     position + 1,
                     add_op,
-                    &inst_node_id,
-                );
-
-                let store_op = irgm.build_op_x_y_in_block(
-                    storage_location,
-                    Value::new(ValTy::op(Rc::clone(inst))),
-                    InstTy::store,
-                    inst_def_block.clone(),
-                );
-
-                irgm.graph_manager().insert_instruction_in_node(
-                    position + 2,
-                    store_op,
                     &inst_node_id,
                 );
             }
@@ -97,29 +84,14 @@ impl SpillHandler {
             for (position, inst) in inst_list.iter().enumerate() {
                 let inst_block = inst.borrow().get_inst_block();
                 if inst.borrow().get_inst_num() == active_use.borrow().inst_num() {
-                    let fp_address =
-                        Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
-                    let add_op = irgm.build_op_x_y_in_block(
-                        fp_address,
-                        spill_addr_value.clone(),
-                        InstTy::sadd,
-                        inst_block.clone(),
-                    );
-
-                    let storage_location = irgm.graph_manager().insert_instruction_in_node(
-                        position,
-                        add_op,
-                        &inst_use_node_id,
-                    );
-
                     let load_op = irgm.build_op_y_in_block(
-                        storage_location,
-                        InstTy::sload,
+                        spill_addr_value.clone(),
+                        InstTy::loadsp,
                         inst_block.clone(),
                     );
 
                     let load_value = irgm.graph_manager().insert_instruction_in_node(
-                        position + 1,
+                        position,
                         load_op,
                         &inst_use_node_id,
                     );

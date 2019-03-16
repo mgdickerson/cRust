@@ -203,7 +203,6 @@ impl Op {
             }
             // Op x y //
             InstTy::add
-            | InstTy::sadd
             | InstTy::sub
             | InstTy::mul
             | InstTy::div
@@ -223,7 +222,7 @@ impl Op {
                     + &self.y_val.clone().unwrap().get_value().to_string();
             }
             // Op y //
-            InstTy::load | InstTy::sload | InstTy::pload |
+            InstTy::load | InstTy::loadsp | InstTy::pload |
             InstTy::gload | InstTy::bra => {
                 p_command = inst_type.to_string()
                     + " "
@@ -231,7 +230,7 @@ impl Op {
             }
             // Op y x //
             InstTy::store | InstTy::mov |
-            InstTy::pstore | InstTy::gstore => {
+            InstTy::pstore | InstTy::gstore | InstTy::spill => {
                 p_command = inst_type.to_string()
                     + " "
                     + &self.y_val.clone().unwrap().get_value().to_string()
@@ -549,7 +548,6 @@ pub enum InstTy {
 
     /// Op x y ///
     add,
-    sadd,
     sub,
     mul,
     div,
@@ -567,7 +565,7 @@ pub enum InstTy {
 
     /// Op y ///
     load,
-    sload,
+    loadsp,
     pload,
     gload,
     bra,
@@ -575,6 +573,8 @@ pub enum InstTy {
     /// Op y x ///
     store,
     mov,
+
+    spill,
 
     // Indicate that function store register
     // value for function parameter.
@@ -608,7 +608,7 @@ impl InstTy {
 
             /// Op x y ///
             InstTy::add => String::from("add"),
-            InstTy::sadd => String::from("spill_add"),
+            InstTy::spill => String::from("spill"),
             InstTy::sub => String::from("sub"),
             InstTy::mul => String::from("mul"),
             InstTy::div => String::from("div"),
@@ -626,20 +626,20 @@ impl InstTy {
 
             /// Op y ///
             InstTy::load => String::from("load"),
-            InstTy::sload => String::from("spill_load"),
+            InstTy::loadsp => String::from("load_spill"),
             InstTy::bra => String::from("bra"),
 
-            InstTy::gload => String::from("global_load"),
+            InstTy::gload => String::from("gload"),
 
             // This will only be used for the return result
-            InstTy::pload => String::from("param_load"),
+            InstTy::pload => String::from("pload"),
 
             /// Op y x ///
             InstTy::store => String::from("store"),
             InstTy::mov => String::from("move"),
 
-            InstTy::pstore => String::from("param_store"),
-            InstTy::gstore => String::from("global_store"),
+            InstTy::pstore => String::from("pstore"),
+            InstTy::gstore => String::from("gstore"),
 
             /// Op [x] ///
             InstTy::call => String::from("call"),

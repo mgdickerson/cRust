@@ -33,8 +33,6 @@ use lib::IR::ir::{InstTy, Op, ValTy, Value};
 use lib::IR::ir_manager::IRGraphManager;
 use lib::CodeGen::phi_absolver;
 
-//extern crate core;
-extern crate core;
 /// External Lib
 extern crate petgraph;
 

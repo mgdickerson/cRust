@@ -2,7 +2,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use lib::IR::ir::{Op};
+use lib::IR::ir::{Op, InstTy, ValTy};
 
 pub struct InstructionBuilder {
     id_counter: usize,
@@ -16,6 +16,117 @@ impl InstructionBuilder {
 
     // Will probably need more context to this.
     pub fn build_instruction(&mut self, op: Rc<RefCell<Op>>) {
+        let op_type = op.borrow().inst_type().clone();
+        match op_type {
+            InstTy::neg | InstTy::mov |
+            InstTy::end => {
+                // Dont think this was used anywhere...
+                panic!("Encountered instruction expected to not be used.");
+            },
+            InstTy::phi | InstTy::kill => {
+                // These should all be removed by this point
+                panic!("Should be no remaining phi instructions when in codegen.");
+            },
+            InstTy::spill | InstTy::loadsp |
+            InstTy::pload | InstTy::gload |
+            InstTy::pload | InstTy::gstore |
+            InstTy::ret | InstTy::call => {},
+            _ => {
+                let unpacked_inst = InstructionBuilder::unpack_simple_ir(op.clone());
+            },
+        }
+    }
+
+    fn unpack_simple_ir(op: Rc<RefCell<Op>>) -> (OpCode, FMT) {
+        let op_type = op.borrow().inst_type().clone();
+
+        match op_type {
+            /// Arithmetic ///
+            InstTy::add | InstTy::adda => {
+                if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
+                    return (OpCode::ADDI, FMT::F1)
+                }
+
+                return (OpCode::ADD, FMT::F2)
+            },
+            InstTy::sub => {
+                if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
+                    return (OpCode::SUBI, FMT::F1)
+                }
+
+                return (OpCode::SUB, FMT::F2)
+            },
+            InstTy::mul => {
+                if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
+                    return (OpCode::MULI, FMT::F1)
+                }
+
+                return (OpCode::MUL, FMT::F2)
+
+            },
+            InstTy::div => {
+                if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
+                    return  (OpCode::DIVI, FMT::F1)
+                }
+
+                return (OpCode::DIV, FMT::F2)
+            },
+            InstTy::cmp => {
+                if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
+                    return  (OpCode::CMPI, FMT::F1)
+                }
+
+                return (OpCode::CMP, FMT::F2)
+            },
+
+            /// Load/Store ///
+            InstTy::load => {
+                return (OpCode::LDX, FMT::F2)
+            },
+            InstTy::store => {
+                return (OpCode::STX, FMT::F2)
+            },
+
+            /// Control ///
+            InstTy::bne => {
+                return (OpCode::BNE, FMT::F1)
+            },
+            InstTy::beq => {
+                return (OpCode::BEQ, FMT::F1)
+            },
+            InstTy::ble => {
+                return (OpCode::BLE, FMT::F1)
+            },
+            InstTy::blt => {
+                return (OpCode::BLT, FMT::F1)
+            },
+            InstTy::bge => {
+                return (OpCode::BGE, FMT::F1)
+            },
+            InstTy::bgt => {
+                return (OpCode::BGT, FMT::F1)
+            },
+            InstTy::bra => {
+                return (OpCode::BSR, FMT::F1)
+            },
+
+            /// Input/Output ///
+            InstTy::read => {
+                return (OpCode::RDD, FMT::F2)
+            },
+            InstTy::writeNL => {
+                return (OpCode::WRL, FMT::F1)
+            },
+            InstTy::write => {
+                return (OpCode::WRD, FMT::F2)
+            },
+            _ => {
+                panic!("Found unexpected instruction while unpacking simple IR.");
+            },
+        }
+    }
+
+    fn unpack_complex_ir(op: Rc<RefCell<Op>>) {
 
     }
 }
@@ -28,24 +139,24 @@ pub struct Instruction {
 struct InstructionPacker {}
 
 impl InstructionPacker {
-    fn pack_f1(opcode: OpCode, reg_a: u8, reg_b: u8, c_val: u16) -> u32 {
+    fn pack_f1(opcode: OpCode, reg_a: u32, reg_b: u32, c_val: u32) -> u32 {
         let mut inst : u32 = 0;
 
         inst |= (opcode as u32) << 26;
-        inst |= (reg_a as u32) << 21;
-        inst |= (reg_b as u32) << 16;
-        inst |= ((c_val as u32) & 0x0000FFFF); // Dont think this is necessary
+        inst |= (reg_a) << 21;
+        inst |= (reg_b) << 16;
+        inst |= ((c_val) & 0x0000FFFF); // Dont think this is necessary
 
         inst
     }
 
-    fn pack_f2(opcode: OpCode, reg_a: u8, reg_b: u8, reg_c: u8) -> u32 {
+    fn pack_f2(opcode: OpCode, reg_a: u32, reg_b: u32, reg_c: u32) -> u32 {
         let mut inst : u32 = 0;
 
         inst |= (opcode as u32) << 26;
-        inst |= (reg_a as u32) << 21;
-        inst |= (reg_b as u32) << 16;
-        inst |= reg_c as u32;
+        inst |= (reg_a) << 21;
+        inst |= (reg_b) << 16;
+        inst |= reg_c;
 
         inst
     }
@@ -58,6 +169,12 @@ impl InstructionPacker {
 
         inst
     }
+}
+
+enum FMT {
+    F1,
+    F2,
+    F3,
 }
 
 enum OpCode {

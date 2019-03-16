@@ -384,10 +384,10 @@ impl RecurseTraverse {
                                 let modifier = spilled_inst.get(&x_inst_id).unwrap().clone();
                                 weight += 1000000 * modifier;
                             }
-                            if x_inst_type == InstTy::sadd {
+                            if x_inst_type == InstTy::spill {
                                 weight += 100000;
                             }
-                            if x_inst_type == InstTy::sload {
+                            if x_inst_type == InstTy::loadsp {
                                 weight += 100000;
                             }
                             let op_node = OpNode::new(Rc::clone(x_inst), weight * 2);
@@ -475,10 +475,10 @@ impl RecurseTraverse {
                                 let modifier = spilled_inst.get(&y_inst_id).unwrap().clone();
                                 weight += 1000000 * modifier;
                             }
-                            if y_inst_type == InstTy::sadd {
+                            if y_inst_type == InstTy::spill {
                                 weight += 100000;
                             }
-                            if y_inst_type == InstTy::sload {
+                            if y_inst_type == InstTy::loadsp {
                                 weight += 100000;
                             }
                             let op_node = OpNode::new(Rc::clone(y_inst), weight * 2);

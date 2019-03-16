@@ -156,14 +156,6 @@ impl Optimizer {
             local_func_map.insert(func_name.clone(), temp_manager);
         }
 
-        // Do some ignored path cleanup
-        /*clean_graph(
-            &mut self.irgm,
-            main_node_index,
-            &mut local_main_manager,
-            &graph_visitor,
-        );*/
-
         // Return values cloned for locals to update Optimizer
         self.main_temp_val_manager = local_main_manager;
         self.func_temp_val_map = local_func_map;

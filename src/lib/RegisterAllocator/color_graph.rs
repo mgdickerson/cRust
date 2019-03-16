@@ -2,7 +2,6 @@ use petgraph::Graph;
 use petgraph::{Directed, Incoming, Outgoing};
 
 use super::{Color, OpNode, RegisterAllocation};
-use core::borrow::Borrow;
 use petgraph::prelude::NodeIndex;
 use std::collections::HashMap;
 
@@ -97,7 +96,7 @@ pub fn color(int_graph: &mut Graph<OpNode, String, Directed, u32>) -> Result<(),
             let current_inst_weight = int_graph.node_weight(node_id.clone()).unwrap().get_weight();
 
             // TODO : Is this a good metric?
-            if current_inst_weight < (lowest_weight * 2) {
+            if current_inst_weight < (lowest_weight * 1) {
                 // Spilling the lowest one every time seems to generate a lot more spills.
                 // Perhaps if spilling only if the lowest is a factor of 3 lower in weight
                 // will reduce the amount of spills.

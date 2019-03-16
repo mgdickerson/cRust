@@ -151,9 +151,6 @@ impl FuncCall {
                 let uniq_func = irgm.get_func_call(&String::from(func_name));
 
 //                 TODO : Actions as follow:
-//                 - Instead of the current store instructions,
-//                   switch to param instruction for loading parameters
-//                   and global for loading globals.
 //                 - Track global usage so that at time of
 //                   codegen a static slot can be set aside for
 //                   all global variables that will be used.
@@ -162,6 +159,7 @@ impl FuncCall {
 //                   in codegen and will do things such as store
 //                   all register values in memory and then
 //                   reload them after function execution.
+//                 - Might also switch to having codegen handling return.
 
 
                 if uniq_func.has_return() {
@@ -174,8 +172,6 @@ impl FuncCall {
                     irgm.graph_manager().add_instruction(store_inst);
                 }
 
-                //println!("{} : \tGlobals {:?}\n\tParams: {:?}", func_name, &uniq_func.load_globals_list(), &uniq_func.load_param_list());
-
                 // Store all global parameters affected.
                 for global in &uniq_func.load_globals_list() {
                     let uniq_var_val =
@@ -185,19 +181,6 @@ impl FuncCall {
                     ));
 
                     let inst = irgm.build_op_x_y(var_addr_val, uniq_var_val, InstTy::gstore);
-
-//                    let inst;
-//                    if let ValTy::con(con_val) = uniq_var_val.clone().get_var_base().clone() {
-//                        let add_inst = irgm.build_op_x_y(
-//                            Value::new(ValTy::con(0)),
-//                            Value::new(ValTy::con(con_val)),
-//                            InstTy::add,
-//                        );
-//                        let add_val = irgm.graph_manager().add_instruction(add_inst);
-//                        inst = irgm.build_op_x_y(var_addr_val, add_val, InstTy::global);
-//                    } else {
-//                        inst = irgm.build_op_x_y(var_addr_val, uniq_var_val, InstTy::global);
-//                    }
                     irgm.graph_manager().add_instruction(inst);
                 }
 
@@ -219,19 +202,6 @@ impl FuncCall {
                     ));
 
                     let inst = irgm.build_op_x_y(var_addr_val, uniq_var_val, InstTy::pstore);
-
-//                    let inst;
-//                    if let ValTy::con(con_val) = uniq_var_val.clone().get_var_base().clone() {
-//                        let add_inst = irgm.build_op_x_y(
-//                            Value::new(ValTy::con(0)),
-//                            Value::new(ValTy::con(con_val)),
-//                            InstTy::add,
-//                        );
-//                        let add_val = irgm.graph_manager().add_instruction(add_inst);
-//                        inst = irgm.build_op_x_y(var_addr_val, add_val, InstTy::store);
-//                    } else {
-//                        inst = irgm.build_op_x_y(var_addr_val, uniq_var_val, InstTy::store);
-//                    }
                     irgm.graph_manager().add_instruction(inst);
                 }
 
