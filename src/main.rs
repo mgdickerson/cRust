@@ -31,7 +31,7 @@ use lib::Utility::display;
 use lib::IR::ir;
 use lib::IR::ir::{InstTy, Op, ValTy, Value};
 use lib::IR::ir_manager::IRGraphManager;
-use lib::CodeGen::phi_absolver;
+use lib::CodeGen::{phi_absolver,generate_code::traversal_path};
 
 /// External Lib
 extern crate petgraph;
@@ -186,6 +186,16 @@ fn main() {
         if inst_register_mapping.len() != 0 {
             phi_absolver::remove_phis(&mut irgm, &mut inst_register_mapping);
             println!("Main has some register mapping.");
+        }
+
+        let walkable_graph = irgm.graph_manager_ref().get_ref_graph().clone();
+        let mut visited = Vec::new();
+
+        traversal_path(&mut irgm, &walkable_graph, root_node, &mut visited);
+
+        println!("Traversal Path: \n");
+        for node_id in visited.iter() {
+            println!("{}", irgm.graph_manager_ref().get_ref_graph().node_weight(node_id.clone()).unwrap().get_node_id());
         }
 
         /*let mut irgm = irgm.clone();
