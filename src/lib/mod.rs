@@ -14,15 +14,20 @@ use self::Utility::display;
 extern crate petgraph;
 use petgraph::graph;
 use petgraph::{Directed, Incoming, Outgoing};
+use petgraph::algo::dominators::simple_fast;
+use petgraph::algo::dominators::Dominators;
+use petgraph::prelude::NodeIndex;
 
 use lib::Optimizer::temp_value_manager::TempValManager;
 use lib::RegisterAllocator::analyze_live_range;
 use lib::RegisterAllocator::{Color, RegisterAllocation};
 use lib::IR::ir::{InstTy, ValTy, Value};
 use lib::IR::ir_manager::IRGraphManager;
-use petgraph::algo::dominators::simple_fast;
-use petgraph::algo::dominators::Dominators;
-use petgraph::prelude::NodeIndex;
+use lib::Graph::node::Node;
+
+use lib::Lexer::token::TokenCollection;
+use lib::Parser::AST::computation::Comp;
+use std::collections::HashMap;
 
 pub mod CodeGen;
 pub mod Graph;
@@ -219,6 +224,180 @@ pub mod tests {
     }
 }
 
+pub fn run(path_name: String) {
+    // Take a file name provided by main, perform all passes on it.
+    let mut path = PathBuf::new();
+    path.push(path_name);
+
+    let mut file = fs::File::open(path.as_path())
+        .expect("Unable to find file. Perhaps directory was entered incorrectly?");
+
+    let mut irgman = parse(file);
+    let (mut irgm, mut mtm, mut ftm) =
+        optimize_passes(irgman, path.clone());
+    register_allocation(&mut irgm, &mut mtm, &mut ftm, path.clone());
+
+    // TODO : Add in everything after register allocation (Otherwise this works! probably want to make the parser for the command line more robust)
+
+    add_dominance_path(&mut irgm, path.clone());
+}
+
+fn tokenize(source: std::fs::File) -> TokenCollection {
+    let mut buffer = String::new();
+    let result = BufReader::new(source)
+        .read_to_string(&mut buffer);
+
+    match result {
+        Ok(num) => {
+            let mut char_iter = buffer.chars().peekable();
+            TokenCollection::collect(&mut char_iter)
+        },
+        Err(e) => {
+            panic!(e);
+        }
+    }
+}
+
+fn parse(source: std::fs::File) -> IRGraphManager {
+    // Gather all tokens
+    let mut tc = tokenize(source);
+
+    // Feed tokens into parser, return IRGraphManager
+    Comp::new(&mut tc).to_ir()
+}
+
+fn optimize_passes(irgm: IRGraphManager, path_buf: PathBuf)
+    -> (IRGraphManager, TempValManager, HashMap<String,TempValManager>) {
+    let mut optimizer = Optimizer::Optimizer::new(irgm);
+
+    // Output graph after every optimization pass.
+    optimizer.pass_0();
+    print_graph(
+        path_buf.to_str().unwrap().clone()
+            .trim_end_matches(".txt").to_owned() + "_opt0.dot",
+        optimizer.get_irgm_ref().graph_manager_ref().get_ref_graph()
+    );
+
+    optimizer.pass_1();
+    print_graph(
+        path_buf.to_str().unwrap().clone()
+            .trim_end_matches(".txt").to_owned() + "_opt1.dot",
+        optimizer.get_irgm_ref().graph_manager_ref().get_ref_graph()
+    );
+
+    optimizer.pass_2();
+    print_graph(
+        path_buf.to_str().unwrap().clone()
+            .trim_end_matches(".txt").to_owned() + "_opt2.dot",
+        optimizer.get_irgm_ref().graph_manager_ref().get_ref_graph()
+    );
+
+    optimizer.pass_3();
+    print_graph(
+        path_buf.to_str().unwrap().clone()
+            .trim_end_matches(".txt").to_owned() + "_opt3.dot",
+        optimizer.get_irgm_ref().graph_manager_ref().get_ref_graph()
+    );
+
+    optimizer.pass_4();
+    print_graph(
+        path_buf.to_str().unwrap().clone()
+            .trim_end_matches(".txt").to_owned() + "_opt4.dot",
+        optimizer.get_irgm_ref().graph_manager_ref().get_ref_graph()
+    );
+
+    let main_temp = optimizer.get_main_temp();
+    let func_temps = optimizer.get_func_temp();
+
+    (optimizer.get_irgm(), main_temp, func_temps)
+}
+
+fn print_graph(path: String, graph: &petgraph::graph::Graph<Node, String, Directed, u32>) {
+    let mut output = String::new();
+    write!(output, "{:?}", display::Dot::with_config(
+        graph,
+        &[display::Config::EdgeColor]
+    ));
+    fs::write(path, output);
+}
+
+fn register_allocation(irgm: &mut IRGraphManager,
+                       mtm: &mut TempValManager,
+                       ftm: &mut HashMap<String,TempValManager>,
+                       path: PathBuf
+) -> HashMap<usize, usize> {
+    let root_node = irgm.graph_manager_ref().get_main_node();
+    let entry_node = irgm.graph_manager_ref().get_main_entrance_node();
+    let exit_nodes = irgm.graph_manager_ref().get_exit_nodes(&root_node);
+
+    let mut inst_register_mapping = analyze_live_range(
+        irgm,
+        mtm,
+        root_node,
+        exit_nodes,
+        None,
+        path.clone()
+    );
+
+    for (func_name, func_root) in irgm.function_manager().list_functions() {
+        let entry_id = irgm
+            .graph_manager_ref()
+            .get_ref_graph()
+            .neighbors_directed(func_root, Incoming)
+            .next()
+            .unwrap();
+
+        let exit_nodes = irgm.graph_manager().get_exit_nodes(&func_root);
+
+        let func_register_mapping = analyze_live_range(
+            irgm,
+            ftm.get_mut(&func_name).unwrap(),
+            entry_id,
+            exit_nodes,
+            Some(func_name),
+            path.clone()
+        );
+
+        for (key, value) in func_register_mapping.iter() {
+            if !inst_register_mapping.contains_key(key) {
+                inst_register_mapping.insert(key.clone(), value.clone());
+            }
+        }
+    }
+
+    inst_register_mapping
+}
+
+fn add_dominance_path(irgm: &mut IRGraphManager, path: PathBuf) {
+    let root = irgm.graph_manager().get_main_node();
+    let graph = irgm.graph_manager().get_mut_ref_graph().clone();
+    let dom_space = simple_fast(&graph, root);
+    //println!("{:?}", dom_space);
+    for node in graph.node_indices() {
+        match dom_space.immediate_dominator(node) {
+            Some(parent_node) => {
+                irgm.graph_manager().add_dominance_edge(node, parent_node);
+            }
+            None => {}
+        }
+    }
+
+    /// END TEST SPACE ///
+    let mut file_name = path.to_str().unwrap().trim_end_matches(".txt").to_owned()
+        + ".dot";
+
+    let mut output = String::new();
+    write!(
+        output,
+        "{:?}",
+        display::Dot::with_config(
+            &irgm.graph_manager().get_mut_ref_graph().clone(),
+            &[display::Config::EdgeColor]
+        )
+    );
+    fs::write(file_name, output);
+}
+
 pub fn run_file(file_name: String) {
     let mut path = PathBuf::new();
     path.push(env::current_exe().unwrap());
@@ -232,7 +411,6 @@ pub fn run_file(file_name: String) {
     println!("{:?}", path);
 
     let mut file = fs::File::open(path.as_path()).expect("Error Opening File.");
-    let mut token_builder: Vec<Lexer::token::Token> = Vec::new();
 
     let mut buffer = String::new();
     let result = BufReader::new(file).read_to_string(&mut buffer);

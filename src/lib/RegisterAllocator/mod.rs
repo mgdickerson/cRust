@@ -31,8 +31,7 @@ pub fn analyze_live_range(
     root_node: NodeIndex,
     exit_nodes: Vec<NodeIndex>,
     func_name: Option<String>,
-    path: PathBuf,
-    entry: OsString,
+    path: PathBuf
 ) -> HashMap<usize, usize> {
     // Create a new graph which will contain each instruction as a node,
     // and edges between instructions represent the interference.
@@ -71,10 +70,8 @@ pub fn analyze_live_range(
             Ok(_) => {
                 needs_coloring = false;
 
-                let mut dot_graph_path = entry.clone();
-                let mut file_name = path.to_str().unwrap().to_owned()
-                    + "/"
-                    + dot_graph_path.to_str().unwrap().trim_end_matches(".txt");
+                let mut file_name = path.to_str().unwrap()
+                    .trim_end_matches(".txt").to_owned();
 
                 if let Some(func_name) = &func_name {
                     file_name += func_name;
