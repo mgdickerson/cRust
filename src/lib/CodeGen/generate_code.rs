@@ -35,6 +35,18 @@ impl CodeGen {
     pub fn clean_inst(&mut self) {
         let starting_node = self.irgm.graph_manager_ref().get_main_node();
         self.get_current_traversal(starting_node);
+        self.clean_nodes();
+
+        let func_list = self.irgm.function_manager().list_functions();
+        for (func_name, starting_node) in func_list.iter() {
+            self.get_current_traversal(starting_node.clone());
+            self.clean_nodes();
+        }
+    }
+
+    pub fn clean_nodes(&mut self) {
+        self.irgm.address_manager().set_variable_assignments();
+        let addr_manager = self.irgm.address_manager().clone();
 
         for node_id in self.traversal_path.iter() {
             let mut inst_list = self.irgm
@@ -46,8 +58,9 @@ impl CodeGen {
                 .get_mut_inst_list_ref()
                 .clone();
 
-            for inst in inst_list.iter_mut() {
+            for (position, inst) in inst_list.iter_mut().enumerate() {
                 inst.borrow_mut().op_to_register(&self.reg_list);
+                inst.borrow_mut().address_to_const(&addr_manager);
 
                 let inst_type = inst.borrow().inst_type().clone();
                 match inst_type {
@@ -59,7 +72,7 @@ impl CodeGen {
                         if let ValTy::node_id(branch_id) = y_val.get_value().clone() {
                             let adjusted_id = self.irgm.graph_manager_ref().block_node_map().get(&branch_id.index()).unwrap().clone();
                             // This works.
-                            println!("Adjusted branch node: {}", self.irgm.graph_manager_ref().get_ref_graph().node_weight(adjusted_id).unwrap().get_node_id());
+                            //println!("Adjusted branch node: {}", self.irgm.graph_manager_ref().get_ref_graph().node_weight(adjusted_id).unwrap().get_node_id());
 
                             let mut current_search_branch = adjusted_id;
                             let mut searching = true;
@@ -96,9 +109,6 @@ impl CodeGen {
                                     }
                                 }
                             }
-
-                            // TODO : Now that we have the nodes: need to put follow the branch
-                            // TODO : path and find first instruction to replace in branch command.
                             // TODO : Should also add instruction vec with numbering of instruction (for size and position and all that)
                         }
                     },

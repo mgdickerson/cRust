@@ -1,4 +1,4 @@
-use lib::IR::address_manager::UniqueAddress;
+use lib::IR::address_manager::{UniqueAddress, AddressType, AddressManager};
 use lib::IR::array_manager::UniqueArray;
 use lib::IR::ret_register::RetRegister;
 use lib::IR::variable_manager::{UniqueVariable, VariableManager};
@@ -284,6 +284,43 @@ impl Op {
             if let ValTy::op(y_op) = y_val.get_value().clone() {
                 let register_num = reg_map.get(&y_op.borrow().get_inst_num()).unwrap().clone();
                 self.y_val = Some(Value::new(ValTy::reg(RegisterAllocation::allocate_register(register_num))));
+            }
+        }
+    }
+
+    pub fn address_to_const(&mut self, addr_manager: & AddressManager) {
+        if let Some(x_val) = self.clone_x_val() {
+            if let ValTy::adr(x_addr) = x_val.get_value().clone() {
+                let addr_type = x_addr.get_type();
+                match addr_type {
+                    AddressType::g_reg => {
+                        // Replace with the global register R30
+                        self.x_val = Some(Value::new(ValTy::reg(RegisterAllocation::allocate_R30())));
+                    },
+                    AddressType::sp => {
+                        self.x_val = Some(Value::new(ValTy::reg(RegisterAllocation::allocate_R29())));
+                    },
+                    _ => {
+                        self.x_val = Some(Value::new(ValTy::con(addr_manager.get_assignment(&x_addr))));
+                    },
+                }
+            }
+        }
+
+        if let Some(y_val) = self.clone_y_val() {
+            if let ValTy::adr(y_addr) = y_val.get_value().clone() {
+                let addr_type = y_addr.get_type();
+                match addr_type {
+                    AddressType::g_reg => {
+                        self.y_val = Some(Value::new(ValTy::reg(RegisterAllocation::allocate_R30())));
+                    },
+                    AddressType::sp => {
+                        self.y_val = Some(Value::new(ValTy::reg(RegisterAllocation::allocate_R29())));
+                    },
+                    _ => {
+                        self.y_val = Some(Value::new(ValTy::con(addr_manager.get_assignment(&y_addr))));
+                    },
+                }
             }
         }
     }

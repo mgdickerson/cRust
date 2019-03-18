@@ -228,7 +228,7 @@ pub mod tests {
 pub fn run(path_name: String) {
     // Take a file name provided by main, perform all passes on it.
     let mut path = PathBuf::new();
-    path.push(path_name);
+    path.push(path_name.clone());
 
     let file = fs::File::open(path.as_path())
         .expect("Unable to find file. Perhaps directory was entered incorrectly?");

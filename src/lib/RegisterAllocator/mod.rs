@@ -195,18 +195,27 @@ impl RegisterAllocation {
         RegisterAllocation { reg: reg_id }
     }
 
+    /// Register always 0
     pub fn allocate_R0() -> Self {
         RegisterAllocation { reg: 0 }
     }
 
+    /// Allocate Frame Pointer
     pub fn allocate_R28() -> Self {
         RegisterAllocation{ reg: 28 }
     }
 
+    /// Allocate Stack Pointer
     pub fn allocate_R29() -> Self {
         RegisterAllocation{ reg: 29 }
     }
 
+    /// Allocate Global Pointer
+    pub fn allocate_R30() -> Self {
+        RegisterAllocation{ reg: 30 }
+    }
+
+    /// Allocate Return Address
     pub fn allocate_R31() -> Self {
         RegisterAllocation{ reg: 31 }
     }
