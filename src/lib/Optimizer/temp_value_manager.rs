@@ -74,7 +74,7 @@ impl TempValManager {
     ) {
         // Make a new TempVal using the passed inst
         let inst_num = inst.borrow().get_inst_num();
-        let mut new_temp = TempVal::new(inst, inst_num);
+        let new_temp = TempVal::new(inst, inst_num);
 
         // Make Rc<RefCell<_>> out of TempVal
         let ref_temp = Rc::new(RefCell::new(new_temp.clone()));
@@ -240,7 +240,7 @@ impl TempValManager {
     pub fn clean_instruction_uses(&mut self, inst_id: &usize) {
         //println!("Are we panicing here?");
 
-        let mut local_handle = self.op_hash.get_mut(inst_id).unwrap().clone();
+        let local_handle = self.op_hash.get_mut(inst_id).unwrap().clone();
 
         //println!("Are we panicing here2?");
         let x_val = local_handle.borrow().x_val();

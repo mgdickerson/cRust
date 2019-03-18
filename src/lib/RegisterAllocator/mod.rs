@@ -116,7 +116,7 @@ pub fn analyze_live_range(
                     .get_inst_ref()[0]
                     .borrow()
                     .get_inst_num();
-                spill_handler.spill_value(irgm, temp_manager, inst_id.clone());
+                spill_handler.spill_value(irgm, temp_manager, inst_id.clone(), func_name.clone());
                 if !spilled_instructions.contains_key(&inst_id) {
                     spilled_instructions.insert(inst_id, 1);
                 } else {

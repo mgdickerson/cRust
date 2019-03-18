@@ -7,6 +7,7 @@ use super::{IRGraphManager, InstTy, Node, NodeData, NodeId, Op, ValTy, Value};
 use lib::Graph::node::NodeType;
 use lib::Graph::node::NodeType::exit;
 use lib::RegisterAllocator::RegisterAllocation;
+use lib::IR::address_manager::AddressType;
 
 #[derive(Debug, Clone)]
 pub struct ReturnStmt {
@@ -86,7 +87,7 @@ impl ReturnStmt {
         {
             let uniq_var_val = Value::new(ValTy::var(irgm.get_current_unique(&global).clone()));
             let var_addr_val = Value::new(ValTy::adr(
-                irgm.address_manager().get_addr_assignment(&global, 4),
+                irgm.address_manager().get_addr_assignment(&global, AddressType::global_var, 4, None),
             ));
 
             let inst;
@@ -104,12 +105,14 @@ impl ReturnStmt {
             let new_global_val = irgm.graph_manager().add_instruction(inst);
         }
 
-        // If unique function has a return, pre-load space for a return.
-        let param_addr_val =
-            Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+        let mut func_name = None;
+        if let Some(func) = irgm.variable_manager().check_active_function() {
+            func_name = Some(func.get_name());
+        }
 
+        // If unique function has a return, pre-load space for a return.
         let return_address_val = Value::new(ValTy::adr(
-            irgm.address_manager().get_addr_assignment(&String::from("return"), 4),
+            irgm.address_manager().get_addr_assignment(&String::from("return"), AddressType::local_var, 4, func_name),
         ));
 
         let store_inst = irgm.build_op_x_y(

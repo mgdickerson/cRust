@@ -9,6 +9,7 @@ use super::{Rc, RefCell};
 use lib::Parser::AST::factor::FactorType::expr;
 use lib::IR::ret_register::RetRegister;
 use lib::RegisterAllocator::RegisterAllocation;
+use lib::IR::address_manager::AddressType;
 
 #[derive(Debug, Clone)]
 pub struct FuncCall {
@@ -164,7 +165,12 @@ impl FuncCall {
 
                 if uniq_func.has_return() {
                     let return_address_val = Value::new(ValTy::adr(
-                        irgm.address_manager().get_addr_assignment(&String::from("return"), 4),
+                        irgm.address_manager()
+                            .get_addr_assignment(
+                                &String::from("return"),
+                                AddressType::local_var,
+                                4,
+                                Some(String::from(func_name))),
                     ));
 
                     let r0_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R0()));
@@ -177,7 +183,7 @@ impl FuncCall {
                     let uniq_var_val =
                         Value::new(ValTy::var(irgm.get_current_unique(global).clone()));
                     let var_addr_val = Value::new(ValTy::adr(
-                        irgm.address_manager().get_addr_assignment(global, 4),
+                        irgm.address_manager().get_addr_assignment(global, AddressType::global_var, 4, None),
                     ));
 
                     let inst = irgm.build_op_x_y(var_addr_val, uniq_var_val, InstTy::gstore);
@@ -198,7 +204,7 @@ impl FuncCall {
                     }
 
                     let var_addr_val = Value::new(ValTy::adr(
-                        irgm.address_manager().get_addr_assignment(param, 4),
+                        irgm.address_manager().get_addr_assignment(param, AddressType::local_var, 4, Some(String::from(func_name))),
                     ));
 
                     let inst = irgm.build_op_x_y(var_addr_val, uniq_var_val, InstTy::pstore);
@@ -212,7 +218,7 @@ impl FuncCall {
                 // Then I need to load back all the affected globals.
                 for global in &uniq_func.load_assigned_globals() {
                     let var_addr_val = Value::new(ValTy::adr(
-                        irgm.address_manager().get_addr_assignment(global, 4),
+                        irgm.address_manager().get_addr_assignment(global, AddressType::global_var, 4, None),
                     ));
 
                     let inst = irgm.build_op_y(var_addr_val, InstTy::gload);
@@ -230,11 +236,8 @@ impl FuncCall {
 
                 if uniq_func.has_return() {
                     // If unique function has a return, pre-load space for a return.
-                    let param_addr_val =
-                        Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
-
                     let return_address_val = Value::new(ValTy::adr(
-                        irgm.address_manager().get_addr_assignment(&String::from("return"), 4),
+                        irgm.address_manager().get_addr_assignment(&String::from("return"), AddressType::local_var, 4, Some(String::from(func_name))),
                     ));
 
                     let store_inst = irgm.build_op_y(return_address_val, InstTy::pload);

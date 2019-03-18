@@ -1,6 +1,6 @@
 use super::{IRGraphManager, TempValManager};
 use lib::RegisterAllocator::RegisterAllocation;
-use lib::IR::address_manager::AddressManager;
+use lib::IR::address_manager::{AddressManager, AddressType};
 use lib::IR::ir::{InstTy, ValTy, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -21,6 +21,7 @@ impl SpillHandler {
         irgm: &mut IRGraphManager,
         temp_manager: &mut TempValManager,
         inst_id: usize,
+        func_name: Option<String>,
     ) {
         // Grab definition block from temp_manager
         let inst_def_block = temp_manager.borrow_inst(&inst_id).borrow().block_num();
@@ -34,11 +35,11 @@ impl SpillHandler {
         let spill_string = String::from("spill_val") + &self.current_spill_counter.to_string();
         self.current_spill_counter += 1;
 
-        let uniq_spill_addr = irgm.address_manager().get_addr_assignment(&spill_string, 4);
+        let uniq_spill_addr = irgm.address_manager().get_addr_assignment(&spill_string, AddressType::spill_var, 4, func_name);
 
         let spill_addr_value = Value::new(ValTy::adr(uniq_spill_addr.clone()));
 
-        let mut inst_list = irgm
+        let inst_list = irgm
             .graph_manager()
             .get_ref_graph()
             .node_weight(inst_node_id)
@@ -48,7 +49,6 @@ impl SpillHandler {
             .clone();
         for (position, inst) in inst_list.iter().enumerate() {
             if inst.borrow().get_inst_num() == inst_id {
-                let fp_address = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
                 let add_op = irgm.build_op_x_y_in_block(
                     spill_addr_value.clone(),
                     Value::new(ValTy::op(Rc::clone(inst))),

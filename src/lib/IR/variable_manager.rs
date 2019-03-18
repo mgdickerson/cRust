@@ -62,6 +62,13 @@ impl VariableManager {
         }
     }
 
+    pub fn check_active_function(&self) -> Option<&UniqueFunction> {
+        match &self.active_func {
+            Some(func) => Some(func),
+            None => None
+        }
+    }
+
     pub fn active_function(&mut self) -> &mut UniqueFunction {
         match &mut self.active_func {
             Some(func) => func,
@@ -111,7 +118,7 @@ impl VariableManager {
         left_set: HashMap<String, Rc<RefCell<UniqueVariable>>>,
         right_set: HashMap<String, Rc<RefCell<UniqueVariable>>>,
     ) -> Vec<(Rc<RefCell<UniqueVariable>>, Rc<RefCell<UniqueVariable>>)> {
-        let mut set = left_set
+        let set = left_set
             .iter()
             .filter_map(|(left_ident, left_val)| {
                 let right_val = right_set

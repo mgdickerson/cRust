@@ -104,36 +104,10 @@ impl Assignment {
     pub fn to_ir(self, irgm: &mut IRGraphManager) {
         let (result, expr_array) = self.designator.get_value();
 
-        let mut expr_value = self
+        let expr_value = self
             .expression
             .to_ir(irgm)
             .expect("Expected some expression with related Assignment Operation");
-
-        /*match expr_value.get_value().clone() {
-            ValTy::con(con) => {
-                let const_add_inst;
-                if con < 0 {
-                    const_add_inst = irgm.build_op_x_y(
-                        Value::new(ValTy::con(0)),
-                        Value::new(ValTy::con(-con)),
-                        InstTy::sub,
-                    );
-                } else {
-                    const_add_inst = irgm.build_op_x_y(
-                        Value::new(ValTy::con(0)),
-                        expr_value.clone(),
-                        InstTy::add,
-                    );
-                }
-                expr_value = irgm.graph_manager().add_instruction(const_add_inst);
-            }
-            ValTy::var(var) => {
-                let var_add_inst =
-                    irgm.build_op_x_y(Value::new(ValTy::con(0)), expr_value, InstTy::add);
-                expr_value = irgm.graph_manager().add_instruction(var_add_inst);
-            }
-            _ => {}
-        }*/
 
         if expr_array.is_empty() {
             let block_num = irgm.get_block_num();

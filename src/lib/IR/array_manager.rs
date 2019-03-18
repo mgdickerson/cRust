@@ -129,7 +129,7 @@ impl ArrayManager {
         if irgm.array_manager().is_global(&uniq_arr.base_ident) {
             ref_register = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
         } else {
-            ref_register = Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
+            ref_register = Value::new(ValTy::adr(irgm.address_manager().get_stack_pointer()));
         }
         let arr_reg = Value::new(ValTy::adr(uniq_arr.clone_addr()));
         let add_inst = irgm.build_op_x_y(ref_register, arr_reg, InstTy::add);

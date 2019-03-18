@@ -96,7 +96,7 @@ impl GraphManager {
     }
 
     pub fn map_blocks_to_node_ids(&mut self) {
-        let mut node_index_list = self.graph.node_indices();
+        let node_index_list = self.graph.node_indices();
         for node_id in node_index_list {
             let block_num = self.graph.node_weight(node_id).unwrap().get_node_id();
 

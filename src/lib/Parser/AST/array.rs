@@ -5,6 +5,7 @@ use Parser::AST;
 use super::Graph;
 use super::{IRGraphManager, InstTy, Node, NodeData, NodeId, Op, ValTy, Value};
 use lib::Graph::graph_manager::GraphManager;
+use lib::IR::address_manager::AddressType;
 
 #[derive(Debug, Clone)]
 pub struct Array {
@@ -161,7 +162,7 @@ impl Array {
 
                 let addr = irgm
                     .address_manager()
-                    .get_addr_assignment(&var_name, arr_size);
+                    .get_addr_assignment(&var_name, AddressType::local_var, arr_size, func_name.clone());
                 irgm.array_manager().assign_addr(var_name, addr);
                 return;
             }
@@ -175,7 +176,7 @@ impl Array {
 
             let addr = irgm
                 .address_manager()
-                .get_addr_assignment(&var_name, arr_size);
+                .get_addr_assignment(&var_name, AddressType::global_var, arr_size, func_name.clone());
             irgm.array_manager().assign_addr(var_name, addr);
         }
     }

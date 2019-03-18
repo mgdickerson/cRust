@@ -2,7 +2,7 @@
 // and put all instructions in order into a single vector.
 use lib::IR::ir_manager::IRGraphManager;
 use lib::Graph::node::{NodeType,Node};
-use lib::IR::ir::{InstTy,ValTy};
+use lib::IR::ir::{InstTy,ValTy,Value};
 
 use petgraph::prelude::{NodeIndex};
 use petgraph::graph::Graph;
@@ -55,11 +55,48 @@ impl CodeGen {
                     InstTy::beq | InstTy::ble |
                     InstTy::blt | InstTy::bge |
                     InstTy::bgt => {
-                        if let ValTy::node_id(branch_id) = inst.borrow().clone_y_val().unwrap().get_value().clone() {
+                        let y_val = inst.borrow().clone_y_val().unwrap();
+                        if let ValTy::node_id(branch_id) = y_val.get_value().clone() {
                             let adjusted_id = self.irgm.graph_manager_ref().block_node_map().get(&branch_id.index()).unwrap().clone();
                             // This works.
                             println!("Adjusted branch node: {}", self.irgm.graph_manager_ref().get_ref_graph().node_weight(adjusted_id).unwrap().get_node_id());
-                            
+
+                            let mut current_search_branch = adjusted_id;
+                            let mut searching = true;
+                            while searching {
+                                let inst_search_list = self.irgm
+                                    .graph_manager_ref()
+                                    .get_ref_graph()
+                                    .node_weight(current_search_branch)
+                                    .unwrap()
+                                    .get_data_ref()
+                                    .get_inst_list_ref()
+                                    .clone();
+
+                                if !inst_search_list.is_empty() {
+                                    let first_inst = inst_search_list.get(0).unwrap();
+                                    inst.borrow_mut().update_y_val(Value::new(ValTy::op(first_inst.clone())));
+                                    searching = false;
+                                } else {
+                                    let mut children = self.irgm
+                                        .graph_manager_ref()
+                                        .get_ref_graph()
+                                        .neighbors_directed(current_search_branch, Outgoing)
+                                        .detach();
+
+                                    current_search_branch = children.next_node(&self.walkable_graph).unwrap();
+
+                                    if NodeType::exit == self.irgm
+                                        .graph_manager_ref()
+                                        .get_ref_graph()
+                                        .node_weight(current_search_branch)
+                                        .unwrap()
+                                        .get_node_type() {
+                                        current_search_branch = children.next_node(&self.walkable_graph).unwrap();
+                                    }
+                                }
+                            }
+
                             // TODO : Now that we have the nodes: need to put follow the branch
                             // TODO : path and find first instruction to replace in branch command.
                             // TODO : Should also add instruction vec with numbering of instruction (for size and position and all that)

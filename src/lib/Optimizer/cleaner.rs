@@ -11,10 +11,10 @@ pub fn clean_graph(
     graph_visitor: &Vec<NodeIndex>,
 ) -> NodeIndex {
     let mut return_node_id = root_node.clone();
-    let mut new_root_id = root_node.index();
+    let new_root_id = root_node.index();
 
     // First remove nodes that cannot be reached from the root node.
-    let mut walkable_graph = irgm.graph_manager().get_ref_graph().clone();
+    let walkable_graph = irgm.graph_manager().get_ref_graph().clone();
 
     // If visit order is sorted by lowest to highest, then reversed, removing nodes should not effect removal of other nodes...
     //let mut visit_order = temp_manager.clone_visit_order();

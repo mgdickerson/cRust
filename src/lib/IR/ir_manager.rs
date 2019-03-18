@@ -46,7 +46,7 @@ pub struct IRGraphManager {
 impl IRGraphManager {
     pub fn new() -> Self {
         let graph = Graph::new();
-        let mut it = InstTracker::new();
+        let it = InstTracker::new();
         let mut bt = BlockTracker::new();
 
         let graph_manager = GraphManager::new(graph, &mut bt);
@@ -315,8 +315,8 @@ impl IRGraphManager {
     }
 
     pub fn get_current_unique(&mut self, ident: &String) -> Rc<RefCell<UniqueVariable>> {
-        let mut block_num = self.get_block_num();
-        let mut inst_num = self.get_inst_num() + 1;
+        let block_num = self.get_block_num();
+        let inst_num = self.get_inst_num() + 1;
         self.var_manager.get_current_unique(ident.clone())
     }
 

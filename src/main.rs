@@ -3,7 +3,10 @@
     non_camel_case_types,
     non_upper_case_globals,
     non_snake_case,
+    unused_assignments,
     unused_must_use,
+    unused_variables,
+    unreachable_patterns,
     dead_code,
     unused_doc_comments
 )]

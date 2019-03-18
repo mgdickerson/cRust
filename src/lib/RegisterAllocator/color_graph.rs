@@ -9,7 +9,7 @@ const NUM_OF_REGISTERS: usize = 8;
 
 pub fn color(int_graph: &mut Graph<OpNode, String, Directed, u32>) -> Result<(), NodeIndex> {
     // Keep track of what has been colored
-    let mut walkable_graph = int_graph.clone();
+    let walkable_graph = int_graph.clone();
 
     // Next grab all nodes that have less than 8 edges that can
     // be colored immediately (store the ones that cant in a

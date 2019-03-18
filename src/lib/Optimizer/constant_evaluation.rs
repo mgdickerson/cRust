@@ -18,7 +18,6 @@ use petgraph::algo::has_path_connecting;
 use lib::RegisterAllocator::RegisterAllocation;
 use lib::Utility::display;
 
-// TODO : on while const evaluation, evaluate if the loop will ever even be taken by comparing the right side value of the phi in the cmp inst.
 pub fn eval_program_constants(
     irgm: &mut IRGraphManager,
     temp_manager: &mut TempValManager,
@@ -27,8 +26,8 @@ pub fn eval_program_constants(
     //println!("Program Eval is being called.");
 
     // Get mutable reference to the graph manager
-    let mut graph_manager = irgm.graph_manager();
-    let mut walkable_graph = graph_manager.get_ref_graph().clone();
+    let graph_manager = irgm.graph_manager();
+    let walkable_graph = graph_manager.get_ref_graph().clone();
     let mut inst_graph = graph_manager.get_ref_graph().clone();
 
     // Get traversal order from temp_manager
@@ -40,7 +39,6 @@ pub fn eval_program_constants(
     // cleaned up by a cleaner function.
 
     let mut value_sub_map: HashMap<usize, i32> = HashMap::new();
-    let mut instruction_replacement_map: HashMap<usize, Value> = HashMap::new();
     let mut removed_nodes: Vec<NodeIndex> = Vec::new();
 
     let mut needs_evaluation = true;
@@ -346,7 +344,7 @@ fn cmp_eval(
     }
 
     //println!("Fell through on Cmp: {}", inst_id);
-    let mut comp_inst = temp_manager.borrow_mut_inst(&inst_id)
+    let comp_inst = temp_manager.borrow_mut_inst(&inst_id)
         .borrow().active_uses().last()
         .expect("All comparisons should be used at least once by the immediately following branch instruction")
         .clone();

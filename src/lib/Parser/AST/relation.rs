@@ -67,7 +67,7 @@ impl Relation {
             .leftExp
             .to_ir(irgm)
             .expect("Expected Left Comp Op, none found");
-        let mut rightCompVal = self
+        let rightCompVal = self
             .rightExp
             .to_ir(irgm)
             .expect("Expected Right Comp Op, none found");

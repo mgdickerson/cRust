@@ -133,7 +133,7 @@ impl Op {
         block_number: usize,
         inst_type: InstTy,
     ) -> Self {
-        let mut p_command = String::new();
+        let p_command = String::new();
 
         Op {
             x_val,

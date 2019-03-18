@@ -24,7 +24,7 @@ pub fn trace_common_expression(
     let walkable_graph = irgm.graph_manager().get_ref_graph().clone();
 
     // Make quick dominance graph.
-    let mut dom_graph = irgm.graph_manager().get_ref_graph().clone();
+    let dom_graph = irgm.graph_manager().get_ref_graph().clone();
     let dom_space = simple_fast(&dom_graph, root_node.clone());
     //println!("{:?}", dom_space);
 

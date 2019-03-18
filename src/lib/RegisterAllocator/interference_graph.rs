@@ -553,13 +553,13 @@ impl RecurseTraverse {
     }
 
     pub fn coalesce_phis(&mut self) {
-        let mut walkable_graph = self.interference_graph.clone();
+        let walkable_graph = self.interference_graph.clone();
         //let mut secondary_walk_graph = self.interference_graph.clone();
 
         // Collecting phis before did not seem to work very well,
         // so manual collecting will be done here.
         // First grab all phi instructions:
-        let mut phi_nodes = walkable_graph
+        let phi_nodes = walkable_graph
             .node_indices()
             .filter_map(|node_id| {
                 let node_inst = self
@@ -611,7 +611,7 @@ impl RecurseTraverse {
             })
             .collect::<Vec<(NodeIndex, (Option<NodeIndex>, Option<NodeIndex>))>>();
 
-        let mut values_to_coalesce = phi_nodes
+        let values_to_coalesce = phi_nodes
             .iter()
             .filter(|(phi_node_id, (x_node_id, y_node_id))| {
                 // Check if there is an x node first

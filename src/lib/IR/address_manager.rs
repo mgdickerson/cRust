@@ -2,49 +2,76 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct AddressManager {
-    register_manager: HashMap<String, UniqueAddress>,
-    current_available_addr: usize,
-    base_addr: usize,
-    global_addr: usize,
-    frame_pointer: usize,
-    stack_pointer: usize,
+    g_reg_manager: HashMap<String, UniqueAddress>,
+    func_reg_manager: HashMap<String, HashMap<String, UniqueAddress>>,
 }
 
 impl AddressManager {
     pub fn new() -> Self {
         AddressManager {
-            register_manager: HashMap::new(),
-            current_available_addr: 0,
-            base_addr: 0,
-            global_addr: 0,
-            frame_pointer: 0,
-            stack_pointer: 0,
+            g_reg_manager: HashMap::new(),
+            func_reg_manager: HashMap::new(),
         }
     }
 
     pub fn get_global_reg(&self) -> UniqueAddress {
-        UniqueAddress::new(String::from("globalReg"), self.global_addr.clone())
+        UniqueAddress::new(String::from("globalReg"), AddressType::g_reg, 4)
     }
 
     pub fn get_stack_pointer(&self) -> UniqueAddress {
-        UniqueAddress::new(String::from("SP"), self.stack_pointer.clone())
+        UniqueAddress::new(String::from("SP"), AddressType::sp, 4)
     }
 
     pub fn get_frame_pointer(&self) -> UniqueAddress {
-        UniqueAddress::new(String::from("FP"), self.frame_pointer.clone())
+        UniqueAddress::new(String::from("FP"), AddressType::fp, 4)
     }
 
-    pub fn get_base_reg(&self) -> UniqueAddress {
-        UniqueAddress::new(String::from("baseReg"), self.base_addr.clone())
-    }
+    pub fn get_addr_assignment(&mut self, addr_name: &String, addr_type: AddressType, size: usize, func_name: Option<String>) -> UniqueAddress {
+        let uniq_addr = UniqueAddress::new(addr_name.clone(), addr_type.clone(), size);
 
-    pub fn get_addr_assignment(&mut self, addr_name: &String, size: usize) -> UniqueAddress {
-//        let current_clone = self.current_available_addr.clone();
-//        self.current_available_addr += size;
-
-        // TODO : Not sure this is going to work out for assignment.
-        let uniq_addr = UniqueAddress::new(addr_name.clone(), size);
-        self.register_manager.insert(addr_name.clone(), uniq_addr.clone());
+        if addr_type == AddressType::global_var {
+            if !self.g_reg_manager.contains_key(addr_name) {
+                self.g_reg_manager.insert(addr_name.clone(), uniq_addr.clone());
+            }
+        } else if addr_type == AddressType::local_var {
+            match self.func_reg_manager.clone().get(&func_name.clone().unwrap()) {
+                Some(func_manager) => {
+                    if !func_manager.contains_key(addr_name) {
+                        self.func_reg_manager
+                            .get_mut(&func_name.clone().unwrap())
+                            .unwrap()
+                            .insert(addr_name.clone(), uniq_addr.clone());
+                    }
+                },
+                None => {
+                    let mut new_hashmap = HashMap::new();
+                    new_hashmap.insert(addr_name.clone(), uniq_addr.clone());
+                    self.func_reg_manager.insert(func_name.unwrap(), new_hashmap);
+                }
+            }
+        } else if addr_type == AddressType::spill_var {
+            match func_name {
+                Some(name) => {
+                    match self.func_reg_manager.clone().get(&name) {
+                        Some(func_manager) => {
+                            if !func_manager.contains_key(addr_name) {
+                                self.func_reg_manager.get_mut(&name).unwrap().insert(addr_name.clone(), uniq_addr.clone());
+                            }
+                        },
+                        None => {
+                            let mut new_hashmap = HashMap::new();
+                            new_hashmap.insert(addr_name.clone(), uniq_addr.clone());
+                            self.func_reg_manager.insert(name, new_hashmap);
+                        }
+                    }
+                },
+                None => {
+                    if !self.g_reg_manager.contains_key(addr_name) {
+                        self.g_reg_manager.insert(addr_name.clone(), uniq_addr.clone());
+                    }
+                },
+            }
+        }
 
         uniq_addr
     }
@@ -53,13 +80,15 @@ impl AddressManager {
 #[derive(Debug, Clone)]
 pub struct UniqueAddress {
     base_ident: String,
+    addr_type: AddressType,
     register_value: usize,
 }
 
 impl UniqueAddress {
-    pub fn new(ident: String, reg_val: usize) -> Self {
+    pub fn new(ident: String, addr_type: AddressType, reg_val: usize) -> Self {
         UniqueAddress {
             base_ident: ident,
+            addr_type,
             register_value: reg_val,
         }
     }
@@ -74,4 +103,14 @@ impl PartialEq for UniqueAddress {
     fn eq(&self, other: &UniqueAddress) -> bool {
         self.base_ident == other.base_ident
     }
+}
+
+#[derive(PartialEq,Clone,Debug)]
+pub enum AddressType {
+    g_reg,
+    sp,
+    fp,
+    global_var,
+    local_var,
+    spill_var,
 }

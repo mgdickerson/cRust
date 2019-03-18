@@ -230,10 +230,10 @@ pub fn run(path_name: String) {
     let mut path = PathBuf::new();
     path.push(path_name);
 
-    let mut file = fs::File::open(path.as_path())
+    let file = fs::File::open(path.as_path())
         .expect("Unable to find file. Perhaps directory was entered incorrectly?");
 
-    let mut irgman = parse(file);
+    let irgman = parse(file);
     let (mut irgm, mut mtm, mut ftm) =
         optimize_passes(irgman, path.clone());
     let mut inst_register_mapping = register_allocation(&mut irgm, &mut mtm, &mut ftm, path.clone());
@@ -391,7 +391,7 @@ fn add_dominance_path(irgm: &mut IRGraphManager, path: PathBuf) {
     }
 
     /// END TEST SPACE ///
-    let mut file_name = path.to_str().unwrap().trim_end_matches(".txt").to_owned()
+    let file_name = path.to_str().unwrap().trim_end_matches(".txt").to_owned()
         + ".dot";
 
     let mut output = String::new();
@@ -418,7 +418,7 @@ pub fn run_file(file_name: String) {
     path.push(file_name.clone() + ".txt");
     println!("{:?}", path);
 
-    let mut file = fs::File::open(path.as_path()).expect("Error Opening File.");
+    let file = fs::File::open(path.as_path()).expect("Error Opening File.");
 
     let mut buffer = String::new();
     let result = BufReader::new(file).read_to_string(&mut buffer);
@@ -426,11 +426,11 @@ pub fn run_file(file_name: String) {
     let mut char_iter = buffer.chars().peekable();
     let mut read_iter = char_iter.clone();
 
-    let mut tokens = Lexer::token::TokenCollection::collect(&mut read_iter);
+    let tokens = Lexer::token::TokenCollection::collect(&mut read_iter);
     let mut tc = Lexer::token::TokenCollection::collect(&mut char_iter);
 
     let comp = Parser::AST::computation::Comp::new(&mut tc);
-    let mut irgmanager = comp.to_ir();
+    let irgmanager = comp.to_ir();
 
     let mut optimizer = Optimizer::Optimizer::new(irgmanager);
     optimizer.pass_0();

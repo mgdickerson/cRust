@@ -10,6 +10,7 @@ use super::{Rc, RefCell};
 use lib::Graph::graph_manager::GraphManager;
 use lib::Graph::node::NodeType::exit;
 use lib::RegisterAllocator::RegisterAllocation;
+use lib::IR::address_manager::AddressType;
 
 #[derive(Debug, Clone)]
 pub struct FuncDecl {
@@ -205,7 +206,7 @@ impl FuncDecl {
         {
             let global_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
             let var_addr_val = Value::new(ValTy::adr(
-                irgm.address_manager().get_addr_assignment(&global, 4),
+                irgm.address_manager().get_addr_assignment(&global, AddressType::global_var, 4, None),
             ));
 
             let inst = irgm.build_op_y(var_addr_val, InstTy::gload);
@@ -221,7 +222,7 @@ impl FuncDecl {
         // Load all param values
         for param in irgm.variable_manager().active_function().load_param_list() {
             let var_addr = Value::new(ValTy::adr(
-                irgm.address_manager().get_addr_assignment(&param, 4),
+                irgm.address_manager().get_addr_assignment(&param, AddressType::local_var, 4, Some(func_name.get_value())),
             ));
 
             let inst = irgm.build_op_y(var_addr, InstTy::pload);
@@ -246,7 +247,7 @@ impl FuncDecl {
             {
                 let uniq_var_val = Value::new(ValTy::var(irgm.get_current_unique(&global).clone()));
                 let var_addr_val = Value::new(ValTy::adr(
-                    irgm.address_manager().get_addr_assignment(&global, 4),
+                    irgm.address_manager().get_addr_assignment(&global, AddressType::global_var, 4, None),
                 ));
 
                 let inst;
