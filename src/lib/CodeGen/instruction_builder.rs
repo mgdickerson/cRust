@@ -3,15 +3,18 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 use lib::IR::ir::{Op, InstTy, ValTy};
+use std::collections::HashMap;
 
 pub struct InstructionBuilder {
     id_counter: usize,
     inst_list: Vec<Instruction>,
+    reg_list: HashMap<usize, usize>,
+    branch_correction: HashMap<usize, usize>,
 }
 
 impl InstructionBuilder {
-    pub fn new() -> Self {
-        InstructionBuilder { id_counter: 0, inst_list: Vec::new() }
+    pub fn new(reg_list: HashMap<usize,usize>, branch_correction: HashMap<usize, usize>) -> Self {
+        InstructionBuilder { id_counter: 0, inst_list: Vec::new(), reg_list, branch_correction }
     }
 
     // Will probably need more context to this.
@@ -31,97 +34,296 @@ impl InstructionBuilder {
             InstTy::pload | InstTy::gload |
             InstTy::pload | InstTy::gstore |
             InstTy::ret | InstTy::call => {},
+            InstTy::adda => {},
+            InstTy::store | InstTy::load => {},
             _ => {
-                let unpacked_inst = InstructionBuilder::unpack_simple_ir(op.clone());
+                self.unpack_simple_ir(op.clone());
             },
         }
     }
 
-    fn unpack_simple_ir(op: Rc<RefCell<Op>>) -> (OpCode, FMT) {
+    fn unpack_simple_ir(&mut self, op: Rc<RefCell<Op>>) -> u32 {
         let op_type = op.borrow().inst_type().clone();
+
+        let mut x = 0;
+        match op.borrow().clone_x_val() {
+            Some(val) => {
+                match val.get_value() {
+                    ValTy::reg(reg) => {
+                        x = reg.to_usize();
+                    },
+                    ValTy::op(op) => {
+                        x = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone();
+                    },
+                    ValTy::con(con) => {
+                        panic!("x value should never be a constant.");
+                    },
+                    ValTy::adr(adr) => {
+                        // TODO : Still not really sure what i want to do with this.
+                        x = 0;
+                    },
+                    ValTy::node_id(id) => {
+                        panic!("I dont believe x can have a node_id");
+                    },
+                    _ => {
+                        panic!("Unexpected encounter in getting x value.");
+                    },
+                }
+            },
+            None => {
+                x = 0;
+            }
+        }
+
+        let mut y = 0;
+        match op.borrow().clone_y_val() {
+            Some(val) => {
+                match val.get_value() {
+                    ValTy::reg(reg) => {
+                        y = reg.to_usize();
+                    },
+                    ValTy::op(op) => {
+                        y = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone();
+                    },
+                    ValTy::con(con) => {
+                        if con.clone() > 65535 {
+                            panic!("For now I am ignoring sizes above u16, and will take care of it later.");
+                        }
+                        y = con.clone() as usize;
+                    },
+                    ValTy::adr(adr) => {
+                        // TODO : Still not really sure what i want to do with this.
+                        y = 0;
+                    },
+                    ValTy::node_id(id) => {
+                        y = self.branch_correction.get(&id.index()).unwrap().clone();
+                    },
+                    _ => {
+                        panic!("Unexpected encounter in getting x value.");
+                    },
+                }
+            },
+            None => {
+                y = 0;
+            }
+        }
 
         match op_type {
             /// Arithmetic ///
             InstTy::mov => {
-                return (OpCode::ADD, FMT::F1)
+                let a = x;
+                let b = 0;
+                let c = y;
+
+                let b = 0; // Represents R0
+
+                let inst = InstructionPacker::pack_f1(OpCode::ADD, a as u32, b, c as u32);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
-            InstTy::add | InstTy::adda => {
+            InstTy::add => {
+                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone() as u32;
+                let b = x as u32;
+                let c = y as u32;
+
                 if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
-                    return (OpCode::ADDI, FMT::F1)
+                    let inst = InstructionPacker::pack_f1(OpCode::ADDI, a, b, c);
+                    self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                    self.id_counter += 1;
+
+                    return 0
                 }
 
-                return (OpCode::ADD, FMT::F2)
+                let inst = InstructionPacker::pack_f2(OpCode::ADD, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::sub => {
+                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone() as u32;
+                let b = x as u32;
+                let c = y as u32;
+
+                let inst;
                 if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
-                    return (OpCode::SUBI, FMT::F1)
+                    inst = InstructionPacker::pack_f1(OpCode::SUBI, a, b, c);
+                } else {
+                    inst = InstructionPacker::pack_f2(OpCode::SUB, a, b, c);
                 }
 
-                return (OpCode::SUB, FMT::F2)
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::mul => {
+                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone() as u32;
+                let b = x as u32;
+                let c = y as u32;
+
+                let inst;
                 if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
-                    return (OpCode::MULI, FMT::F1)
+                    inst = InstructionPacker::pack_f1(OpCode::MULI, a, b, c);
+                } else {
+                    inst = InstructionPacker::pack_f2(OpCode::MUL, a, b, c);
                 }
 
-                return (OpCode::MUL, FMT::F2)
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
 
             },
             InstTy::div => {
+                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone() as u32;
+                let b = x as u32;
+                let c = y as u32;
+
+                let inst;
                 if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
-                    return  (OpCode::DIVI, FMT::F1)
+                    inst = InstructionPacker::pack_f1(OpCode::DIVI, a, b, c);
+                } else {
+                    inst = InstructionPacker::pack_f2(OpCode::DIV, a, b, c);
                 }
 
-                return (OpCode::DIV, FMT::F2)
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::cmp => {
+                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone() as u32;
+                let b = x as u32;
+                let c = y as u32;
+
+                let inst;
                 if let ValTy::con(is_immediate) = op.borrow().clone_y_val().unwrap().get_value() {
-                    return  (OpCode::CMPI, FMT::F1)
+                    inst = InstructionPacker::pack_f1(OpCode::CMPI, a, b, c);
+                } else {
+                    inst = InstructionPacker::pack_f2(OpCode::CMP, a, b, c);
                 }
 
-                return (OpCode::CMP, FMT::F2)
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
 
-            /// Load/Store ///
-            InstTy::load => {
-                return (OpCode::LDX, FMT::F2)
-            },
-            InstTy::store => {
-                return (OpCode::STX, FMT::F2)
-            },
+//            /// Load/Store ///
+//            InstTy::load => {
+//                return (OpCode::LDX, FMT::F2)
+//            },
+//            InstTy::store => {
+//                return (OpCode::STX, FMT::F2)
+//            },
 
             /// Control ///
             InstTy::bne => {
-                return (OpCode::BNE, FMT::F1)
+                let a = x as u32;
+                let b = 0;
+                let c = y as u32;
+
+                let inst = InstructionPacker::pack_f1(OpCode::BNE, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::beq => {
-                return (OpCode::BEQ, FMT::F1)
+                let a = x as u32;
+                let b = 0;
+                let c = y as u32;
+
+                let inst = InstructionPacker::pack_f1(OpCode::BEQ, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::ble => {
-                return (OpCode::BLE, FMT::F1)
+                let a = x as u32;
+                let b = 0;
+                let c = y as u32;
+
+                let inst = InstructionPacker::pack_f1(OpCode::BLE, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::blt => {
-                return (OpCode::BLT, FMT::F1)
+                let a = x as u32;
+                let b = 0;
+                let c = y as u32;
+
+                let inst = InstructionPacker::pack_f1(OpCode::BLT, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::bge => {
-                return (OpCode::BGE, FMT::F1)
+                let a = x as u32;
+                let b = 0;
+                let c = y as u32;
+
+                let inst = InstructionPacker::pack_f1(OpCode::BGE, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::bgt => {
-                return (OpCode::BGT, FMT::F1)
+                let a = x as u32;
+                let b = 0;
+                let c = y as u32;
+
+                let inst = InstructionPacker::pack_f1(OpCode::BGT, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::bra => {
-                return (OpCode::BSR, FMT::F1)
+                let a = x as u32;
+                let b = 0;
+                let c = y as u32;
+
+                let inst = InstructionPacker::pack_f1(OpCode::BSR, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
 
             /// Input/Output ///
             InstTy::read => {
-                return (OpCode::RDD, FMT::F2)
+                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone();
+
+                let inst = InstructionPacker::pack_f2(OpCode::RDD, a as u32, 0, 0);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::writeNL => {
-                return (OpCode::WRL, FMT::F1)
+                let inst = InstructionPacker::pack_f1(OpCode::WRL, 0, 0, 0);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             InstTy::write => {
-                return (OpCode::WRD, FMT::F2)
+                let b = x as u32;
+
+                let inst = InstructionPacker::pack_f2(OpCode::WRD, 0, b, 0);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
             },
             _ => {
                 panic!("Found unexpected instruction while unpacking simple IR.");
@@ -137,6 +339,12 @@ impl InstructionBuilder {
 pub struct Instruction {
     inst: u32,
     id: usize,
+}
+
+impl Instruction {
+    pub fn new(inst: u32, id: & usize) -> Self {
+        Instruction { inst, id: id.clone() }
+    }
 }
 
 struct InstructionPacker {}

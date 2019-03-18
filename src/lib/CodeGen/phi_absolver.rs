@@ -97,7 +97,26 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                                 InstTy::mov,
                                 x_parent_node.index());
 
-                            irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
+                            let parent_inst_list = irgm.graph_manager()
+                                .get_ref_graph()
+                                .node_weight(x_parent_node)
+                                .unwrap()
+                                .get_data_ref()
+                                .get_inst_list_ref()
+                                .clone();
+
+                            if let Some(inst) = parent_inst_list.last() {
+                                if let InstTy::bra = inst.borrow().inst_type().clone() {
+                                    let insert = parent_inst_list.len();
+                                    irgm.graph_manager().insert_instruction_in_node(insert -1, x_add_op.clone(), &x_parent_node);
+                                } else {
+                                    irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
+                                }
+                            } else {
+                                irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
+
+                            }
+
                             register_map.insert(x_add_op.get_inst_num(), phi_register.clone());
                         }
 
@@ -107,7 +126,26 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                             InstTy::mov,
                             y_parent_node.index());
 
-                        irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
+                        let parent_inst_list = irgm.graph_manager()
+                            .get_ref_graph()
+                            .node_weight(y_parent_node)
+                            .unwrap()
+                            .get_data_ref()
+                            .get_inst_list_ref()
+                            .clone();
+
+                        if let Some(inst) = parent_inst_list.last() {
+                            if let InstTy::bra = inst.borrow().inst_type().clone() {
+                                let insert = parent_inst_list.len();
+                                irgm.graph_manager().insert_instruction_in_node(insert -1, y_add_op.clone(), &y_parent_node);
+                            } else {
+                                irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
+                            }
+                        } else {
+                            irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
+
+                        }
+
                         register_map.insert(y_add_op.get_inst_num(), phi_register.clone());
                     },
                     (_, Some(ValTy::op(y_op))) => {
@@ -121,7 +159,26 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                                 InstTy::mov,
                                 y_parent_node.index());
 
-                            irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
+                            let parent_inst_list = irgm.graph_manager()
+                                .get_ref_graph()
+                                .node_weight(y_parent_node)
+                                .unwrap()
+                                .get_data_ref()
+                                .get_inst_list_ref()
+                                .clone();
+
+                            if let Some(inst) = parent_inst_list.last() {
+                                if let InstTy::bra = inst.borrow().inst_type().clone() {
+                                    let insert = parent_inst_list.len();
+                                    irgm.graph_manager().insert_instruction_in_node(insert -1, y_add_op.clone(), &y_parent_node);
+                                } else {
+                                    irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
+                                }
+                            } else {
+                                irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
+
+                            }
+
                             register_map.insert(y_add_op.get_inst_num(), phi_register.clone());
                         }
 
@@ -131,7 +188,26 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                             InstTy::mov,
                             x_parent_node.index());
 
-                        irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
+                        let parent_inst_list = irgm.graph_manager()
+                            .get_ref_graph()
+                            .node_weight(x_parent_node)
+                            .unwrap()
+                            .get_data_ref()
+                            .get_inst_list_ref()
+                            .clone();
+
+                        if let Some(inst) = parent_inst_list.last() {
+                            if let InstTy::bra = inst.borrow().inst_type().clone() {
+                                let insert = parent_inst_list.len();
+                                irgm.graph_manager().insert_instruction_in_node(insert -1, x_add_op.clone(), &x_parent_node);
+                            } else {
+                                irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
+                            }
+                        } else {
+                            irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
+
+                        }
+
                         register_map.insert(x_add_op.get_inst_num(), phi_register.clone());
                     },
                     _ => {
@@ -142,7 +218,26 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                             InstTy::mov,
                             x_parent_node.index());
 
-                        irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
+                        let parent_inst_list = irgm.graph_manager()
+                            .get_ref_graph()
+                            .node_weight(x_parent_node)
+                            .unwrap()
+                            .get_data_ref()
+                            .get_inst_list_ref()
+                            .clone();
+
+                        if let Some(inst) = parent_inst_list.last() {
+                            if let InstTy::bra = inst.borrow().inst_type().clone() {
+                                let insert = parent_inst_list.len();
+                                irgm.graph_manager().insert_instruction_in_node(insert -1, x_add_op.clone(), &x_parent_node);
+                            } else {
+                                irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
+                            }
+                        } else {
+                            irgm.graph_manager().add_instruction_in_node(x_add_op.clone(), &x_parent_node);
+
+                        }
+
                         register_map.insert(x_add_op.get_inst_num(), phi_register.clone());
 
                         // y-register does not match and needs to be added
@@ -152,7 +247,26 @@ pub fn remove_phis(irgm: &mut IRGraphManager, register_map: &mut HashMap<usize, 
                             InstTy::mov,
                             y_parent_node.index());
 
-                        irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
+                        let parent_inst_list = irgm.graph_manager()
+                            .get_ref_graph()
+                            .node_weight(y_parent_node)
+                            .unwrap()
+                            .get_data_ref()
+                            .get_inst_list_ref()
+                            .clone();
+
+                        if let Some(inst) = parent_inst_list.last() {
+                            if let InstTy::bra = inst.borrow().inst_type().clone() {
+                                let insert = parent_inst_list.len();
+                                irgm.graph_manager().insert_instruction_in_node(insert -1, y_add_op.clone(), &y_parent_node);
+                            } else {
+                                irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
+                            }
+                        } else {
+                            irgm.graph_manager().add_instruction_in_node(y_add_op.clone(), &y_parent_node);
+
+                        }
+
                         register_map.insert(y_add_op.get_inst_num(), phi_register.clone());
                     },
                 }

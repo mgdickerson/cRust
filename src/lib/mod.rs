@@ -27,6 +27,7 @@ use lib::Graph::node::Node;
 
 use lib::Lexer::token::TokenCollection;
 use lib::Parser::AST::computation::Comp;
+use lib::CodeGen::{phi_absolver,generate_code,instruction_builder};
 use std::collections::HashMap;
 
 pub mod CodeGen;
@@ -235,10 +236,17 @@ pub fn run(path_name: String) {
     let mut irgman = parse(file);
     let (mut irgm, mut mtm, mut ftm) =
         optimize_passes(irgman, path.clone());
-    register_allocation(&mut irgm, &mut mtm, &mut ftm, path.clone());
+    let mut inst_register_mapping = register_allocation(&mut irgm, &mut mtm, &mut ftm, path.clone());
+
+    if inst_register_mapping.len() != 0 {
+        phi_absolver::remove_phis(&mut irgm, &mut inst_register_mapping);
+    }
+
+    let mut code_gen = generate_code::CodeGen::new(irgm, inst_register_mapping);
+    code_gen.clean_inst();
 
     // TODO : Add in everything after register allocation (Otherwise this works! probably want to make the parser for the command line more robust)
-
+    let mut irgm = code_gen.get_irgm();
     add_dominance_path(&mut irgm, path.clone());
 }
 

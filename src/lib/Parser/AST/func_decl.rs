@@ -208,10 +208,7 @@ impl FuncDecl {
                 irgm.address_manager().get_addr_assignment(&global, 4),
             ));
 
-            let adda_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
-            let adda_val = irgm.graph_manager().add_instruction(adda_inst);
-
-            let inst = irgm.build_op_y(adda_val, InstTy::load);
+            let inst = irgm.build_op_y(var_addr_val, InstTy::gload);
             let inst_val = irgm.graph_manager().add_instruction(inst);
 
             let block_num = irgm.get_block_num();
@@ -223,16 +220,11 @@ impl FuncDecl {
 
         // Load all param values
         for param in irgm.variable_manager().active_function().load_param_list() {
-            let frame_pointer_addr =
-                Value::new(ValTy::adr(irgm.address_manager().get_frame_pointer()));
             let var_addr = Value::new(ValTy::adr(
                 irgm.address_manager().get_addr_assignment(&param, 4),
             ));
 
-            let adda_inst = irgm.build_op_x_y(frame_pointer_addr, var_addr, InstTy::add);
-            let adda_val = irgm.graph_manager().add_instruction(adda_inst);
-
-            let inst = irgm.build_op_y(adda_val, InstTy::load);
+            let inst = irgm.build_op_y(var_addr, InstTy::pload);
             let inst_val = irgm.graph_manager().add_instruction(inst);
 
             let block_num = irgm.get_block_num();
@@ -252,16 +244,10 @@ impl FuncDecl {
                 .active_function()
                 .load_assigned_globals()
             {
-                let global_addr_val =
-                    Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
-
                 let uniq_var_val = Value::new(ValTy::var(irgm.get_current_unique(&global).clone()));
                 let var_addr_val = Value::new(ValTy::adr(
                     irgm.address_manager().get_addr_assignment(&global, 4),
                 ));
-
-                let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
-                let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
 
                 let inst;
                 if let ValTy::con(con_val) = uniq_var_val.clone().get_var_base().clone() {
@@ -271,9 +257,9 @@ impl FuncDecl {
                         InstTy::add,
                     );
                     let add_val = irgm.graph_manager().add_instruction(add_inst);
-                    inst = irgm.build_op_x_y(add_reg_val, add_val, InstTy::store);
+                    inst = irgm.build_op_x_y(var_addr_val, add_val, InstTy::pstore);
                 } else {
-                    inst = irgm.build_op_x_y(add_reg_val, uniq_var_val, InstTy::store);
+                    inst = irgm.build_op_x_y(var_addr_val, uniq_var_val, InstTy::pstore);
                 }
                 let new_global_val = irgm.graph_manager().add_instruction(inst);
             }

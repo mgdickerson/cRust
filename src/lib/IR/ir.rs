@@ -8,6 +8,7 @@ use lib::RegisterAllocator::RegisterAllocation;
 use petgraph::graph::NodeIndex;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct Value {
@@ -111,6 +112,7 @@ pub struct Op {
     x_val: Option<Value>,
     y_val: Option<Value>,
     special_val: Option<String>,
+    register: Option<RegisterAllocation>,
 
     // General Information about self
     inst_number: usize,
@@ -137,6 +139,7 @@ impl Op {
             x_val,
             y_val,
             special_val,
+            register: None,
             inst_number,
             block_number,
             inst_type,
@@ -185,7 +188,6 @@ impl Op {
         )
     }
 
-    // TODO : Switch string building out of initialization and make it part of this command.
     pub fn to_string(&self) -> String {
         let mut p_command = String::new();
         let inst_type = self.inst_type.clone();
@@ -263,6 +265,26 @@ impl Op {
             None
         } else {
             Some(self.clone())
+        }
+    }
+
+    pub fn op_to_register(&mut self, reg_map: & HashMap<usize, usize>) {
+        if let Some(register) = reg_map.get(&self.inst_number) {
+            self.register = Some(RegisterAllocation::allocate_register(register.clone()));
+        }
+
+        if let Some(x_val) = self.clone_x_val() {
+            if let ValTy::op(x_op) = x_val.get_value().clone() {
+                let register_num = reg_map.get(&x_op.borrow().get_inst_num()).unwrap().clone();
+                self.x_val = Some(Value::new(ValTy::reg(RegisterAllocation::allocate_register(register_num))));
+            }
+        }
+
+        if let Some(y_val) = self.clone_y_val() {
+            if let ValTy::op(y_op) = y_val.get_value().clone() {
+                let register_num = reg_map.get(&y_op.borrow().get_inst_num()).unwrap().clone();
+                self.y_val = Some(Value::new(ValTy::reg(RegisterAllocation::allocate_register(register_num))));
+            }
         }
     }
 
@@ -430,7 +452,14 @@ impl Op {
 
 impl std::fmt::Debug for Op {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "({}): {}; \\l ", self.inst_number, self.to_string())
+        match self.register.clone() {
+            Some(register) => {
+                write!(f, "[{}] {} : {}; \\l ", self.inst_number, register.to_string(), self.to_string())
+            },
+            None => {
+                write!(f, "[{}] {}; \\l ", self.inst_number, self.to_string())
+            },
+        }
     }
 }
 

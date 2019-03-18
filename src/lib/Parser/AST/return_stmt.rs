@@ -84,15 +84,10 @@ impl ReturnStmt {
             .active_function()
             .load_assigned_globals()
         {
-            let global_addr_val = Value::new(ValTy::adr(irgm.address_manager().get_global_reg()));
-
             let uniq_var_val = Value::new(ValTy::var(irgm.get_current_unique(&global).clone()));
             let var_addr_val = Value::new(ValTy::adr(
                 irgm.address_manager().get_addr_assignment(&global, 4),
             ));
-
-            let add_inst = irgm.build_op_x_y(global_addr_val, var_addr_val, InstTy::add);
-            let add_reg_val = irgm.graph_manager().add_instruction(add_inst);
 
             let inst;
             if let ValTy::con(con_val) = uniq_var_val.clone().get_var_base().clone() {
@@ -102,9 +97,9 @@ impl ReturnStmt {
                     InstTy::add,
                 );
                 let add_val = irgm.graph_manager().add_instruction(add_inst);
-                inst = irgm.build_op_x_y(add_reg_val, add_val, InstTy::store);
+                inst = irgm.build_op_x_y(var_addr_val, add_val, InstTy::gstore);
             } else {
-                inst = irgm.build_op_x_y(add_reg_val, uniq_var_val, InstTy::store);
+                inst = irgm.build_op_x_y(var_addr_val, uniq_var_val, InstTy::gstore);
             }
             let new_global_val = irgm.graph_manager().add_instruction(inst);
         }
@@ -117,15 +112,10 @@ impl ReturnStmt {
             irgm.address_manager().get_addr_assignment(&String::from("return"), 4),
         ));
 
-        // For the stack based approach to function calls, all returns are passed to the return spot in stack
-        let add_inst = irgm.build_op_x_y(param_addr_val, return_address_val, InstTy::adda);
-        let add_val = irgm.graph_manager().add_instruction(add_inst);
-
-        let r0_val = Value::new(ValTy::reg(RegisterAllocation::allocate_R0()));
         let store_inst = irgm.build_op_x_y(
-            add_val,
+            return_address_val,
             ret_val.expect("return calls should always return an expr"),
-            InstTy::store);
+            InstTy::gstore);
         irgm.graph_manager().add_instruction(store_inst);
 
         // This will be a special instruction that always returns from branch location on register R31;
