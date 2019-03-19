@@ -2,12 +2,17 @@
 // and put all instructions in order into a single vector.
 use lib::IR::ir_manager::IRGraphManager;
 use lib::Graph::node::{NodeType,Node};
-use lib::IR::ir::{InstTy,ValTy,Value};
+use lib::IR::ir::{InstTy,ValTy,Value,Op};
 
 use petgraph::prelude::{NodeIndex};
 use petgraph::graph::Graph;
 use petgraph::{Directed, Incoming, Outgoing};
+
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
+use lib::CodeGen::instruction_builder::{Instruction, InstructionBuilder};
+
 
 pub struct CodeGen {
     irgm: IRGraphManager,
@@ -32,19 +37,53 @@ impl CodeGen {
         self.irgm
     }
 
-    pub fn clean_inst(&mut self) {
-        let starting_node = self.irgm.graph_manager_ref().get_main_node();
-        self.get_current_traversal(starting_node);
-        self.clean_nodes();
+    pub fn build_program(&mut self) -> Vec<Instruction> {
+        let (mut main_insts, mut func_insts) = self.clean_inst();
 
-        let func_list = self.irgm.function_manager().list_functions();
-        for (func_name, starting_node) in func_list.iter() {
-            self.get_current_traversal(starting_node.clone());
-            self.clean_nodes();
+        let mut inst_builder = InstructionBuilder::new();
+
+        for inst in main_insts {
+            inst_builder.build_instruction(inst, true);
         }
+
+        inst_builder.patch_branches();
+        // +1 just to be safe.
+        let global_pointer_offset = inst_builder.get_inst_list().len() as u32 + 1;
+        let stack_pointer_start = global_pointer_offset.clone() + self.irgm.address_manager().get_global_size();
+        inst_builder.patch_global_stack(global_pointer_offset, stack_pointer_start);
+
+
+//        println!("Instruction List: ");
+//        for inst in inst_builder.get_inst_list() {
+//            println!("{:?}", inst);
+//        }
+
+        // TODO : This program now creates an op file for programs with no functions. Still needs testing.
+
+        inst_builder.get_inst_list()
     }
 
-    pub fn clean_nodes(&mut self) {
+    pub fn clean_inst(&mut self) -> (Vec<Rc<RefCell<Op>>>, HashMap<String, Vec<Rc<RefCell<Op>>>>) {
+        let starting_node = self.irgm.graph_manager_ref().get_main_node();
+        self.get_current_traversal(starting_node);
+        let mut main_inst_set = Vec::new();
+
+        self.clean_nodes(&mut main_inst_set);
+
+        let func_list = self.irgm.function_manager().list_functions();
+        let mut func_map = HashMap::new();
+        for (func_name, starting_node) in func_list.iter() {
+            self.get_current_traversal(starting_node.clone());
+            let mut func_inst_set = Vec::new();
+            self.clean_nodes(&mut func_inst_set);
+
+            func_map.insert(func_name.clone(), func_inst_set);
+        }
+
+        (main_inst_set, func_map)
+    }
+
+    pub fn clean_nodes(&mut self, inst_set: &mut Vec<Rc<RefCell<Op>>>) {
         self.irgm.address_manager().set_variable_assignments();
         let addr_manager = self.irgm.address_manager().clone();
 
@@ -114,6 +153,8 @@ impl CodeGen {
                     },
                     _ => {},
                 }
+
+                inst_set.push(inst.clone());
             }
         }
     }

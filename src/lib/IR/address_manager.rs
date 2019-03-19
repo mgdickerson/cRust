@@ -5,8 +5,10 @@ use lib::IR::address_manager::AddressType::g_reg;
 pub struct AddressManager {
     g_reg_manager: HashMap<String, UniqueAddress>,
     global_assignments: HashMap<UniqueAddress, i32>,
+    global_size: i32,
     func_reg_manager: HashMap<String, HashMap<String, UniqueAddress>>,
     function_assignments: HashMap<String, HashMap<UniqueAddress, i32>>,
+    func_size: HashMap<String, i32>,
 }
 
 impl AddressManager {
@@ -14,8 +16,10 @@ impl AddressManager {
         AddressManager {
             g_reg_manager: HashMap::new(),
             global_assignments: HashMap::new(),
+            global_size: 0,
             func_reg_manager: HashMap::new(),
             function_assignments: HashMap::new(),
+            func_size: HashMap::new(),
         }
     }
 
@@ -31,6 +35,14 @@ impl AddressManager {
         UniqueAddress::new(String::from("FP"), AddressType::fp, 4, None)
     }
 
+    pub fn get_global_size(&self) -> u32 {
+        self.global_size.clone() as u32
+    }
+
+    pub fn get_func_size(&self, func_name: &String) -> u32 {
+        self.func_size.get(func_name).unwrap().clone() as u32
+    }
+
     pub fn set_variable_assignments(&mut self) {
         // Set all global assignments
         let mut global_offset = 0;
@@ -38,6 +50,8 @@ impl AddressManager {
             self.global_assignments.insert(value.clone(), global_offset.clone());
             global_offset += value.get_size() as i32;
         }
+
+        self.global_size = global_offset;
 
         // Set all function local assignments
         for (func_name, func_manager) in self.func_reg_manager.iter() {
@@ -49,6 +63,7 @@ impl AddressManager {
             }
 
             self.function_assignments.insert(func_name.clone(), func_assignments);
+            self.func_size.insert(func_name.clone(), func_offset);
         }
     }
 

@@ -234,8 +234,15 @@ pub fn run(path_name: String) {
         .expect("Unable to find file. Perhaps directory was entered incorrectly?");
 
     let irgman = parse(file);
+    print_graph(
+        path.clone().to_str()
+            .unwrap().clone()
+            .trim_end_matches(".txt").to_owned() + "_original.dot",
+        irgman.graph_manager_ref().get_ref_graph()
+    );
     let (mut irgm, mut mtm, mut ftm) =
         optimize_passes(irgman, path.clone());
+    add_dominance_path(&mut irgm.clone(), path.clone());
     let mut inst_register_mapping = register_allocation(&mut irgm, &mut mtm, &mut ftm, path.clone());
 
     if inst_register_mapping.len() != 0 {
@@ -243,11 +250,28 @@ pub fn run(path_name: String) {
     }
 
     let mut code_gen = generate_code::CodeGen::new(irgm, inst_register_mapping);
-    code_gen.clean_inst();
+    let inst_list = code_gen.build_program();
 
     // TODO : Add in everything after register allocation (Otherwise this works! probably want to make the parser for the command line more robust)
     let mut irgm = code_gen.get_irgm();
-    add_dominance_path(&mut irgm, path.clone());
+    print_graph(
+        path.clone().to_str()
+            .unwrap().clone()
+            .trim_end_matches(".txt").to_owned() + "_register_allocated.dot",
+        irgm.graph_manager_ref().get_ref_graph()
+    );
+
+    // Output instruction list
+    let mut output = String::new();
+    for instruction in inst_list {
+        write!(output, "{:032b}\n", instruction.get_inst());
+    }
+    fs::write(
+        path.clone().to_str()
+            .unwrap().clone()
+            .trim_end_matches(".txt").to_owned() + "output.data",
+        output
+    );
 }
 
 fn tokenize(source: std::fs::File) -> TokenCollection {

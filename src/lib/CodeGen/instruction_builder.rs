@@ -4,21 +4,81 @@ use std::cell::RefCell;
 
 use lib::IR::ir::{Op, InstTy, ValTy};
 use std::collections::HashMap;
+use lib::RegisterAllocator::RegisterAllocation;
 
 pub struct InstructionBuilder {
     id_counter: usize,
     inst_list: Vec<Instruction>,
-    reg_list: HashMap<usize, usize>,
-    branch_correction: HashMap<usize, usize>,
+    latest_adda: Option<Rc<RefCell<Op>>>,
+    inst_position_tracker: HashMap<usize, usize>,
+    branch_revisits: HashMap<usize, usize>,
 }
 
 impl InstructionBuilder {
-    pub fn new(reg_list: HashMap<usize,usize>, branch_correction: HashMap<usize, usize>) -> Self {
-        InstructionBuilder { id_counter: 0, inst_list: Vec::new(), reg_list, branch_correction }
+    pub fn new() -> Self {
+        let mut inst_list = Vec::new();
+        let mut id_counter = 0;
+
+        // Make Space to load location of Global Address Pointer
+        let inst = InstructionPacker::pack_f1(OpCode::ADD, 0, 0, 0);
+        inst_list.push(Instruction::new(inst, &id_counter));
+        id_counter += 1;
+
+        // Make Space to load current SP
+        let inst = InstructionPacker::pack_f1(OpCode::ADD, 0, 0, 0);
+        inst_list.push(Instruction::new(inst, &id_counter));
+        id_counter += 1;
+
+        InstructionBuilder {
+            id_counter,
+            inst_list,
+            latest_adda: None,
+            inst_position_tracker: HashMap::new(),
+            branch_revisits: HashMap::new(),
+        }
+    }
+
+    pub fn get_inst_list(&self) -> Vec<Instruction> {
+        self.inst_list.clone()
+    }
+
+    pub fn patch_branches(&mut self) {
+        for (instruction_id, op_id) in self.branch_revisits.clone() {
+            let branch_position = self.inst_position_tracker.get(&op_id).unwrap().clone();
+
+            self.inst_list.get_mut(instruction_id).unwrap().patch_f1_branch(branch_position as u32);
+        }
+    }
+
+    pub fn patch_global_stack(&mut self, global_offset: u32, stack_offset: u32) {
+        self.inst_list
+            .get_mut(0)
+            .unwrap()
+            .alter_instruction(
+                OpCode::ADDI,
+                FMT::F1,
+                RegisterAllocation::allocate_R30().to_u32(),
+                0,
+                global_offset
+            );
+
+        self.inst_list
+            .get_mut(1)
+            .unwrap()
+            .alter_instruction(
+                OpCode::ADDI,
+                FMT::F1,
+                RegisterAllocation::allocate_R29().to_u32(),
+                0,
+                stack_offset
+            );
     }
 
     // Will probably need more context to this.
-    pub fn build_instruction(&mut self, op: Rc<RefCell<Op>>) {
+    pub fn build_instruction(&mut self, op: Rc<RefCell<Op>>, is_global: bool) {
+        let inst_id = op.borrow().get_inst_num();
+        self.inst_position_tracker.insert(inst_id, self.id_counter.clone());
+
         let op_type = op.borrow().inst_type().clone();
         match op_type {
             InstTy::neg |
@@ -30,14 +90,26 @@ impl InstructionBuilder {
                 // These should all be removed by this point
                 panic!("Should be no remaining phi instructions when in codegen.");
             },
-            InstTy::spill | InstTy::loadsp |
+            InstTy::spill | InstTy::loadsp => {
+                // As of right now, the only spills are in the main,
+                // but it is not currently handled if the spill happens in
+                // a function or in a global.
+                self.unpack_spill_loadsp(op, is_global);
+            }
+            // These are all function related, save this for absolute last.
             InstTy::pload | InstTy::gload |
             InstTy::pload | InstTy::gstore |
-            InstTy::ret | InstTy::call => {},
-            InstTy::adda => {},
-            InstTy::store | InstTy::load => {},
+            InstTy::call => {
+                // TODO : If I find myself with an excess of time tomorrow morning.
+            },
+            InstTy::adda => {
+                self.latest_adda = Some(op);
+            },
+            InstTy::store | InstTy::load => {
+                self.unpack_load_store(op);
+            },
             _ => {
-                self.unpack_simple_ir(op.clone());
+                self.unpack_simple_ir(op);
             },
         }
     }
@@ -50,17 +122,18 @@ impl InstructionBuilder {
             Some(val) => {
                 match val.get_value() {
                     ValTy::reg(reg) => {
-                        x = reg.to_usize();
+                        x = reg.to_u32();
                     },
                     ValTy::op(op) => {
-                        x = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone();
+                        // for now just make it 0, handle this later.
+                        x = 0;
                     },
                     ValTy::con(con) => {
                         panic!("x value should never be a constant.");
                     },
                     ValTy::adr(adr) => {
                         // TODO : Still not really sure what i want to do with this.
-                        x = 0;
+                        panic!("Addresses should all be handled now.");
                     },
                     ValTy::node_id(id) => {
                         panic!("I dont believe x can have a node_id");
@@ -80,23 +153,23 @@ impl InstructionBuilder {
             Some(val) => {
                 match val.get_value() {
                     ValTy::reg(reg) => {
-                        y = reg.to_usize();
+                        y = reg.to_u32() as i32;
                     },
                     ValTy::op(op) => {
-                        y = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone();
+                        y = op.borrow().get_inst_num() as i32;
                     },
                     ValTy::con(con) => {
                         if con.clone() > 65535 {
                             panic!("For now I am ignoring sizes above u16, and will take care of it later.");
                         }
-                        y = con.clone() as usize;
+                        y = con.clone();
                     },
                     ValTy::adr(adr) => {
                         // TODO : Still not really sure what i want to do with this.
                         y = 0;
                     },
                     ValTy::node_id(id) => {
-                        y = self.branch_correction.get(&id.index()).unwrap().clone();
+                       panic!("NodeIds should have all be handled by code cleanup already.");
                     },
                     _ => {
                         panic!("Unexpected encounter in getting x value.");
@@ -124,7 +197,7 @@ impl InstructionBuilder {
                 return 0
             },
             InstTy::add => {
-                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone() as u32;
+                let a = op.borrow().get_register().to_u32() as u32;
                 let b = x as u32;
                 let c = y as u32;
 
@@ -143,7 +216,7 @@ impl InstructionBuilder {
                 return 0
             },
             InstTy::sub => {
-                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone() as u32;
+                let a = op.borrow().get_register().to_u32() as u32;
                 let b = x as u32;
                 let c = y as u32;
 
@@ -160,7 +233,7 @@ impl InstructionBuilder {
                 return 0
             },
             InstTy::mul => {
-                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone() as u32;
+                let a = op.borrow().get_register().to_u32() as u32;
                 let b = x as u32;
                 let c = y as u32;
 
@@ -178,7 +251,7 @@ impl InstructionBuilder {
 
             },
             InstTy::div => {
-                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone() as u32;
+                let a = op.borrow().get_register().to_u32() as u32;
                 let b = x as u32;
                 let c = y as u32;
 
@@ -195,7 +268,7 @@ impl InstructionBuilder {
                 return 0
             },
             InstTy::cmp => {
-                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone() as u32;
+                let a = op.borrow().get_register().to_u32() as u32;
                 let b = x as u32;
                 let c = y as u32;
 
@@ -212,22 +285,14 @@ impl InstructionBuilder {
                 return 0
             },
 
-//            /// Load/Store ///
-//            InstTy::load => {
-//                return (OpCode::LDX, FMT::F2)
-//            },
-//            InstTy::store => {
-//                return (OpCode::STX, FMT::F2)
-//            },
-
             /// Control ///
             InstTy::bne => {
                 let a = x as u32;
                 let b = 0;
-                let c = y as u32;
 
-                let inst = InstructionPacker::pack_f1(OpCode::BNE, a, b, c);
+                let inst = InstructionPacker::pack_f1(OpCode::BNE, a, b, 0);
                 self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.branch_revisits.insert(self.id_counter.clone(), y as usize);
                 self.id_counter += 1;
 
                 return 0
@@ -235,10 +300,10 @@ impl InstructionBuilder {
             InstTy::beq => {
                 let a = x as u32;
                 let b = 0;
-                let c = y as u32;
 
-                let inst = InstructionPacker::pack_f1(OpCode::BEQ, a, b, c);
+                let inst = InstructionPacker::pack_f1(OpCode::BEQ, a, b, 0);
                 self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.branch_revisits.insert(self.id_counter.clone(), y as usize);
                 self.id_counter += 1;
 
                 return 0
@@ -246,10 +311,10 @@ impl InstructionBuilder {
             InstTy::ble => {
                 let a = x as u32;
                 let b = 0;
-                let c = y as u32;
 
-                let inst = InstructionPacker::pack_f1(OpCode::BLE, a, b, c);
+                let inst = InstructionPacker::pack_f1(OpCode::BLE, a, b, 0);
                 self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.branch_revisits.insert(self.id_counter.clone(), y as usize);
                 self.id_counter += 1;
 
                 return 0
@@ -257,10 +322,10 @@ impl InstructionBuilder {
             InstTy::blt => {
                 let a = x as u32;
                 let b = 0;
-                let c = y as u32;
 
-                let inst = InstructionPacker::pack_f1(OpCode::BLT, a, b, c);
+                let inst = InstructionPacker::pack_f1(OpCode::BLT, a, b, 0);
                 self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.branch_revisits.insert(self.id_counter.clone(), y as usize);
                 self.id_counter += 1;
 
                 return 0
@@ -268,10 +333,10 @@ impl InstructionBuilder {
             InstTy::bge => {
                 let a = x as u32;
                 let b = 0;
-                let c = y as u32;
 
-                let inst = InstructionPacker::pack_f1(OpCode::BGE, a, b, c);
+                let inst = InstructionPacker::pack_f1(OpCode::BGE, a, b, 0);
                 self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.branch_revisits.insert(self.id_counter.clone(), y as usize);
                 self.id_counter += 1;
 
                 return 0
@@ -279,21 +344,21 @@ impl InstructionBuilder {
             InstTy::bgt => {
                 let a = x as u32;
                 let b = 0;
-                let c = y as u32;
 
-                let inst = InstructionPacker::pack_f1(OpCode::BGT, a, b, c);
+                let inst = InstructionPacker::pack_f1(OpCode::BGT, a, b, 0);
                 self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.branch_revisits.insert(self.id_counter.clone(), y as usize);
                 self.id_counter += 1;
 
                 return 0
             },
             InstTy::bra => {
-                let a = x as u32;
+                let a = 0;
                 let b = 0;
-                let c = y as u32;
 
-                let inst = InstructionPacker::pack_f1(OpCode::BSR, a, b, c);
+                let inst = InstructionPacker::pack_f1(OpCode::BEQ, a, b, 0);
                 self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.branch_revisits.insert(self.id_counter.clone(), y as usize);
                 self.id_counter += 1;
 
                 return 0
@@ -301,7 +366,7 @@ impl InstructionBuilder {
 
             /// Input/Output ///
             InstTy::read => {
-                let a = self.reg_list.get(&op.borrow().get_inst_num()).unwrap().clone();
+                let a = op.borrow().get_register().to_u32();
 
                 let inst = InstructionPacker::pack_f2(OpCode::RDD, a as u32, 0, 0);
                 self.inst_list.push(Instruction::new(inst, &self.id_counter));
@@ -325,6 +390,16 @@ impl InstructionBuilder {
 
                 return 0
             },
+
+            InstTy::ret => {
+                let c = x as u32;
+
+                let inst = InstructionPacker::pack_f2(OpCode::RET, 0, 0, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+
+                return 0
+            },
             _ => {
                 panic!("Found unexpected instruction while unpacking simple IR.");
             },
@@ -334,8 +409,143 @@ impl InstructionBuilder {
     fn unpack_complex_ir(op: Rc<RefCell<Op>>) {
 
     }
+
+    fn unpack_load_store(&mut self, op: Rc<RefCell<Op>>) {
+        let op_type = op.borrow().inst_type().clone();
+
+        let adda = self.latest_adda.clone().unwrap();
+        let (x_val, y_val) = adda.borrow().get_val_ty();
+
+        let mut x = 0;
+        if let ValTy::reg(reg) = x_val
+            .unwrap() {
+            x = reg.to_u32();
+        } else {
+            panic!("Invalid register value in adda instruction.");
+        }
+
+        let mut y = 0;
+        if let ValTy::reg(reg) = y_val
+            .unwrap() {
+            y = reg.to_u32();
+        } else {
+            panic!("Invalid register value found in adda instruction.");
+        }
+
+
+        let b = x;
+        let c = y;
+
+        match op_type {
+            InstTy::store => {
+                let mut a = 0;
+                match op
+                    .borrow()
+                    .clone_y_val().unwrap()
+                    .get_value()
+                    .clone() {
+                    ValTy::reg(reg) => {
+                        a = reg.to_u32();
+                    },
+                    ValTy::con(con) => {
+                        a = con as u32;
+                    }
+                    _ => {
+                        panic!("Store instruction did not contain an appropriate value to store...");
+                    }
+                }
+                let inst = InstructionPacker::pack_f2(OpCode::STX, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+            },
+            InstTy::load => {
+                let a = op.borrow().get_register().to_u32();
+                let inst = InstructionPacker::pack_f2(OpCode::LDX, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+            },
+            _ => {},
+        }
+
+        self.latest_adda = None;
+    }
+
+    fn unpack_spill_loadsp(&mut self, op: Rc<RefCell<Op>>, is_global: bool) {
+        let op_type = op.borrow().inst_type().clone();
+
+        match op_type {
+            InstTy::spill => {
+                let mut a = 0;
+                if let ValTy::reg(spill_reg) = op
+                    .borrow()
+                    .clone_y_val()
+                    .unwrap()
+                    .get_value()
+                    .clone() {
+                    a = spill_reg.to_u32();
+                } else {
+                    panic!("Spill value was not a register.");
+                }
+
+                let mut b = 0;
+                if is_global {
+                    // Global Register
+                    b = RegisterAllocation::allocate_R30().to_u32();
+                } else {
+                    // Stack Pointer
+                    b = RegisterAllocation::allocate_R29().to_u32();
+                }
+
+                let mut c = 0;
+                if let ValTy::con(addr_num) = op
+                    .borrow()
+                    .clone_x_val()
+                    .unwrap()
+                    .get_value()
+                    .clone() {
+                    c = addr_num as u32;
+                } else {
+                    panic!("Spill value was not a constant offset.");
+                }
+
+                let inst = InstructionPacker::pack_f1(OpCode::STW, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+            },
+            InstTy::loadsp => {
+                let mut a = op.borrow().get_register().to_u32();
+
+                let mut b = 0;
+                if is_global {
+                    // Global Register
+                    b = RegisterAllocation::allocate_R30().to_u32();
+                } else {
+                    // Stack Pointer
+                    b = RegisterAllocation::allocate_R29().to_u32();
+                }
+
+                let mut c = 0;
+                if let ValTy::con(addr_num) = op
+                    .borrow()
+                    .clone_y_val()
+                    .unwrap()
+                    .get_value()
+                    .clone() {
+                    c = addr_num as u32;
+                } else {
+                    panic!("Spill value was not a constant offset.");
+                }
+
+                let inst = InstructionPacker::pack_f1(OpCode::LDW, a, b, c);
+                self.inst_list.push(Instruction::new(inst, &self.id_counter));
+                self.id_counter += 1;
+            },
+            _ => {},
+        }
+    }
 }
 
+#[derive(Clone)]
 pub struct Instruction {
     inst: u32,
     id: usize,
@@ -344,6 +554,34 @@ pub struct Instruction {
 impl Instruction {
     pub fn new(inst: u32, id: & usize) -> Self {
         Instruction { inst, id: id.clone() }
+    }
+
+    pub fn get_inst(&self) -> u32 {
+        self.inst.clone()
+    }
+
+    fn patch_f1_branch(&mut self, c: u32) {
+        self.inst |= c;
+    }
+
+    fn alter_instruction(&mut self, opcode: OpCode, fmt: FMT, a: u32, b: u32, c: u32) {
+        match fmt {
+            FMT::F1 => {
+                self.inst |= InstructionPacker::pack_f1(opcode, a, b, c);
+            },
+            FMT::F2 => {
+                self.inst |= InstructionPacker::pack_f2(opcode, a, b, c);
+            },
+            FMT::F3 => {
+                self.inst |= InstructionPacker::pack_f3(opcode, c);
+            },
+        }
+    }
+}
+
+impl std::fmt::Debug for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}: {:032b}", self.id, self.inst)
     }
 }
 
@@ -388,6 +626,7 @@ enum FMT {
     F3,
 }
 
+#[derive(Clone)]
 enum OpCode {
     // Arithmetic Instructions
     ADD = 0,

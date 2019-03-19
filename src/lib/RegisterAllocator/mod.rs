@@ -227,4 +227,8 @@ impl RegisterAllocation {
     pub fn to_usize(&self) -> usize {
         self.reg.clone()
     }
+
+    pub fn to_u32(&self) -> u32 {
+        self.reg.clone() as u32
+    }
 }

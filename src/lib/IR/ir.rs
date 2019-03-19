@@ -95,8 +95,8 @@ impl ValTy {
             ValTy::con(con) => String::from("#") + &con.to_string(),
             ValTy::var(var) => {
                 // Temporarily, I want it to output var name
-                var.borrow().value_to_string()
-                //var.borrow().get_ident()
+                //var.borrow().value_to_string()
+                var.borrow().get_ident()
             }
             ValTy::adr(adr) => adr.to_string(),
             ValTy::arr(arr) => arr.to_string(),
@@ -372,6 +372,10 @@ impl Op {
         }
 
         (x_val, y_val)
+    }
+
+    pub fn get_register(&self) -> RegisterAllocation {
+        self.register.clone().unwrap().clone()
     }
 
     pub fn clone_x_val(&self) -> Option<Value> {
