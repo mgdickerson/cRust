@@ -6,6 +6,8 @@ pub mod ir_manager;
 pub mod ret_register;
 pub mod variable_manager;
 
+pub mod inst;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
