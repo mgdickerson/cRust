@@ -51,12 +51,15 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>, pos: &mut 
                         Some(' ') | Some('=') | Some('!') | Some('>') | Some('<') | Some('(')
                         | Some(')') | Some('{') | Some('}') | Some('[') | Some(']') | Some(';')
                         | Some('+') | Some('-') | Some('.') | Some('*') | Some('/') | Some(',')
-                        | Some('#') | Some('\r') | Some('\n') => match check_keyword(&mut buffer) {
-                            Some(x) => return Some(x),
-                            None => return Some(Token::new(TokenType::Ident, buffer)),
+                        | Some('#') | Some('\r') | Some('\n') | None => {
+                            let token = check_keyword(&mut buffer, lo, *pos);
+                            *pos += 1;
+                            return Ok(Some(token));
                         },
-                        None => return Some(Token::new(TokenType::Ident, buffer)),
-                        Some(_) => {}
+                        Some(err) => {
+                            // Unexpected token, return error.
+                            return Err(Error);
+                        },
                     }
                 }
 
@@ -132,13 +135,6 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>, pos: &mut 
                         return Some(Token::new(TokenType::SubOp, buffer));
                     }
                 }
-
-                //Comment handlers
-                '#' => {
-                    //Single comment token, take the rest of the line.
-                    buffer.push(c);
-                    is_comment = true;
-                }
                 '/' => {
                     buffer.push(c);
 
@@ -152,6 +148,14 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>, pos: &mut 
                     buffer.push(c);
                     return Some(Token::new(TokenType::MulOp, buffer));
                 }
+
+                //Comment handlers
+                '#' => {
+                    //Single comment token, take the rest of the line.
+                    buffer.push(c);
+                    is_comment = true;
+                }
+                
 
                 //Comma Splitter
                 ',' => {
@@ -169,8 +173,6 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>, pos: &mut 
                 '\t' => {}
                 '\r' => {}
                 '\n' => {}
-                '"' => {}
-                ':' => {}
 
                 //EOF and End of Main Function
                 '.' => {
@@ -178,11 +180,15 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>, pos: &mut 
                     return Some(Token::new(TokenType::ComputationEnd, buffer));
                 }
 
-                _ => {}, //buffer.push(c),//for now we just build:
+                _ => {
+                    // Encountered some token that could not be lexed, return error
+                    *pos += 1;  // Add 1 to current position so that next token request starts at correct location.
+                    return Err(Error)
+                }, //buffer.push(c),//for now we just build:
             }
         }
 
-        // TODO : Increment the pos by a single character here.
+        *pos += 1;
     }
 
     //leave in until dev done.
@@ -194,24 +200,38 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>, pos: &mut 
     None //If all above cases fall through, then we are at the end of our computation and thus we return None. This ends the Parsing.
 }
 
-fn check_keyword(key: &mut String) -> Option<Token> {
+/// When a string is completed, compare against this list of keywords.
+/// If a keyword is found, build token of type and return. Otherwise 
+/// it is a normal string or declaration, otherwise it is an Ident 
+/// token.
+fn check_keyword(key: &mut String, lo: BytePos, hi: BytePos) -> Token {
     match key.as_str() {
-        "var" => Some(Token::new(TokenType::Var, key.to_string())),
-        "array" => Some(Token::new(TokenType::Array, key.to_string())),
-        "function" | "procedure" => Some(Token::new(TokenType::FuncDecl, key.to_string())),
-        "main" => Some(Token::new(TokenType::Computation, key.to_string())),
-        "let" => Some(Token::new(TokenType::Assignment, key.to_string())),
-        "call" => Some(Token::new(TokenType::FuncCall, key.to_string())),
-        "if" => Some(Token::new(TokenType::IfStatement, key.to_string())),
-        "then" => Some(Token::new(TokenType::ThenStatement, key.to_string())),
-        "else" => Some(Token::new(TokenType::ElseStatement, key.to_string())),
-        "fi" => Some(Token::new(TokenType::FiStatement, key.to_string())),
-        "while" => Some(Token::new(TokenType::WhileStatement, key.to_string())),
-        "do" => Some(Token::new(TokenType::DoStatement, key.to_string())),
-        "od" => Some(Token::new(TokenType::OdStatement, key.to_string())),
-        "return" => Some(Token::new(TokenType::ReturnStatement, key.to_string())),
+        "var" => build_token(TokenType::Var, key.to_string(), lo, hi),
+        "array" => build_token(TokenType::Array, key.to_string(), lo, hi),
+        "function" | "procedure" => build_token(TokenType::FuncDecl, key.to_string(), lo, hi),
+        "main" => build_token(TokenType::Computation, key.to_string(), lo, hi),
+        "let" => build_token(TokenType::Assignment, key.to_string(), lo, hi),
+        "call" => build_token(TokenType::FuncCall, key.to_string(), lo, hi),
+        "if" => build_token(TokenType::IfStatement, key.to_string(), lo, hi),
+        "then" => build_token(TokenType::ThenStatement, key.to_string(), lo, hi),
+        "else" => build_token(TokenType::ElseStatement, key.to_string(), lo, hi),
+        "fi" => build_token(TokenType::FiStatement, key.to_string(), lo, hi),
+        "while" => build_token(TokenType::WhileStatement, key.to_string(), lo, hi),
+        "do" => build_token(TokenType::DoStatement, key.to_string(), lo, hi),
+        "od" => build_token(TokenType::OdStatement, key.to_string(), lo, hi),
+        "return" => build_token(TokenType::ReturnStatement, key.to_string(), lo, hi),
 
-        //If no keyword is found, it returns None, and the string must be an ident of some sort.
-        _ => None,
+        ident => {
+            // Not one of the above keywords, it is therefore an ident, build 
+            // and return an Ident token.
+            build_token(TokenType::Ident, key, lo, hi);
+        }
     }
+}
+
+/// Super simple token builder function, takes necessary information and outputs a Token.
+/// Mostly using this to make span building easier and in a single location.
+fn build_token(token_ty: TokenType, buf: String, mut lo: BytePos, mut hi: BytePos) -> Token {
+    let span = Span::new(lo, hi);
+    Token::new(token_ty, buf, span)
 }
