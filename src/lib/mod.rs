@@ -24,6 +24,7 @@ use lib::RegisterAllocator::{Color, RegisterAllocation};
 use lib::IR::ir::{InstTy, ValTy, Value};
 use lib::IR::ir_manager::IRGraphManager;
 use lib::Graph::node::Node;
+use lib::Utility::source_file::SourceFile;
 
 use lib::Lexer::token::TokenCollection;
 use lib::Parser::AST::computation::Comp;
@@ -281,6 +282,9 @@ fn tokenize(source: std::fs::File) -> TokenCollection {
 
     match result {
         Ok(num) => {
+            let mut file_src = buffer.clone();
+            let src_file = SourceFile::new(String::from("test"), file_src);
+
             let mut char_iter = buffer.chars().peekable();
             TokenCollection::collect(&mut char_iter)
         },

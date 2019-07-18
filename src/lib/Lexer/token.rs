@@ -1,34 +1,6 @@
 use std;
 use Lexer;
-
-/// Tracks where Tokens are within the source file to make for 
-/// easier debugging message. Comes in the form of: 
-///     start(row, column),
-///     end(row, column),
-#[derive(Default, Copy, Clone, Debug)]
-pub struct Span {
-    start: (usize, usize),
-    end: (usize, usize),
-}
-
-impl Span {
-    pub fn add_span_start(&mut self, start_row: usize, start_colm: usize) {
-        self.start = (start_row, start_colm);
-    }
-
-    pub fn add_span_end(&mut self, end_row: usize, end_colm: usize) {
-        self.end = (end_row, end_colm);
-    }
-
-    pub fn add_span(&mut self, start_row: usize, start_colm: usize, end_row: usize, end_colm: usize) {
-        self.start = (start_row, start_colm);
-        self.end = (end_row, end_colm);
-    }
-
-    pub fn get_span(&self) -> ((usize, usize), (usize, usize)) {
-        (self.start, self.end)
-    }
-}
+use lib::Utility::syntax_position::Span;
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -38,11 +10,11 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, token_contents: String) -> Self {
+    pub fn new(token_type: TokenType, token_contents: String, span: Span) -> Self {
         Token {
             token_type,
             token_contents,
-            span: Span::default(),
+            span,
         }
     }
 

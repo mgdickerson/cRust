@@ -1,9 +1,18 @@
 pub mod token;
 
+use std::iter::Peekable;
+use std::str::Chars;
+
 use self::token::Token;
 use self::token::TokenType;
+use lib::Utility::error::Error;
+use lib::Utility::syntax_position::{BytePos, Span};
 
 use std;
+
+pub fn tokenize(iter: &mut Peekable<Chars<'_>>) -> Result<Vec<Token>, Vec<Error>> {
+
+}
 
 //  As per Fabian's suggestion: use this function to request a token,
 //then pass the token back. This function will take a string version of
@@ -13,8 +22,9 @@ use std;
 
 //This seems to work in separating tokens, but may need revisiting for better
 //clarity of tokens or perhaps consolidation, we shall see.
-pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<Token> {
+pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>, pos: &mut BytePos) -> Result<Option<Token>, Error> {
     let mut buffer = String::new();
+    let lo = pos.clone();
 
     let mut is_comment: bool = false;
     let mut is_number: bool = true;
@@ -159,6 +169,8 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<
                 '\t' => {}
                 '\r' => {}
                 '\n' => {}
+                '"' => {}
+                ':' => {}
 
                 //EOF and End of Main Function
                 '.' => {
@@ -166,12 +178,11 @@ pub fn get_token(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<
                     return Some(Token::new(TokenType::ComputationEnd, buffer));
                 }
 
-                _ => panic!(
-                    "Should never reach this case! Character that gave error: {}",
-                    c
-                ), //buffer.push(c),//for now we just build:
+                _ => {}, //buffer.push(c),//for now we just build:
             }
         }
+
+        // TODO : Increment the pos by a single character here.
     }
 
     //leave in until dev done.
