@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, AddAssign, SubAssign};
 
 const MAX_LEN: u32 = 0b0111_1111_1111_1111;
 
@@ -30,6 +30,11 @@ impl Sub for BytePos {
     fn sub(self, other: BytePos) -> BytePos {
         // Potentially hazardous behaviour if it produces a negative number.
         BytePos(self.0 - other.0)
+    }
+}
+impl AddAssign<u32> for BytePos {
+    fn add_assign(&mut self, rhs: u32) {
+        self.0 += rhs;
     }
 }
 

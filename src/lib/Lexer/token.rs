@@ -5,7 +5,6 @@ use lib::Utility::syntax_position::Span;
 #[derive(Debug, Clone)]
 pub struct Token {
     token_type: TokenType,
-    token_contents: String,
     span: Span,
 }
 
@@ -13,14 +12,8 @@ impl Token {
     pub fn new(token_type: TokenType, token_contents: String, span: Span) -> Self {
         Token {
             token_type,
-            token_contents,
             span,
         }
-    }
-
-    pub fn get_contents(&self) -> String {
-        let copy = self.token_contents.clone();
-        copy
     }
 
     pub fn get_type(&self) -> TokenType {
@@ -31,11 +24,6 @@ impl Token {
     pub fn peek_type(&self) -> TokenType {
         let peek_token_copy = self.token_type.clone();
         peek_token_copy
-    }
-
-    pub fn peek_content(&self) -> String {
-        let peek_content_copy = self.token_contents.clone();
-        peek_content_copy
     }
 }
 
@@ -83,7 +71,7 @@ impl TokenCollection {
     }
 }
 //std::iter::Peekable<std::slice::Iter<Token<'_>>>
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     // Debugging Type
     Test,
@@ -110,17 +98,17 @@ pub enum TokenType {
     Array,
 
     // Braces
-    LeftBrace,
-    RightBrace,
-    LeftPara,
-    RightPara,
-    LeftBracket,
-    RightBracket,
+    LBrace,
+    RBrace,
+    LPara,
+    RPara,
+    LBracket,
+    RBracket,
     // TODO : Need to differentiate
 
     // Combination tokens
-    Ident,
-    Number,
+    Ident(String),
+    Number(i64),
 
     Designator,
     Factor,
@@ -135,16 +123,16 @@ pub enum TokenType {
     FuncParam,
     FuncIdent,
 
-    IfStatement,
-    ThenStatement,
-    ElseStatement,
-    FiStatement,
+    If,
+    Then,
+    Else,
+    Fi,
 
-    WhileStatement,
-    DoStatement,
-    OdStatement,
+    While,
+    Do,
+    Od,
 
-    ReturnStatement,
+    Return,
 
     Statement,
     StatSequence,

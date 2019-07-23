@@ -3,4 +3,8 @@ pub struct Error {
 
 }
 
-impl Error {}
+impl Error {
+    pub fn new() -> Self {
+        Error {}
+    }
+}
