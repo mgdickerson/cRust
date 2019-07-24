@@ -12,14 +12,14 @@ pub struct SourceFile {
 impl SourceFile {
     pub fn new(
         name: String,
-        mut src: String,
+        src: String,
     ) -> Result<SourceFile, Error> {
         // All files will start at position 0.
         let start_pos = BytePos(0);
         let end_pos = src.len();
 
         if end_pos > u32::max_value() as usize {
-            return Err(Error{});
+            return Err(Error::Msg(String::from("ending position exceeds max u32 value")));
         }
 
         let lines = analyze_source_file(&src, start_pos.clone());

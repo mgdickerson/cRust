@@ -24,17 +24,17 @@ use std::fs::OpenOptions;
 
 /// Internal Lib
 mod lib;
-use lib::Graph::node::{Node, NodeId};
+// use lib::Graph::node::{Node, NodeId};
 use lib::Lexer;
 use lib::Lexer::token::{Token, TokenCollection, TokenType};
-use lib::Optimizer;
-use lib::Parser;
-use lib::RegisterAllocator::analyze_live_range;
+// use lib::Optimizer;
+// use lib::Parser;
+// use lib::RegisterAllocator::analyze_live_range;
 use lib::Utility::display;
-use lib::IR::ir;
-use lib::IR::ir::{InstTy, Op, ValTy, Value};
-use lib::IR::ir_manager::IRGraphManager;
-use lib::CodeGen::{phi_absolver,generate_code::traversal_path};
+// use lib::IR::ir;
+// use lib::IR::ir::{InstTy, Op, ValTy, Value};
+// use lib::IR::ir_manager::IRGraphManager;
+// use lib::CodeGen::{phi_absolver,generate_code::traversal_path};
 
 /// External Lib
 extern crate petgraph;
@@ -60,4 +60,6 @@ fn main() {
 
     //println!("{:?}", path);
     lib::run(path);
+
+    println!("Completed Lex!");
 }

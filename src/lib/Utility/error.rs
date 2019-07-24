@@ -7,6 +7,9 @@ use self::Error::*;
 pub enum Error {
     Msg(String),
     Eof,
+    Parse(String),
+    UndefChar(char),
+    UndefOp(String),
 }
 
 impl Display for Error {
@@ -14,6 +17,9 @@ impl Display for Error {
         match *self {
             Msg(ref string) => write!(formatter, "{}", string),
             Eof => write!(formatter, "end of file"),
+            Parse(ref string) => write!(formatter, "unable to parse string {}", string),
+            UndefChar(ref ch) => write!(formatter, "unsupported character used: {}", ch),
+            UndefOp(ref string) => write!(formatter, "undefined operation: {}", string),
         }
     }
 }

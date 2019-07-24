@@ -1,4 +1,6 @@
 use std;
+use std::iter::Peekable;
+use std::str::Chars;
 use Lexer;
 use lib::Utility::syntax_position::Span;
 
@@ -9,7 +11,7 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, token_contents: String, span: Span) -> Self {
+    pub fn new(token_type: TokenType, span: Span) -> Self {
         Token {
             token_type,
             span,
@@ -33,20 +35,14 @@ pub struct TokenCollection {
 }
 
 impl TokenCollection {
-    pub fn collect(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> TokenCollection {
-        let mut token_builder: Vec<Token> = Vec::new();
-
-        loop {
-            if iter.peek() == None {
-                return TokenCollection {
-                    token_vector: token_builder.into_iter().peekable(),
-                };
-            }
-
-            if let Some(token) = Lexer::get_token(iter) {
-                token_builder.push(token);
-            } else {
-                //Lexer::get_token(iter) returned None.
+    pub fn collect<'lxr,'lctx>(iter: &'lxr mut Peekable<Chars<'lctx>>) -> TokenCollection {
+        match Lexer::Lexer::tokenize(iter) {
+            Ok(tc) => {
+                TokenCollection { token_vector: tc.into_iter().peekable() }
+            },
+            Err(error) => {
+                // FIXME : Add proper error handling.
+                panic!("Fix me later");
             }
         }
     }
@@ -85,26 +81,31 @@ pub enum TokenType {
     Comma,
     SemiTermination,
 
-    // Operations
-    RelOp,
-    MathOp,
+    // Math Operations
     AddOp,
     SubOp,
     MulOp,
     DivOp,
+
+    // Relative Operations
+    EqOp,
+    NeqOp,
+    LessOp,
+    GreatOp,
+    LeqOp,
+    GeqOp,
 
     // Variable Types
     Var,
     Array,
 
     // Braces
-    LBrace,
-    RBrace,
-    LPara,
-    RPara,
-    LBracket,
-    RBracket,
-    // TODO : Need to differentiate
+    LCurly,
+    RCurly,
+    LParen,
+    RParen,
+    LSquare,
+    RSquare,
 
     // Combination tokens
     Ident(String),
@@ -149,5 +150,5 @@ pub enum TokenType {
     OutputNum,
     OutputNewLine,
 
-    Comment,
+    Comment(String),
 }
