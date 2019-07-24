@@ -5,13 +5,14 @@ use std::str::Chars;
 
 use self::token::Token;
 use self::token::TokenType;
-use lib::Utility::error::Error;
+use lib::Utility::error::{Error};
 use lib::Utility::syntax_position::{BytePos, Span};
 
 use std;
 
 pub struct Lexer<'lctx,'lxr> {
-    char_iter: &'lxr mut Chars<'lctx>,
+    char_iter: &'lxr mut Peekable<Chars<'lctx>>,
+    current_char: Option<char>,
     buffer: Vec<char>,
     token_collection: Vec<Token>,
     errors: Vec<Error>,
@@ -23,10 +24,11 @@ pub struct Lexer<'lctx,'lxr> {
 
 impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
     fn new(
-        char_iter: &'lxr mut Chars<'lctx>
+        char_iter: &'lxr mut Peekable<Chars<'lctx>>
     ) -> Self {
         Lexer {
             char_iter,
+            current_char: None,
             buffer: Vec::new(),
             token_collection: Vec::new(),
             errors: Vec::new(),
@@ -44,24 +46,62 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
 
     }
 
+    fn advance(&mut self) -> Result<(), Error> {
+        match self.char_iter.next() {
+            Some(ch) => {
+                self.current_char = Some(ch);
+                self.hi += 1;
+                Ok(())
+            }
+            None => {
+                Err(Error::Eof)
+            }
+        }
+    }
+
+    fn current_char(
+        &mut self,
+    ) -> Result<char, Error> {
+        if let Some(ch) = self.current_char {
+            return Ok(ch);
+        }
+
+        return Err(Error::Eof);
+    }
+
+    fn take_while<F: Fn(char) -> bool>(
+        &mut self, 
+        pred: F
+    ) -> Result<String, Error> {
+        let mut buffer = String::new();
+        let mut ch = self.current_char()?;
+        while pred(ch) {
+            buffer.push(ch);
+            self.advance();
+            ch = self.current_char()?;
+        }
+        Ok(buffer)
+    }
+
+    // FIXME
     fn check_keyword(
         &mut self,
     ) {
         match key.as_str() {
-            "var" => build_token(TokenType::Var, key.to_string(), lo, hi),
-            "array" => build_token(TokenType::Array, key.to_string(), lo, hi),
-            "function" | "procedure" => build_token(TokenType::FuncDecl, key.to_string(), lo, hi),
-            "main" => build_token(TokenType::Computation, key.to_string(), lo, hi),
-            "let" => build_token(TokenType::Assignment, key.to_string(), lo, hi),
-            "call" => build_token(TokenType::FuncCall, key.to_string(), lo, hi),
-            "if" => build_token(TokenType::IfStatement, key.to_string(), lo, hi),
-            "then" => build_token(TokenType::ThenStatement, key.to_string(), lo, hi),
-            "else" => build_token(TokenType::ElseStatement, key.to_string(), lo, hi),
-            "fi" => build_token(TokenType::FiStatement, key.to_string(), lo, hi),
-            "while" => build_token(TokenType::WhileStatement, key.to_string(), lo, hi),
-            "do" => build_token(TokenType::DoStatement, key.to_string(), lo, hi),
-            "od" => build_token(TokenType::OdStatement, key.to_string(), lo, hi),
-            "return" => build_token(TokenType::ReturnStatement, key.to_string(), lo, hi),
+            "var" => {}, build_token(TokenType::Var, key.to_string(), lo, hi),
+            "array" => {}, build_token(TokenType::Array, key.to_string(), lo, hi),
+            "function" | "procedure" => {}, build_token(TokenType::FuncDecl, key.to_string(), lo, hi),
+            "main" => {}, build_token(TokenType::Computation, key.to_string(), lo, hi),
+            "let" => {}, build_token(TokenType::Assignment, key.to_string(), lo, hi),
+            "call" => {}, build_token(TokenType::FuncCall, key.to_string(), lo, hi),
+            "if" => {}, build_token(TokenType::IfStatement, key.to_string(), lo, hi),
+            "then" => {}, build_token(TokenType::ThenStatement, key.to_string(), lo, hi),
+            "else" => {}, build_token(TokenType::ElseStatement, key.to_string(), lo, hi),
+            "fi" => {}, build_token(TokenType::FiStatement, key.to_string(), lo, hi),
+            "while" => {}, build_token(TokenType::WhileStatement, key.to_string(), lo, hi),
+            "do" => {}, build_token(TokenType::DoStatement, key.to_string(), lo, hi),
+            "od" => {}, build_token(TokenType::OdStatement, key.to_string(), lo, hi),
+            "return" => {}, build_token(TokenType::ReturnStatement, key.to_string(), lo, hi),
 
             ident => {
                 // Not one of the above keywords, it is therefore an ident, build 
@@ -75,181 +115,69 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
     /// Mostly using this to make span building easier and in a single location.
     fn build_token(
         &mut self,
-        token_ty: TokenType, 
-    ) -> Token {
-        let span = Span::new(lo, hi);
-        Token::new(token_ty, buf, span)
+    ) {
+        // Build Span, String buf, and get current token type
+        let span = Span::new(self.lo, self.hi);
+        let buf : String = self.buffer.into_iter().collect();
+        if let Some(token_ty) = self.current_op.clone() {
+            // If current token has a type, add to the token collection
+            self.token_collection.push(Token::new(token_ty, buf, span));
+        }
+        
+        // After building and adding token, do clean up and maintenance of tokenizer.
+        self.lo = self.hi;
+        self.buffer.clear();
+        self.current_op = None;
     }
 
     fn collect_tokens(
         &mut self
     ) {
-        let local_iter = self.char_iter.clone();
-        local_iter.for_each(|c| {
-            self.hi += 1;
-            match c {
-                // TODO : Add '_' case? might be nice for naming variables but isn't in assignment.
-                //Alpha characters
-                'a'...'z' | 'A'...'Z' => {
-                    self.buffer.push(c);
-                    is_number = false;
-                    match iter.peek() {
-                        Some(' ') | Some('=') | Some('!') | Some('>') | Some('<') | Some('(')
-                        | Some(')') | Some('{') | Some('}') | Some('[') | Some(']') | Some(';')
-                        | Some('+') | Some('-') | Some('.') | Some('*') | Some('/') | Some(',')
-                        | Some('#') | Some('\r') | Some('\n') | None => {
-                            let token = check_keyword(&mut buffer, lo, *pos);
-                            *pos += 1;
-                            return Ok(Some(token));
-                        },
-                        Some(err) => {
-                            // Unexpected token, return error.
-                            return Err(Error::new());
-                        },
-                    }
-                }
+        while self.advance() == Ok(()) {
+            if let Ok(ch) = self.current_char() {
+                match ch {
+                    // Alpha characters
+                    'a'...'z' | 'A'...'Z' | '_' => {},
+                    
+                    // Numerics                
+                    '0'...'9' => {},
 
-                //Numerics
-                '0'...'9' => {
-                    buffer.push(c);
-                    match iter.peek() {
-                        Some(' ') | Some('+') | Some('-') | Some('/') | Some('*') | Some('=')
-                        | Some('!') | Some('>') | Some('<') | Some('{') | Some('[') | Some('(')
-                        | Some('}') | Some(']') | Some(')') | Some(';') | Some(',')
-                        | Some('\r') | Some('\n') | Some('\t') => {
-                            if is_number == true {
-                                return Some(Token::new(TokenType::Number, buffer));
-                            } else if is_number == false {
-                                return Some(Token::new(TokenType::Ident, buffer));
-                            }
-                        }
-                        _ => {}
-                    }
-                }
+                    // Non-Generating Tokens
+                    '\'' | '\t' | '\r' | '\n' | ' ' => {},
 
-                //Braces and Brackets
-                '{' => {
-                    buffer.push(c);
-                    let token = build_token(TokenType::LeftBrace, buffer, lo, *pos);
-                    *pos += 1;
-                    return Ok(Some(token));
-                }
-                '[' => {
-                    buffer.push(c);
-                    let token = build_token(TokenType::LeftBracket, buffer, lo, *pos);
-                    *pos += 1;
-                    return Ok(Some(token));
-                    // return Some(Token::new(TokenType::LeftBracket, buffer));
-                }
-                '(' => {
-                    buffer.push(c);
-                    let token = build_token(TokenType::LeftPara, buffer, lo, *pos);
-                    *pos += 1;
-                    return Ok(Some(token));
-                    // return Some(Token::new(TokenType::LeftPara, buffer));
-                }
-                '}' => {
-                    buffer.push(c);
-                    let token = build_token(TokenType::RightBrace, buffer, lo, *pos);
-                    *pos += 1;
-                    return Ok(Some(token));
-                    // return Some(Token::new(TokenType::RightBrace, buffer));
-                }
-                ']' => {
-                    buffer.push(c);
-                    let token = build_token(TokenType::RightBracket, buffer, lo, *pos);
-                    *pos += 1;
-                    return Ok(Some(token));
-                    // return Some(Token::new(TokenType::RightBracket, buffer));
-                }
-                ')' => {
-                    buffer.push(c);
-                    let token = build_token(TokenType::RightPara, buffer, lo, *pos);
-                    *pos += 1;
-                    return Ok(Some(token));
-                    // return Some(Token::new(TokenType::RightPara, buffer));
-                }
+                    // Braces and Brackets.
+                    '{' => {},
+                    '[' => {},
+                    '(' => {},
+                    '}' => {},
+                    ']' => {},
+                    ')' => {},
 
-                //relOp characters will need an explicit peeknext
-                '=' | '!' | '>' | '<' => {
-                    buffer.push(c);
-                    match iter.peek() {
-                        Some('=') | Some('!') | Some('>') | Some('<') => {}
-                        Some('-') => {
-                            if c == '<' {
-                            } else {
-                                return Some(Token::new(TokenType::RelOp, buffer));
-                            }
-                        }
-                        _ => return Some(Token::new(TokenType::RelOp, buffer)),
-                    }
-                }
+                    // relOp
+                    '=' => {},
+                    '!' | '~' => {},
+                    '>' => {},
+                    '<' => {},
 
-                //Math Operators
-                '+' => {
-                    buffer.push(c);
-                    return Some(Token::new(TokenType::AddOp, buffer));
-                }
-                '-' => {
-                    buffer.push(c);
-                    if buffer.as_str() == "<-" {
-                        return Some(Token::new(TokenType::AssignmentOp, buffer));
-                    } else {
-                        return Some(Token::new(TokenType::SubOp, buffer));
-                    }
-                }
-                '/' => {
-                    buffer.push(c);
+                    // mathOp
+                    '+' => {},
+                    '-' => {},
+                    '*' => {},
+                    '/' => {},
 
-                    if *iter.peek().unwrap() == '/' {
-                        is_comment = true;
-                    } else {
-                        return Some(Token::new(TokenType::DivOp, buffer));
-                    }
-                }
-                '*' => {
-                    buffer.push(c);
-                    return Some(Token::new(TokenType::MulOp, buffer));
-                }
+                    // Comment
+                    '#' => {},
 
-                //Comment handlers
-                '#' => {
-                    //Single comment token, take the rest of the line.
-                    buffer.push(c);
-                    is_comment = true;
-                }
-                
+                    // Splitters
+                    ',' => {},
+                    ';' => {},
+                    '.' => {},
 
-                //Comma Splitter
-                ',' => {
-                    buffer.push(c);
-                    return Some(Token::new(TokenType::Comma, buffer));
+                    // Undefined Character Error
+                    err => {},
                 }
-
-                //characters to ignore or remove (such as whitespace)
-                ' ' => {}
-                ';' => {
-                    buffer.push(c);
-                    return Some(Token::new(TokenType::SemiTermination, buffer));
-                }
-                '\'' => {}
-                '\t' => {}
-                '\r' => {}
-                '\n' => {}
-
-                //EOF and End of Main Function
-                '.' => {
-                    buffer.push(c);
-                    return Some(Token::new(TokenType::ComputationEnd, buffer));
-                }
-
-                _ => {
-                    // Encountered some token that could not be lexed, return error
-                    *pos += 1;  // Add 1 to current position so that next token request starts at correct location.
-                    return Err(Error::new())
-                }, //buffer.push(c),//for now we just build:
             }
-        })
+        }
     }
 }
 
