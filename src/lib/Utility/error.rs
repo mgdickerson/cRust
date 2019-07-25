@@ -10,6 +10,7 @@ pub enum Error {
     Parse(String),
     UndefChar(char),
     UndefOp(String),
+    LexingError(Vec<Error>),
 }
 
 impl Display for Error {
@@ -20,6 +21,10 @@ impl Display for Error {
             Parse(ref string) => write!(formatter, "unable to parse string {}", string),
             UndefChar(ref ch) => write!(formatter, "unsupported character used: {}", ch),
             UndefOp(ref string) => write!(formatter, "undefined operation: {}", string),
+            LexingError(ref error_collection) => {
+                // TODO : Add lexing error reporting
+                write!(formatter, "Lexing Error.")
+            },
         }
     }
 }

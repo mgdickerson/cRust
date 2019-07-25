@@ -1,3 +1,9 @@
+use std::fs::File;
+use std::io::BufReader;
+use std::io::Read;
+
+use lib::Lexer::token::Token;
+use lib::Lexer::*;
 use super::syntax_position::{BytePos};
 use super::error::Error;
 
@@ -12,8 +18,12 @@ pub struct SourceFile {
 impl SourceFile {
     pub fn new(
         name: String,
-        src: String,
+        src_file: File,
     ) -> Result<SourceFile, Error> {
+        let mut src = String::new();
+        let result = BufReader::new(src_file)
+        .read_to_string(&mut src);
+
         // All files will start at position 0.
         let start_pos = BytePos(0);
         let end_pos = src.len();
@@ -33,6 +43,15 @@ impl SourceFile {
         })
     }
 
+    pub fn tokenize_source(&mut self) -> Result<Vec<Token>, Error> {
+        let mut iter = self.src.chars().peekable();
+        match Lexer::tokenize(&mut iter) {
+            Ok(token_collecton) => Ok(token_collecton),
+            Err(error_collection) => Err(Error::LexingError(error_collection)),
+        }
+    }
+
+    /// Get starting BytePos base on given position within line.
     pub fn line_begin_pos(&self, pos: BytePos) -> BytePos {
         match self.lines.binary_search(&pos) {
             Ok(index) => {
@@ -45,6 +64,22 @@ impl SourceFile {
                     self.lines[index - 1]
                 }
             },
+        }
+    }
+
+    /// Get line number from BytePos for Debugging purposes.
+    pub fn line_num(&self, pos: BytePos) -> usize {
+        match self.lines.binary_search(&pos) {
+            Ok(index) => {
+                index
+            },
+            Err(index) => {
+                if index == 0 {
+                    0
+                } else {
+                    index - 1
+                }
+            }
         }
     }
 }

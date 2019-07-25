@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 use std::env;
-use std::fmt::Write;
-use std::fs::OpenOptions;
+// use std::fmt::Write;
+// use std::fs::OpenOptions;
 use std::fs::{self, DirEntry};
-use std::io::prelude::*;
-use std::io::{BufRead, BufReader, Result};
+// use std::io::prelude::*;
+// use std::io::{BufRead, BufReader, Result};
 use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -25,8 +25,10 @@ use petgraph::prelude::NodeIndex;
 // use lib::IR::ir_manager::IRGraphManager;
 // use lib::Graph::node::Node;
 use lib::Utility::source_file::SourceFile;
+use lib::Utility::error::Error;
 
 use lib::Lexer::token::TokenCollection;
+use lib::Lexer::token::Token;
 // use lib::Parser::AST::computation::Comp;
 // use lib::CodeGen::{phi_absolver,generate_code,instruction_builder};
 use std::collections::HashMap;
@@ -275,27 +277,14 @@ pub fn run(path_name: String) {
     // );
 }
 
-fn tokenize<'lxr,'lctx>(source: std::fs::File) -> TokenCollection {
-    let mut buffer = String::new();
-    let result = BufReader::new(source)
-        .read_to_string(&mut buffer);
-
-    match result {
-        Ok(num) => {
-            let mut file_src = buffer.clone();
-            let src_file = SourceFile::new(String::from("test"), file_src);
-
-            let mut char_iter = buffer.chars().peekable();
-            TokenCollection::collect(&mut char_iter)
-        },
-        Err(e) => {
-            panic!(e);
-        }
-    }
+fn tokenize(source: std::fs::File) -> Result<Vec<Token>, Error> {
+    let mut src_file = SourceFile::new(String::from("Test"), source)?;
+    src_file.tokenize_source()
 }
 
 fn parse(source: std::fs::File) {
     let tc = tokenize(source);
+    println!("{:?}", tc);
 }
 // fn parse(source: std::fs::File) -> IRGraphManager {
 //     // Gather all tokens

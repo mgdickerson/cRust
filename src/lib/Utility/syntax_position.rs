@@ -53,10 +53,10 @@ impl Span {
             std::mem::swap(&mut lo, &mut hi);
         }
 
-        let (base, len) = (lo.0, hi.0);
+        let (base, len) = (lo.0, hi.0 - lo.0);
 
         // Make sure length is not rediculous and base is manageable.
-        if len <= MAX_LEN && base <= 0 {
+        if len <= MAX_LEN {
             Span { base, len: len as u16 }
         } else {
             // Unhandled len size, default to len of 0. Other Spans will still be handled
