@@ -26,7 +26,7 @@ use std::fs::OpenOptions;
 mod lib;
 // use lib::Graph::node::{Node, NodeId};
 use lib::Lexer;
-use lib::Lexer::token::{Token, TokenCollection, TokenType};
+use lib::Lexer::token::{Token, TokenType};
 // use lib::Optimizer;
 // use lib::Parser;
 // use lib::RegisterAllocator::analyze_live_range;
@@ -59,7 +59,7 @@ fn main() {
     }
 
     //println!("{:?}", path);
-    lib::run(path);
+    println!("{:?}", lib::run(path));
 
     println!("Completed Lex!");
 }

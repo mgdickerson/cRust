@@ -1,14 +1,12 @@
-pub mod token;
-
 use std::iter::Peekable;
 use std::str::Chars;
+
+pub mod token;
 
 use self::token::Token;
 use self::token::TokenType;
 use lib::Utility::error::{Error};
 use lib::Utility::syntax_position::{BytePos, Span};
-
-use std;
 
 pub struct Lexer<'lctx,'lxr> {
     char_iter: &'lxr mut Peekable<Chars<'lctx>>,
@@ -41,12 +39,12 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
 
     pub fn tokenize(
         iter: &'lxr mut Peekable<Chars<'lctx>>
-    ) -> Result<Vec<Token>, Vec<Error>> {
+    ) -> Result<Vec<Token>, Error> {
         let mut lexer = Lexer::new(iter);
         lexer.collect_tokens();
 
         if lexer.errors.len() != 0 {
-            Err(lexer.errors)
+            Err(Error::LexingError(lexer.errors))
         } else {
             Ok(lexer.token_collection)
         }
@@ -155,7 +153,7 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
 
                 match result {
                     Ok(token) => {
-                        if token.get_type() != TokenType::None {
+                        if token.peek_type() != TokenType::None {
                             self.token_collection.push(token);
                         }
                     },
@@ -185,6 +183,11 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                 "do" => TokenType::Do,
                 "od" => TokenType::Od,
                 "return" => TokenType::Return,
+                
+                // Pre-defined functions
+                "InputNum" => TokenType::InputNum,
+                "OutputNum" => TokenType::OutputNum,
+                "OutputNewLine" => TokenType::OutputNewLine,
 
                 _ => TokenType::Ident(ident),
             };
@@ -255,7 +258,7 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                     self.advance();
                     self.build_token(TokenType::GeqOp)
                 },
-                _ => self.build_token(TokenType::GreatOp),
+                _ => self.build_token(TokenType::GreaterOp),
             }
         } else {
             Err(Error::Eof)
@@ -294,7 +297,7 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
     fn comment(
         &mut self
     ) -> Result<Token, Error> {
-        let buffer = self.take_while(|ch| ch != '\n')?;
+        let buffer = self.take_while(|ch| ch != '\n' && ch != '\r')?;
         self.build_token(TokenType::Comment(buffer))
     }
 }

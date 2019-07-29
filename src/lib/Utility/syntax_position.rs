@@ -69,3 +69,20 @@ impl Span {
         (BytePos(self.base),BytePos(self.len as u32))
     }
 }
+
+impl Add for Span {
+    type Output = Span;
+
+    fn add(self, other: Span) -> Span {
+        Span {
+            base: self.base,
+            len: self.len + other.len,
+        }
+    }
+}
+
+impl AddAssign<Span> for Span {
+    fn add_assign(&mut self, rhs: Span) {
+        self.len += rhs.len;
+    }
+}

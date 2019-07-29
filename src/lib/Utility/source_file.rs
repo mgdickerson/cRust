@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::io::Read;
+use std::iter::Peekable;
+use std::str::Chars;
 
 use lib::Lexer::token::Token;
 use lib::Lexer::*;
@@ -43,13 +45,18 @@ impl SourceFile {
         })
     }
 
-    pub fn tokenize_source(&mut self) -> Result<Vec<Token>, Error> {
-        let mut iter = self.src.chars().peekable();
-        match Lexer::tokenize(&mut iter) {
-            Ok(token_collecton) => Ok(token_collecton),
-            Err(error_collection) => Err(Error::LexingError(error_collection)),
-        }
+    pub fn src_to_iter(&self) -> Peekable<Chars<'_>> {
+        self.src.chars().peekable()
     }
+
+    // TODO : Remove this, should not be part of File Handle.
+    // pub fn tokenize_source(&mut self) -> Result<Vec<Token>, Error> {
+    //     let mut iter = self.src.chars().peekable();
+    //     match Lexer::tokenize(&mut iter) {
+    //         Ok(token_collecton) => Ok(token_collecton),
+    //         Err(error_collection) => Err(Error::LexingError(error_collection)),
+    //     }
+    // }
 
     /// Get starting BytePos base on given position within line.
     pub fn line_begin_pos(&self, pos: BytePos) -> BytePos {

@@ -11,6 +11,7 @@ pub struct Token {
 }
 
 impl Token {
+    /// Standard Token builder.
     pub fn new(token_type: TokenType, span: Span) -> Self {
         Token {
             token_type,
@@ -18,66 +19,23 @@ impl Token {
         }
     }
 
-    pub fn get_type(&self) -> TokenType {
-        let copy = self.token_type.clone();
-        copy
-    }
-
+    /// Returns token type without consuming Token.
     pub fn peek_type(&self) -> TokenType {
-        let peek_token_copy = self.token_type.clone();
-        peek_token_copy
+        self.token_type.clone()
+    }
+
+    /// Consumes Token, returns span
+    pub fn get_span(self) -> Span {
+        self.span
     }
 }
 
-#[derive(Debug)]
-pub struct TokenCollection {
-    token_vector: std::iter::Peekable<std::vec::IntoIter<Token>>,
-}
-
-impl TokenCollection {
-    pub fn collect<'lxr,'lctx>(iter: &'lxr mut Peekable<Chars<'lctx>>) -> TokenCollection {
-        match Lexer::Lexer::tokenize(iter) {
-            Ok(tc) => {
-                TokenCollection { token_vector: tc.into_iter().peekable() }
-            },
-            Err(error) => {
-                // FIXME : Add proper error handling.
-                panic!("Fix me later");
-            }
-        }
-    }
-
-    //  Debugging function
-    pub fn get_vector(self) -> std::iter::Peekable<std::vec::IntoIter<Token>> {
-        self.token_vector
-    }
-
-    pub fn get_next_token(&mut self) -> Option<Token> {
-        self.token_vector.next()
-    }
-
-    pub fn peek_next_token_type(&mut self) -> Option<TokenType> {
-        match self.token_vector.peek() {
-            Some(x) => {
-                let token_type_peek = x.clone();
-                Some(token_type_peek.peek_type())
-            }
-            None => None,
-        }
-    }
-}
-//std::iter::Peekable<std::slice::Iter<Token<'_>>>
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
-    // Debugging Type
-    Test,
-
     // Null Type, used before type information gathered.
     None,
 
     // Basic building block tokens
-    Letter,
-    Digit,
     Comma,
     SemiTermination,
 
@@ -91,7 +49,7 @@ pub enum TokenType {
     EqOp,
     NeqOp,
     LessOp,
-    GreatOp,
+    GreaterOp,
     LeqOp,
     GeqOp,
 
@@ -111,44 +69,49 @@ pub enum TokenType {
     Ident(String),
     Number(i64),
 
-    Designator,
-    Factor,
-    Term,
-    Expression,
-    Relation,
-
+    // Statement Kind (Indicated the Let key word)
     Assignment,
-    AssignmentOp,
 
-    FuncCall,
-    FuncParam,
-    FuncIdent,
-
+    // Conditional Terminators
     If,
     Then,
     Else,
     Fi,
-
     While,
     Do,
     Od,
 
+    // Function Call Terminators
+    FuncDecl,
+    FuncCall,
     Return,
 
-    Statement,
-    StatSequence,
-
-    TypeDecl,
-    VarDecl,
-    FuncDecl,
-    FormalParam,
-    FuncBody,
     Computation,
     ComputationEnd,
 
+    // Pre-Defined Functions
     InputNum,
     OutputNum,
     OutputNewLine,
 
     Comment(String),
 }
+
+// TODO : Items removed from Token that should actually
+// either be IR or dont really have a purpose.
+/* 
+ * Designator,
+ * Factor,
+ * Term,
+ * Expression,
+ * Relation,
+ * AssignmentOp,
+ * FuncParam,
+ * FuncIdent,
+ * Statement,
+ * StatSequence,
+ * TypeDecl,
+ * VarDecl,
+ * FormalParam,
+ * FuncBody,
+*/

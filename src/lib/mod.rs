@@ -1,16 +1,31 @@
+// Std Library Uses
 use std::cell::RefCell;
 use std::env;
-// use std::fmt::Write;
-// use std::fs::OpenOptions;
 use std::fs::{self, DirEntry};
-// use std::io::prelude::*;
-// use std::io::{BufRead, BufReader, Result};
 use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::collections::HashMap;
+// use std::io::prelude::*;
+// use std::io::{BufRead, BufReader, Result};
+// use std::fmt::Write;
+// use std::fs::OpenOptions;
+
+
+// Internal mods
+pub mod Lexer;
+pub mod parser;
+pub mod Utility;
+
+// Internal Use
+use lib::Lexer::token::Token;
+use lib::parser::Parser;
 
 use self::Utility::display;
+use lib::Utility::source_file::SourceFile;
+use lib::Utility::error::Error;
 
+// Extern Libraries
 extern crate petgraph;
 use petgraph::graph;
 use petgraph::{Directed, Incoming, Outgoing};
@@ -24,23 +39,19 @@ use petgraph::prelude::NodeIndex;
 // use lib::IR::ir::{InstTy, ValTy, Value};
 // use lib::IR::ir_manager::IRGraphManager;
 // use lib::Graph::node::Node;
-use lib::Utility::source_file::SourceFile;
-use lib::Utility::error::Error;
 
-use lib::Lexer::token::TokenCollection;
-use lib::Lexer::token::Token;
+
+// use lib::Lexer::token::TokenCollection;
 // use lib::Parser::AST::computation::Comp;
 // use lib::CodeGen::{phi_absolver,generate_code,instruction_builder};
-use std::collections::HashMap;
 
 // pub mod CodeGen;
 // pub mod Graph;
 // pub mod IR;
-pub mod Lexer;
+
 // pub mod Optimizer;
 // pub mod Parser;
 // pub mod RegisterAllocator;
-pub mod Utility;
 
 // #[cfg(test)]
 // pub mod tests {
@@ -228,7 +239,7 @@ pub mod Utility;
 //     }
 // }
 
-pub fn run(path_name: String) {
+pub fn run(path_name: String) -> Result<(), Error> {
     // Take a file name provided by main, perform all passes on it.
     let mut path = PathBuf::new();
     path.push(path_name.clone());
@@ -236,7 +247,11 @@ pub fn run(path_name: String) {
     let file = fs::File::open(path.as_path())
         .expect("Unable to find file. Perhaps directory was entered incorrectly?");
 
-    let irgman = parse(file);
+    let src_file = SourceFile::new(String::from("Test"), file)?;
+
+    // TODO : For now this will work to get me through parsing tests.
+    Parser::parse(&mut src_file.src_to_iter())
+
     // print_graph(
     //     path.clone().to_str()
     //         .unwrap().clone()
@@ -277,15 +292,15 @@ pub fn run(path_name: String) {
     // );
 }
 
-fn tokenize(source: std::fs::File) -> Result<Vec<Token>, Error> {
-    let mut src_file = SourceFile::new(String::from("Test"), source)?;
-    src_file.tokenize_source()
-}
+// fn tokenize(source: std::fs::File) -> Result<Vec<Token>, Error> {
+//     let mut src_file = SourceFile::new(String::from("Test"), source)?;
+//     src_file.tokenize_source()
+// }
 
-fn parse(source: std::fs::File) {
-    let tc = tokenize(source);
-    println!("{:?}", tc);
-}
+// fn parse(source: std::fs::File) {
+//     let tc = tokenize(source);
+//     
+// }
 // fn parse(source: std::fs::File) -> IRGraphManager {
 //     // Gather all tokens
 //     let mut tc = tokenize(source);
