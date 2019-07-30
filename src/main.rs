@@ -35,6 +35,7 @@ use lib::Utility::display;
 // use lib::IR::ir::{InstTy, Op, ValTy, Value};
 // use lib::IR::ir_manager::IRGraphManager;
 // use lib::CodeGen::{phi_absolver,generate_code::traversal_path};
+use lib::Utility::display::TermColor;
 
 /// External Lib
 extern crate petgraph;
@@ -61,5 +62,5 @@ fn main() {
     //println!("{:?}", path);
     println!("{:?}", lib::run(path));
 
-    println!("Completed Lex!");
+    println!("{}Completed Lex!{} Test.", TermColor::Success, TermColor::Error);
 }

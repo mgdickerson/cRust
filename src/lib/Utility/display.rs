@@ -1,6 +1,42 @@
-//! Simple graphviz dot file format output.
+use std::fmt::{self, Display, Formatter, Debug, Write};
 
-use std::fmt::{self, Display, Write};
+use lib::Utility::syntax_position::Span;
+
+/// Enumeration for displaying colors within terminal (makes for pretty displays of messages).
+pub enum TermColor {
+    Error,
+    Warning,
+    Success,
+    Normal,
+}
+
+impl Display for TermColor {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        match *self {
+            TermColor::Error => write!(formatter, "\x1B[38;5;196m"),
+            TermColor::Warning => write!(formatter, "\x1B[38;5;11m"),
+            TermColor::Success => write!(formatter, "\x1B[38;5;10m"),
+            TermColor::Normal => write!(formatter, "\x1B[0m"),
+        }
+    }
+}
+
+impl Debug for TermColor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            TermColor::Error => write!(f, "\x1B[38;5;196m"),
+            TermColor::Warning => write!(f, "\x1B[38;5;11m"),
+            TermColor::Success => write!(f, "\x1B[38;5;10m"),
+            TermColor::Normal => write!(f, "\x1B[0m"),
+        }
+    }
+}
+
+// TODO : Figure out what all needs to be included in the trait to make good output messages.
+/// Trait for building diagnostic messages for compiler output.
+pub trait MessageBuilder {
+    fn build_message(&self, error_type: &String, error_message: &String, span: Span) -> fmt::Result;
+}
 
 use petgraph::visit::GraphRef;
 
