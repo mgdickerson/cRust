@@ -1,5 +1,4 @@
-// Testing constant expression evaluation
-main 
+main `
 var x, y;
 {
     let xab` <- 1 - 10 - 10000a =x 10 - 10 `;

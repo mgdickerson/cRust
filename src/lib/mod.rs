@@ -248,7 +248,7 @@ pub fn run(path_name: String) -> Result<(), Error> {
     let file = fs::File::open(path.as_path())
         .expect("Unable to find file. Perhaps directory was entered incorrectly?");
 
-    let mut src_file = SourceFile::new(String::from("Test"), file)?;
+    let mut src_file = SourceFile::new(path_name, file)?;
 
     // TODO : For now this will work to get me through parsing tests.
     match Parser::parse(&mut src_file.src_to_iter()) {

@@ -100,6 +100,11 @@ fn analyze_source_file(
     let src_chars = src.chars();
     let mut lines = Vec::default();
 
+    // Add the first line as position 0 in array, 
+    // this allows all the other line markers to be 
+    // the beginning and not the end of a line.
+    lines.push(BytePos::from_usize(i));
+
     for c in src_chars {
         let pos = BytePos::from_usize(i);
 

@@ -73,16 +73,36 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
         return Err(Error::CurrentChar);
     }
 
+    fn peek_char(
+        &mut self,
+    ) -> Result<char, Error> {
+        if let Some(ch) = self.char_iter.peek() {
+            return Ok(*ch)
+        }
+
+        return Err(
+            Error::Eof(
+                self.build_error_token(String::from("EoF with peeking character"))?
+            )
+        )
+    }
+
     fn take_while<F: Fn(char) -> bool>(
         &mut self, 
         pred: F
     ) -> Result<String, Error> {
         let mut buffer = String::new();
+        
+        // Grab current character
         let mut ch = self.current_char()?;
+        buffer.push(ch);
+        
+        // Work on peeking characters
+        ch = self.peek_char()?;
         while pred(ch) {
             buffer.push(ch);
             self.advance();
-            ch = self.current_char()?;
+            ch = self.peek_char()?;
         }
         Ok(buffer)
     }
@@ -125,7 +145,7 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                         '0'...'9' => self.number(),
 
                         // Non-Generating Tokens
-                        '\'' | '\t' | '\r' | '\n' | ' ' => self.build_token(TokenType::None),
+                        '\t' | '\r' | '\n' | ' ' => self.build_token(TokenType::None),
 
                         // Braces and Brackets.
                         '{' => self.build_token(TokenType::LCurly),
@@ -154,6 +174,8 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                         ',' => self.build_token(TokenType::Comma),
                         ';' => self.build_token(TokenType::SemiTermination),
                         '.' => self.build_token(TokenType::ComputationEnd),
+
+                        // For some reason I had '\'' as None?
 
                         // Undefined Character Error
                         err => {
@@ -211,7 +233,7 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
     fn number(
         &mut self
     ) -> Result<Token, Error> {
-        let buffer = self.take_while(|ch| ch.is_numeric())?;
+        let buffer = self.take_while(|ch| ch.is_alphanumeric())?;
 
         if let Ok(num) = buffer.parse() {
             self.build_token(TokenType::Number(num))

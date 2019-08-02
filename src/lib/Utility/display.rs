@@ -9,15 +9,19 @@ pub enum TermColor {
     Warning,
     Success,
     Normal,
+    Info,
+    Bold,
 }
 
 impl Display for TermColor {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         match *self {
-            TermColor::Error => write!(formatter, "\x1B[38;5;196m"),
-            TermColor::Warning => write!(formatter, "\x1B[38;5;11m"),
-            TermColor::Success => write!(formatter, "\x1B[38;5;10m"),
+            TermColor::Error => write!(formatter, "\x1B[1m\x1B[38;5;196m"),
+            TermColor::Warning => write!(formatter, "\x1B[1m\x1B[38;5;11m"),
+            TermColor::Success => write!(formatter, "\x1B[1m\x1B[38;5;10m"),
             TermColor::Normal => write!(formatter, "\x1B[0m"),
+            TermColor::Info => write!(formatter, "\x1B[1m\x1B[38;5;33m"),
+            TermColor::Bold => write!(formatter, "\x1B[1m"),
         }
     }
 }
@@ -25,12 +29,19 @@ impl Display for TermColor {
 impl Debug for TermColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            TermColor::Error => write!(f, "\x1B[38;5;196m"),
-            TermColor::Warning => write!(f, "\x1B[38;5;11m"),
-            TermColor::Success => write!(f, "\x1B[38;5;10m"),
+            TermColor::Error => write!(f, "\x1B[1m\x1B[38;5;196m"),
+            TermColor::Warning => write!(f, "\x1B[1m\x1B[38;5;11m"),
+            TermColor::Success => write!(f, "\x1B[1m\x1B[38;5;10m"),
             TermColor::Normal => write!(f, "\x1B[0m"),
+            TermColor::Info => write!(f, "\x1B[1m\x1B[38;5;33m"),
+            TermColor::Bold => write!(f, "\x1B[1m"),
         }
     }
+}
+
+pub enum MessageType {
+    Error,
+    Warning,
 }
 
 // TODO : Figure out what all needs to be included in the trait to make good output messages.
@@ -40,32 +51,71 @@ pub trait MessageBuilder {
 
     fn build_error_message(
         &self,
+        mt: MessageType,
         error_type: String,
         error_message: String,
         src_file: &mut SourceFile,
         span: Span,
         output: &mut String,
     ) -> fmt::Result {
-        // First announce error.
-        write!(output, "{}[Error({})]: {}{}\n", TermColor::Error, error_type, TermColor::Normal, error_message)?;
-
         let line_number = src_file.line_num(span.base());
         let starting_byte = src_file.line_begin_pos(span.base());
         let src_str = src_file.get_src_line(line_number.clone());
         let number_spaces = get_digits(line_number + 1, 0) + 1;
+        let tc;
 
-        write!(output, "{:width$}|\n", " ", width = number_spaces)?;
-        write!(output, "{:<width$}|{}", line_number + 1, src_str, width = number_spaces)?;
-        write!(output, "{:width$}|", " ", width = number_spaces)?;
-        write!(output, "{}", TermColor::Error)?;
-        for num in 0..src_str.len() {
-            if num as u32 + starting_byte.0 >= span.base().0 && num as u32 + starting_byte.0 < span.base().0 + span.len().0 as u32 {
-                write!(output, "^")?;
-            } else {
-                write!(output, " ")?;
-            }
+        match mt {
+            MessageType::Error => {
+                tc = TermColor::Error;
+                write!(
+                    output, 
+                    "{}[Error({})]: {}{}{}{}\n",  
+                    tc, 
+                    error_type, 
+                    TermColor::Normal, 
+                    TermColor::Bold, 
+                    error_message, 
+                    TermColor::Normal)?;
+            },
+            MessageType::Warning => {
+                tc = TermColor::Warning;
+                write!(
+                    output, 
+                    "{}[Warning({})]: {}{}{}{}\n",  
+                    tc, 
+                    error_type, 
+                    TermColor::Normal, 
+                    TermColor::Bold, 
+                    error_message, 
+                    TermColor::Normal)?;
+            },
         }
-        write!(output, "\n{}{:width$}|\n", TermColor::Normal, " ", width = number_spaces)
+        
+        write!(
+            output,
+            "{}{:>width$}-> {}{}:{}:{}\n{}{:width$}|\n{:<width$}|{}{}{}{:width$}|{}{:blank$}{:^^marker$}\n{}{:width$}|\n",
+            TermColor::Info,
+            "-",
+            TermColor::Normal,
+            src_file.name,
+            line_number + 1,
+            span.base().0 - starting_byte.0 + 1,
+            TermColor::Info,
+            " ",
+            line_number + 1,
+            TermColor::Normal,
+            src_str,
+            TermColor::Info,
+            " ",
+            tc,
+            " ",
+            "^",
+            TermColor::Info,
+            " ",
+            width = number_spaces,
+            blank = (span.base().0 - starting_byte.0) as usize,
+            marker = span.len().0 as usize,
+        )
     }
 }
 

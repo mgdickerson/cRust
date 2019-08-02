@@ -1,10 +1,11 @@
 use std::fmt::{self, Display, Formatter};
 use std::io;
 use std::fmt::Write;
+
 use self::Error::*;
 
 use lib::Lexer::token::{Token, TokenType};
-use lib::Utility::display::MessageBuilder;
+use lib::Utility::display::{MessageBuilder, MessageType};
 use lib::Utility::source_file::SourceFile;
 
 
@@ -25,15 +26,15 @@ impl Display for Error {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         match *self {
             Msg(ref string) => write!(formatter, "{}", string),
-            Advance => write!(formatter, "Expected next token, found EOF."),
-            CurrentChar => write!(formatter, "Expected current token, found EOF."),
+            Advance => write!(formatter, "Expected next token, found EOF"),
+            CurrentChar => write!(formatter, "Expected current token, found EOF"),
             Eof(ref token) => write!(formatter, "end of file: {:?}", token),
             Parse(ref token) => write!(formatter, "unable to parse string {:?}", token),
             UndefChar(ref token) => write!(formatter, "unsupported character used: {:?}", token),
             UndefOp(ref token) => write!(formatter, "undefined operation: {:?}", token),
             LexingError(ref error_collection) => {
                 // TODO : Add lexing error reporting
-                write!(formatter, "Lexing Error.")
+                write!(formatter, "Lexing Error")
             },
         }
     }
@@ -45,16 +46,16 @@ impl MessageBuilder for Error {
             Msg(ref string) => write!(output, "{}", self),
             Advance => write!(output, "{}", self),
             CurrentChar => write!(output, "{}", self),
-            Eof(ref token) => self.build_error_message(String::from("EOF"), token.get_error_message(), src_file, token.get_span(), output),
-            Parse(ref token) => self.build_error_message(String::from("ParingInt"), token.get_error_message(), src_file, token.get_span(), output),
-            UndefChar(ref token) => self.build_error_message(String::from("UndefChar"), token.get_error_message(), src_file, token.get_span(), output),
-            UndefOp(ref token) => self.build_error_message(String::from("UndefOp"), token.get_error_message(), src_file, token.get_span(), output),
+            Eof(ref token) => self.build_error_message(MessageType::Error, String::from("EOF"), token.get_error_message(), src_file, token.get_span(), output),
+            Parse(ref token) => self.build_error_message(MessageType::Error, String::from("ParingInt"), token.get_error_message(), src_file, token.get_span(), output),
+            UndefChar(ref token) => self.build_error_message(MessageType::Error, String::from("UndefChar"), token.get_error_message(), src_file, token.get_span(), output),
+            UndefOp(ref token) => self.build_error_message(MessageType::Error, String::from("UndefOp"), token.get_error_message(), src_file, token.get_span(), output),
             LexingError(ref error_collection) => {
                 for error in error_collection.iter() {
                     error.build_message(src_file, output);
                 }
 
-                write!(output, "\n")
+                write!(output, "")
             },
         }
     }
