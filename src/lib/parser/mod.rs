@@ -3,6 +3,7 @@ use std::str::Chars;
 use std::vec::IntoIter;
 
 // pub mod AST;
+pub mod ast;
 
 use lib::Lexer::token::Token;
 use lib::Lexer::Lexer;
