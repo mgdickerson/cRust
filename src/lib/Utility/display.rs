@@ -1,6 +1,7 @@
 use std::fmt::{self, Display, Formatter, Debug, Write};
 
 use lib::Utility::syntax_position::Span;
+use lib::Utility::source_file::SourceFile;
 
 /// Enumeration for displaying colors within terminal (makes for pretty displays of messages).
 pub enum TermColor {
@@ -35,7 +36,45 @@ impl Debug for TermColor {
 // TODO : Figure out what all needs to be included in the trait to make good output messages.
 /// Trait for building diagnostic messages for compiler output.
 pub trait MessageBuilder {
-    fn build_message(&self, error_type: &String, error_message: &String, span: Span) -> fmt::Result;
+    fn build_message(&self, src_file: &mut SourceFile, output: &mut String) -> fmt::Result;
+
+    fn build_error_message(
+        &self,
+        error_type: String,
+        error_message: String,
+        src_file: &mut SourceFile,
+        span: Span,
+        output: &mut String,
+    ) -> fmt::Result {
+        // First announce error.
+        write!(output, "{}[Error({})]: {}{}\n", TermColor::Error, error_type, TermColor::Normal, error_message)?;
+
+        let line_number = src_file.line_num(span.base());
+        let starting_byte = src_file.line_begin_pos(span.base());
+        let src_str = src_file.get_src_line(line_number.clone());
+        let number_spaces = get_digits(line_number + 1, 0) + 1;
+
+        write!(output, "{:width$}|\n", " ", width = number_spaces)?;
+        write!(output, "{:<width$}|{}", line_number + 1, src_str, width = number_spaces)?;
+        write!(output, "{:width$}|", " ", width = number_spaces)?;
+        write!(output, "{}", TermColor::Error)?;
+        for num in 0..src_str.len() {
+            if num as u32 + starting_byte.0 >= span.base().0 && num as u32 + starting_byte.0 < span.base().0 + span.len().0 as u32 {
+                write!(output, "^")?;
+            } else {
+                write!(output, " ")?;
+            }
+        }
+        write!(output, "\n{}{:width$}|\n", TermColor::Normal, " ", width = number_spaces)
+    }
+}
+
+pub fn get_digits(line_num: usize, current_size: usize) -> usize {
+    if line_num != 0 {
+        return get_digits(line_num/10, current_size + 1)
+    } else {
+        current_size
+    }
 }
 
 use petgraph::visit::GraphRef;

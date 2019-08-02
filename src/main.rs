@@ -59,8 +59,5 @@ fn main() {
         path = env::current_dir().unwrap().to_str().unwrap().to_owned() + path.trim_left_matches(".");
     }
 
-    //println!("{:?}", path);
-    println!("{:?}", lib::run(path));
-
-    println!("{}Completed Lex!{} Test.", TermColor::Success, TermColor::Error);
+    lib::run(path);
 }

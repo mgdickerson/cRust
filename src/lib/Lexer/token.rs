@@ -4,7 +4,7 @@ use std::str::Chars;
 use Lexer;
 use lib::Utility::syntax_position::Span;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     token_type: TokenType,
     span: Span,
@@ -25,8 +25,15 @@ impl Token {
     }
 
     /// Consumes Token, returns span
-    pub fn get_span(self) -> Span {
+    pub fn get_span(&self) -> Span {
         self.span
+    }
+
+    pub fn get_error_message(&self) -> String {
+        match self.token_type {
+            TokenType::Error(ref string) => string.to_string(),
+            _ => String::from("Error in non-error type.")
+        }
     }
 }
 
@@ -34,6 +41,7 @@ impl Token {
 pub enum TokenType {
     // Null Type, used before type information gathered.
     None,
+    Error(String),
 
     // Basic building block tokens
     Comma,

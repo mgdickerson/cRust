@@ -41,7 +41,7 @@ impl AddAssign<u32> for BytePos {
 /// Tracks where Tokens are within the source file to make for 
 /// easier debugging message. Following the Rust solution, 
 /// only need a start position and length.
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct Span {
     base: u32,
     len: u16,
@@ -67,6 +67,14 @@ impl Span {
 
     pub fn data(&self) -> (BytePos, BytePos) {
         (BytePos(self.base),BytePos(self.len as u32))
+    }
+
+    pub fn base(&self) -> BytePos {
+        BytePos(self.base)
+    }
+
+    pub fn len(&self) -> BytePos {
+        BytePos(self.len as u32)
     }
 }
 

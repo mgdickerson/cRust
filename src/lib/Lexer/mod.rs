@@ -58,7 +58,7 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                 Ok(())
             }
             None => {
-                Err(Error::Eof)
+                Err(Error::Advance)
             }
         }
     }
@@ -70,7 +70,7 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
             return Ok(ch);
         }
 
-        return Err(Error::Eof);
+        return Err(Error::CurrentChar);
     }
 
     fn take_while<F: Fn(char) -> bool>(
@@ -98,6 +98,17 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
         self.lo = self.hi;  // TODO : Dont think this will be necessary if we add the start to each token.
 
         Ok(Token::new(token_ty, span))
+    }
+
+    fn build_error_token(
+        &mut self,
+        error_msg: String,
+    ) -> Result<Token, Error> {
+        // Build Span
+        let span = Span::new(self.lo, self.hi);
+        self.lo = self.hi;
+
+        Ok(Token::new(TokenType::Error(error_msg), span))
     }
 
     fn collect_tokens(
@@ -146,8 +157,10 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
 
                         // Undefined Character Error
                         err => {
-                            self.lo = self.hi;  // Need to add tracking even for Errors, otherwise tracking will be off.
-                            Err(Error::UndefChar(ch))
+                            match self.build_error_token(String::from("Undefined Character.")) {
+                                Ok(error_token) => Err(Error::UndefChar(error_token)),
+                                Err(build_err) => Err(build_err),
+                            }
                         },
                     };
 
@@ -203,7 +216,10 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
         if let Ok(num) = buffer.parse() {
             self.build_token(TokenType::Number(num))
         } else {
-            Err(Error::Parse(buffer))
+            match self.build_error_token(String::from("Unable to Parse.")) {
+                Ok(error_token) => Err(Error::Parse(error_token)),
+                Err(build_err) => Err(build_err),
+            }
         }
     }
 
@@ -220,7 +236,10 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
             },
             Ok(invalid) => {
                 buffer.push(invalid);
-                Err(Error::UndefOp(buffer))
+                match self.build_error_token(String::from("Undefined Operation.")) {
+                    Ok(error_token) => Err(Error::UndefOp(error_token)),
+                    Err(build_err) => Err(build_err),
+                }
             },
             Err(error) => {
                 Err(error)
@@ -241,7 +260,10 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
             },
             Ok(invalid) => {
                 buffer.push(invalid);
-                Err(Error::UndefOp(buffer))
+                match self.build_error_token(String::from("Undefined Operation.")) {
+                    Ok(error_token) => Err(Error::UndefOp(error_token)),
+                    Err(build_err) => Err(build_err),
+                }
             },
             Err(error) => {
                 Err(error)
@@ -261,7 +283,10 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                 _ => self.build_token(TokenType::GreaterOp),
             }
         } else {
-            Err(Error::Eof)
+            match self.build_error_token(String::from("EOF reached while parsing >.")) {
+                Ok(error_token) => Err(Error::Eof(error_token)),
+                Err(build_err) => Err(build_err),
+            }
         }
     }
 
@@ -277,7 +302,10 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                 _ => self.build_token(TokenType::LessOp),
             }
         } else {
-            Err(Error::Eof)
+            match self.build_error_token(String::from("EOF reached while parsing <.")) {
+                Ok(error_token) => Err(Error::Eof(error_token)),
+                Err(build_err) => Err(build_err),
+            }
         }
     }
 
@@ -290,7 +318,10 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                 _ => self.build_token(TokenType::DivOp),
             }
         } else {
-            Err(Error::Eof)
+            match self.build_error_token(String::from("EOF reached while parsing / or potential comment.")) {
+                Ok(error_token) => Err(Error::Eof(error_token)),
+                Err(build_err) => Err(build_err),
+            }
         }
     }
 

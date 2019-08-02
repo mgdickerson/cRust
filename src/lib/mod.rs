@@ -24,6 +24,7 @@ use lib::parser::Parser;
 use self::Utility::display;
 use lib::Utility::source_file::SourceFile;
 use lib::Utility::error::Error;
+use lib::Utility::display::{TermColor, MessageBuilder};
 
 // Extern Libraries
 extern crate petgraph;
@@ -247,10 +248,19 @@ pub fn run(path_name: String) -> Result<(), Error> {
     let file = fs::File::open(path.as_path())
         .expect("Unable to find file. Perhaps directory was entered incorrectly?");
 
-    let src_file = SourceFile::new(String::from("Test"), file)?;
+    let mut src_file = SourceFile::new(String::from("Test"), file)?;
 
     // TODO : For now this will work to get me through parsing tests.
-    Parser::parse(&mut src_file.src_to_iter())
+    match Parser::parse(&mut src_file.src_to_iter()) {
+        Ok(_) => Ok(()),
+        Err(parse_error) => {
+            let mut output = String::new();
+            parse_error.build_message(&mut src_file, &mut output);
+            println!("{}", output);
+            println!("{}Compilation Failed!", TermColor::Error);
+            Err(parse_error)
+        },
+    }
 
     // print_graph(
     //     path.clone().to_str()

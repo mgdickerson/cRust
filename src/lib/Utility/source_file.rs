@@ -49,15 +49,6 @@ impl SourceFile {
         self.src.chars().peekable()
     }
 
-    // TODO : Remove this, should not be part of File Handle.
-    // pub fn tokenize_source(&mut self) -> Result<Vec<Token>, Error> {
-    //     let mut iter = self.src.chars().peekable();
-    //     match Lexer::tokenize(&mut iter) {
-    //         Ok(token_collecton) => Ok(token_collecton),
-    //         Err(error_collection) => Err(Error::LexingError(error_collection)),
-    //     }
-    // }
-
     /// Get starting BytePos base on given position within line.
     pub fn line_begin_pos(&self, pos: BytePos) -> BytePos {
         match self.lines.binary_search(&pos) {
@@ -87,6 +78,16 @@ impl SourceFile {
                     index - 1
                 }
             }
+        }
+    }
+
+    pub fn get_src_line(&self, starting_pos: usize) -> & str {
+        let starting_byte = self.lines[starting_pos];
+        
+        if let Some(end_byte) = self.lines.get(starting_pos + 1) {
+            &self.src[starting_byte.0 as usize..end_byte.0 as usize]
+        } else {
+            &self.src[starting_byte.0 as usize..]
         }
     }
 }
