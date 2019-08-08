@@ -7,11 +7,13 @@ use self::Error::*;
 use lib::Lexer::token::{Token, TokenType};
 use lib::Utility::display::{MessageBuilder, MessageType};
 use lib::Utility::source_file::SourceFile;
+use lib::Utility::syntax_position::Span;
 
 
 /// TODO : Add an Error Handling struct here.
 #[derive(Clone,Debug,PartialEq)]
 pub enum Error {
+    // Lexing Errors
     Msg(String),
     Advance,
     CurrentChar,
@@ -20,11 +22,16 @@ pub enum Error {
     UndefChar(Token),
     UndefOp(Token),
     LexingError(Vec<Error>),
+
+    // Parsing Errors
+    NoCodeFound,
+    MainNF(Token),
 }
 
 impl Display for Error {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         match *self {
+            // Lexing Errors
             Msg(ref string) => write!(formatter, "{}", string),
             Advance => write!(formatter, "Expected next token, found EOF"),
             CurrentChar => write!(formatter, "Expected current token, found EOF"),
@@ -36,6 +43,10 @@ impl Display for Error {
                 // TODO : Add lexing error reporting
                 write!(formatter, "Lexing Error")
             },
+
+            // Parsing Errors
+            NoCodeFound => write!(formatter, "while parsing, neither main nor any other token found"),
+            MainNF(ref token) => write!(formatter, "expected main declaraction, found: {:?}", token),
         }
     }
 }
@@ -57,6 +68,10 @@ impl MessageBuilder for Error {
 
                 write!(output, "")
             },
+
+            // Parsing Errors
+            NoCodeFound => self.build_error_message(MessageType::Error, String::from("NoCodeFound"), String::from("No 'main' or other token found"), src_file, Span::default(), output),
+            MainNF(ref token) => self.build_error_message(MessageType::Error, String::from("MainNF"), String::from("Expected main, found unexpected token"), src_file, token.get_span(), output),
         }
     }
 }
