@@ -26,6 +26,7 @@ pub enum Error {
     // Parsing Errors
     NoCodeFound,
     MainNF(Token),
+    UxToken(String, Token),
 }
 
 impl Display for Error {
@@ -47,6 +48,7 @@ impl Display for Error {
             // Parsing Errors
             NoCodeFound => write!(formatter, "while parsing, neither main nor any other token found"),
             MainNF(ref token) => write!(formatter, "expected main declaraction, found: {:?}", token),
+            UxToken(ref string, ref token) => write!(formatter, "expected {}, found unexpected token: {:?}", string, token),
         }
     }
 }
@@ -72,6 +74,18 @@ impl MessageBuilder for Error {
             // Parsing Errors
             NoCodeFound => self.build_error_message(MessageType::Error, String::from("NoCodeFound"), String::from("No 'main' or other token found"), src_file, Span::default(), output),
             MainNF(ref token) => self.build_error_message(MessageType::Error, String::from("MainNF"), String::from("Expected main, found unexpected token"), src_file, token.get_span(), output),
+            UxToken(ref string, ref token) => {
+                let mut err_mssg = String::new();
+                write!(err_mssg, "Expected {} but instead found token: {:?}", string, token);
+                self.build_error_message(
+                    MessageType::Error, 
+                    String::from("UnexpectedToken"), 
+                    err_mssg, 
+                    src_file, 
+                    token.get_span(), 
+                    output
+                )
+            },
         }
     }
 }

@@ -15,6 +15,7 @@ use lib::parser::ast::{Expr};
 
 pub struct Parser {
     token_iter: Peekable<IntoIter<Token>>,
+    errors: Vec<Error>,
     lo: BytePos,
     hi: BytePos,
     // Not sure what else to put yet.
@@ -27,6 +28,7 @@ impl<'pctx, 'lxr, 'lctx> Parser {
         let token_collection = Lexer::tokenize(iter)?;
         Ok(Parser {
             token_iter: token_collection.into_iter().peekable(),
+            errors: Vec::new(),
             lo: BytePos::default(),
             hi: BytePos::default(),
         })
@@ -48,6 +50,13 @@ impl<'pctx, 'lxr, 'lctx> Parser {
         Ok(())
     }
 
+    fn set_lo(
+        &mut self,
+        tok: &Token,
+    ) {
+        self.lo = tok.get_span().base();
+    }
+
     fn advance(&mut self) -> Result<Token, Error> {
         match self.token_iter.next() {
             Some(token) => {
@@ -57,6 +66,43 @@ impl<'pctx, 'lxr, 'lctx> Parser {
             },
             None => Err(Error::Advance)
         }
+    }
+
+    fn peek(&mut self) -> Result<Token, Error> {
+        match self.token_iter.peek() {
+            Some(token) => Ok(token.clone()),
+            None => Err(Error::Advance),
+        }
+    }
+
+    /// When an error is encountered, consume until specified Token is found.
+    /// This will allow the parser to move over errors and continue parsing, 
+    /// finding more bugs in the process instead of just halting on the first one.
+    fn consume_until<F: Fn(Token) -> bool>(
+        &mut self,
+        pred: F
+    ) -> Result<Token, Error> {
+        let mut tok = self.advance()?;
+        while !pred(tok.clone()) {
+            tok = self.advance()?;
+        }
+        Ok(tok)
+    }
+
+    /// Pass lo BytePos to build_span so that saved lo positions can be used.
+    fn build_ast_span(
+        &mut self,
+        lo: BytePos,
+    ) -> Result<Span, Error> {
+        let span = Span::new(lo, self.hi);
+        if let Ok(token) = self.peek() {
+            self.lo = token.get_span().base();
+            self.hi = self.lo;
+        } else {
+            self.lo = BytePos::from_usize(0);
+            self.hi = self.lo;
+        }
+        Ok(span)
     }
 
     pub fn build_ast(
@@ -72,6 +118,7 @@ impl<'pctx, 'lxr, 'lctx> Parser {
 
             // First token encountered (other than comments) should be main.
             if TokenType::Computation == token.peek_type() {
+                self.set_lo(&token);
                 return self.build_comp()
             } else {
                 return Err(Error::MainNF(token))
@@ -84,10 +131,76 @@ impl<'pctx, 'lxr, 'lctx> Parser {
     pub fn build_comp(
         &mut self,
     ) -> Result<Expr,Error> {
-        // Found main(), continue with execution
-        
+        let mut globals : Vec<Expr> = Vec::new();
+        let mut funcs : Vec<Expr> = Vec::new();
+        let comp_lo = self.lo;
+
+        // Found main(), search for globals
+        while let Ok(token) = self.peek() {
+            if let TokenType::Var = token.peek_type() {
+                let consume_tok = self.advance()?;
+            } else if let TokenType::Array = token.peek_type() {
+                let consume_tok = self.advance()?;
+            } else { break; }
+        }
+
+        while let Ok(token) = self.peek() {
+            if let TokenType::FuncDecl = token.peek_type() {
+                let consume_tok = self.advance()?;
+            } else { break; }
+        }
+
+        if let Ok(token) = self.advance() {
+            if let TokenType::LCurly = token.peek_type() {
+
+            } else { /* error */ }
+
+            if let Ok(token) = self.advance() {
+                if let TokenType::ComputationEnd = token.peek_type() {
+                    self.set_lo(&token);
+                    return Ok(Expr::Comp { globals, funcs, span: self.build_ast_span(comp_lo)? })
+                } else {
+                    // error
+                }
+            }
+        } else {
+            // error
+        }
 
         // TODO : Place Holder
         Err(Error::Eof(self.advance()?))
+    }
+
+    pub fn build_var(
+        &mut self,
+    ) -> Result<Expr,Error> {
+        let mut vars = Vec::new();
+        let var_lo = self.lo;
+
+        while let Ok(token) = self.advance() {
+            if let TokenType::Ident(ident) = token.peek_type() {
+                vars.push(Expr::Ident{ val: token.clone(), span: self.build_ast_span(token.get_span().base())? });
+                let next_token = self.advance()?;
+                match next_token.peek_type() {
+                    TokenType::Comma => {
+                        // There is likely another ident incoming, continue
+                        continue
+                    },
+                    TokenType::SemiTermination => {
+                        // End of this ident, build and return.
+                        return Ok(Expr::Var{ idents: vars, span: self.build_ast_span(var_lo)? })
+                    },
+                    err => {
+                        // TODO : add use of consume while and put the error in to self instead of return
+                        return Err(Error::UxToken(String::from("',', ';'"), next_token))
+                    },
+                }
+            } else {
+                // TODO : add use of consume while and put the error in to self instead of return
+                return Err(Error::UxToken(String::from("ident"), token))
+            }
+        }
+
+        Err(Error::Advance)
     }
 }
