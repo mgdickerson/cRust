@@ -44,6 +44,7 @@ pub enum MessageType {
     Warning,
 }
 
+// TODO : Interesting bug, only things in position 1 seem to be completely incorrect.
 // TODO : Figure out what all needs to be included in the trait to make good output messages.
 /// Trait for building diagnostic messages for compiler output.
 pub trait MessageBuilder {
@@ -236,56 +237,56 @@ impl<'a, G> Dot<'a, G> {
         NF: FnMut(&NW, &mut FnMut(&Display) -> fmt::Result) -> fmt::Result,
         EF: FnMut(&EW, &mut FnMut(&Display) -> fmt::Result) -> fmt::Result,
     {
-        try!(writeln!(f, "{} {{", TYPE[g.is_directed() as usize]));
+        (writeln!(f, "{} {{", TYPE[g.is_directed() as usize]))?;
 
         // For config type interference graph, add below instruction
         if self.config.contains(&Config::InterferenceGraph) {
-            try!(writeln!(f, "\t{}", String::from("layout=\"circo\";")));
+            (writeln!(f, "\t{}", String::from("layout=\"circo\";")))?;
         }
 
         // output all labels
         for node in g.node_references() {
-            try!(write!(f, "{}{}", INDENT, g.to_index(node.id())));
+            (write!(f, "{}{}", INDENT, g.to_index(node.id())))?;
             if self.config.contains(&Config::NodeIndexLabel) {
-                try!(writeln!(f, ""));
+                (writeln!(f, ""))?;
             } else if self.config.contains(&Config::InterferenceGraph) {
-                try!(node_fmt(node.weight(), &mut |d| PassThrough(d).fmt(f)));
-                try!(writeln!(f, ""));
+                (node_fmt(node.weight(), &mut |d| PassThrough(d).fmt(f)))?;
+                (writeln!(f, ""))?;
             } else {
-                try!(write!(f, " [shape=record label=\"{{"));
-                try!(node_fmt(node.weight(), &mut |d| Escaped(d).fmt(f)));
-                try!(writeln!(f, " }}\"]"));
+                (write!(f, " [shape=record label=\"{{"))?;
+                (node_fmt(node.weight(), &mut |d| Escaped(d).fmt(f)))?;
+                (writeln!(f, " }}\"]"))?;
             }
         }
         // output all edges
         for (i, edge) in g.edge_references().enumerate() {
-            try!(write!(
+            (write!(
                 f,
                 "{}{} {} {}",
                 INDENT,
                 g.to_index(edge.source()),
                 EDGE[g.is_directed() as usize],
                 g.to_index(edge.target())
-            ));
+            ))?;
             if self.config.contains(&Config::EdgeNoLabel) {
-                try!(writeln!(f, ""));
+                (writeln!(f, ""))?;
             } else if self.config.contains(&Config::EdgeIndexLabel) {
-                try!(writeln!(f, " [label=\"{}\"]", i));
+                (writeln!(f, " [label=\"{}\"]", i))?;
             } else if self.config.contains(&Config::EdgeColor) {
-                try!(write!(f, " [color="));
-                try!(edge_fmt(edge.weight(), &mut |d| PassThrough(d).fmt(f)));
-                try!(writeln!(f, "]"));
+                (write!(f, " [color="))?;
+                (edge_fmt(edge.weight(), &mut |d| PassThrough(d).fmt(f)))?;
+                (writeln!(f, "]"))?;
             } else if self.config.contains(&Config::InterferenceGraph) {
-                try!(write!(f, " [arrowhead=none]"));
-                try!(writeln!(f, ""));
+                (write!(f, " [arrowhead=none]"))?;
+                (writeln!(f, ""))?;
             } else {
-                try!(write!(f, " [label=\""));
-                try!(edge_fmt(edge.weight(), &mut |d| Escaped(d).fmt(f)));
-                try!(writeln!(f, "\"]"));
+                (write!(f, " [label=\""))?;
+                (edge_fmt(edge.weight(), &mut |d| Escaped(d).fmt(f)))?;
+                (writeln!(f, "\"]"))?;
             }
         }
 
-        try!(writeln!(f, "}}"));
+        (writeln!(f, "}}"))?;
         Ok(())
     }
 }
@@ -326,14 +327,14 @@ where
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.chars() {
-            try!(self.write_char(c));
+            (self.write_char(c))?;
         }
         Ok(())
     }
 
     fn write_char(&mut self, c: char) -> fmt::Result {
         match c {
-            '"' => try!(self.0.write_char('\\')),
+            '"' => (self.0.write_char('\\'))?,
             // \l is for left justified linebreak
             '\n' => return self.0.write_str(r#"\l"#),
             _ => {}

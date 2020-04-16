@@ -1,10 +1,12 @@
 use lib::Utility::syntax_position::Span;
+use lib::Utility::Dummy;
 use lib::Lexer::token::{TokenType,Token};
 use self::Expr::*;
 
+#[derive(Debug)]
 pub enum Expr {
     Array {
-        array_depth: Vec<i64>,
+        array_depth: Vec<Token>,
         idents: Vec<Expr>,
         span: Span,
     },
@@ -21,6 +23,11 @@ pub enum Expr {
     Call {
         func_name: Box<Expr>,
         param: Vec<Expr>,
+        span: Span,
+    },
+    Design {
+        ident: Box<Expr>,
+        exprs: Vec<Expr>,
         span: Span,
     },
     Expr {
@@ -69,8 +76,16 @@ pub enum Expr {
         func_body: Box<Expr>,
         span: Span,
     },
+    Error {
+        consumed_tokens: Vec<Token>,
+        span: Span,
+    }
 }
 
 impl Default for Expr {
     fn default() -> Self { Expr::Comp{ globals: Vec::default(), funcs: Vec::default(), span: Span::default() } }
+}
+
+impl Dummy for Expr {
+    fn dummy() -> Self { Expr::Error{ consumed_tokens: Vec::default(), span: Span::default() }}
 }

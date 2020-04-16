@@ -56,7 +56,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let mut path = args[1].clone();
     if path.starts_with("./") {
-        path = env::current_dir().unwrap().to_str().unwrap().to_owned() + path.trim_left_matches(".");
+        path = env::current_dir().unwrap().to_str().unwrap().to_owned() + path.trim_start_matches(".");
     }
 
     lib::run(path);

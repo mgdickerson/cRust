@@ -13,6 +13,8 @@ use lib::Utility::syntax_position::Span;
 /// TODO : Add an Error Handling struct here.
 #[derive(Clone,Debug,PartialEq)]
 pub enum Error {
+    InvalidValueRequest(Token),
+
     // Lexing Errors
     Msg(String),
     Advance,
@@ -27,11 +29,16 @@ pub enum Error {
     NoCodeFound,
     MainNF(Token),
     UxToken(String, Token),
+    Redef(Token),
+    UndefIdent(Token),
+    ParsingError(Vec<Error>),
 }
 
 impl Display for Error {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         match *self {
+            InvalidValueRequest(ref token) => write!(formatter, "Invalid value was requested for given token: {:?}", token),
+
             // Lexing Errors
             Msg(ref string) => write!(formatter, "{}", string),
             Advance => write!(formatter, "Expected next token, found EOF"),
@@ -49,6 +56,11 @@ impl Display for Error {
             NoCodeFound => write!(formatter, "while parsing, neither main nor any other token found"),
             MainNF(ref token) => write!(formatter, "expected main declaraction, found: {:?}", token),
             UxToken(ref string, ref token) => write!(formatter, "expected {}, found unexpected token: {:?}", string, token),
+            Redef(ref token) => write!(formatter, "token redefined: {:?}", token),
+            UndefIdent(ref token) => write!(formatter, "ident not defined: {:?}", token),
+            ParsingError(ref error_collection) => {
+                write!(formatter, "Lexing Error")
+            },
         }
     }
 }
@@ -56,6 +68,9 @@ impl Display for Error {
 impl MessageBuilder for Error {
     fn build_message(&self, src_file: &mut SourceFile, output: &mut String) -> fmt::Result {
         match *self {
+            InvalidValueRequest(ref token) => self.build_error_message(MessageType::Error, String::from("InvalidValReq"), token.invalid_value(), src_file, token.get_span(), output),
+
+            // Lexing Errors
             Msg(ref string) => write!(output, "{}", self),
             Advance => write!(output, "{}", self),
             CurrentChar => write!(output, "{}", self),
@@ -86,6 +101,19 @@ impl MessageBuilder for Error {
                     output
                 )
             },
+            Redef(ref token) => {
+                let mut err_mssg = String::new();
+                write!(err_mssg, "Token {:?} redefined.", token);
+                self.build_error_message(MessageType::Error, String::from("SymbolRedefinition"), err_mssg, src_file, token.get_span(), output)
+            },
+            UndefIdent(ref token) => self.build_error_message(MessageType::Error, String::from("UndefinedIdent"), String::from("No definition for ident found"), src_file, token.get_span(), output),
+            ParsingError(ref error_collection) => {
+                for error in error_collection.iter() {
+                    error.build_message(src_file, output);
+                }
+
+                write!(output, "")
+            }
         }
     }
 }

@@ -139,20 +139,20 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                 let result =
                     match ch {
                         // Alpha characters
-                        'a'...'z' | 'A'...'Z' | '_' => self.ident(),
+                        'a'..='z' | 'A'..='Z' | '_' => self.ident(),
                         
                         // Numerics                
-                        '0'...'9' => self.number(),
+                        '0'..='9' => self.number(),
 
                         // Non-Generating Tokens
                         '\t' | '\r' | '\n' | ' ' => self.build_token(TokenType::None),
 
                         // Braces and Brackets.
-                        '{' => self.build_token(TokenType::LCurly),
-                        '[' => self.build_token(TokenType::LSquare),
+                        '{' => self.build_token(TokenType::LBrace),
+                        '[' => self.build_token(TokenType::LBracket),
                         '(' => self.build_token(TokenType::LParen),
-                        '}' => self.build_token(TokenType::RCurly),
-                        ']' => self.build_token(TokenType::RSquare),
+                        '}' => self.build_token(TokenType::RBrace),
+                        ']' => self.build_token(TokenType::RBracket),
                         ')' => self.build_token(TokenType::RParen),
 
                         // relOp
@@ -320,6 +320,10 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                 '=' => {
                     self.advance();
                     self.build_token(TokenType::LeqOp)
+                },
+                '-' => {
+                    self.advance();
+                    self.build_token(TokenType::Arrow)
                 },
                 _ => self.build_token(TokenType::LessOp),
             }

@@ -1,7 +1,9 @@
 use std;
 use std::iter::Peekable;
 use std::str::Chars;
+use std::fmt::Write;
 use Lexer;
+use lib::Utility::error::Error;
 use lib::Utility::syntax_position::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -24,6 +26,10 @@ impl Token {
         self.token_type.clone()
     }
 
+    pub fn is_type(&self, tk_ty: &TokenType) -> bool {
+        self.token_type == *tk_ty
+    }
+
     /// Consumes Token, returns span
     pub fn get_span(&self) -> Span {
         self.span
@@ -33,6 +39,28 @@ impl Token {
         match self.token_type {
             TokenType::Error(ref string) => string.to_string(),
             _ => String::from("Error in non-error type.")
+        }
+    }
+
+    pub fn invalid_value(&self) -> String {
+        let mut err_mssg = String::new();
+        write!(err_mssg, "Invalid value was requested for given token: {:?}", self);
+        err_mssg
+    }
+
+    pub fn get_str_value(&self) -> Result<String, Error> {
+        match self.peek_type() {
+            TokenType::Error(s) | 
+            TokenType::Ident(s) | 
+            TokenType::Comment(s) => return Ok(s.clone()),
+            _ => return Err(Error::InvalidValueRequest(self.clone())),
+        }
+    }
+
+    pub fn get_i64_value(&self) -> Result<i64, Error> {
+        match self.peek_type() {
+            TokenType::Number(n) => return Ok(n),
+            _ => return Err(Error::InvalidValueRequest(self.clone())),
         }
     }
 }
@@ -66,12 +94,12 @@ pub enum TokenType {
     Array,
 
     // Braces
-    LCurly,
-    RCurly,
+    LBrace,
+    RBrace,
     LParen,
     RParen,
-    LSquare,
-    RSquare,
+    LBracket,
+    RBracket,
 
     // Combination tokens
     Ident(String),
@@ -79,6 +107,7 @@ pub enum TokenType {
 
     // Statement Kind (Indicated the Let key word)
     Assignment,
+    Arrow,
 
     // Conditional Terminators
     If,
@@ -104,22 +133,3 @@ pub enum TokenType {
 
     Comment(String),
 }
-
-// TODO : Items removed from Token that should actually
-// either be IR or dont really have a purpose.
-/* 
- * Designator,
- * Factor,
- * Term,
- * Expression,
- * Relation,
- * AssignmentOp,
- * FuncParam,
- * FuncIdent,
- * Statement,
- * StatSequence,
- * TypeDecl,
- * VarDecl,
- * FormalParam,
- * FuncBody,
-*/
