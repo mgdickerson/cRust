@@ -54,191 +54,58 @@ use petgraph::prelude::NodeIndex;
 // pub mod Parser;
 // pub mod RegisterAllocator;
 
-// #[cfg(test)]
-// pub mod tests {
-//     use lib::run_file;
+#[cfg(test)]
+pub mod tests {
+    use std::fs;
+    
+    use lib::Lexer::token::Token;
+    use lib::parser::Parser;
+    use lib::Utility::display;
+    use lib::Utility::source_file::SourceFile;
+    use lib::Utility::error::Error;
+    use lib::Utility::display::{TermColor, MessageBuilder};
 
-//     #[test]
-//     fn test_big() {
-//         run_file(String::from("big"));
-//     }
 
-//     #[test]
-//     fn test_cell() {
-//         run_file(String::from("cell"));
-//     }
+    #[test]
+    fn test_parser() {
+        // Test all files with extension .txt in Testing Path.
+        let paths = fs::read_dir("./src/Testing/").unwrap();
+        let mut tests = 0;
+        let mut failures = Vec::new();
+        for entry in paths {
+            let path = entry.unwrap().path();
+            println!("\n{}Sub Test: {:?}", TermColor::Info, path);
+            let file = fs::File::open(path.clone())
+            .expect("Unable to find file. Perhaps directory was entered incorrectly?");
 
-//     #[test]
-//     fn test_conditional_call() {
-//         run_file(String::from("conditional_call"));
-//     }
+            let mut src_file = SourceFile::new(String::from(path.as_path().to_str().unwrap()), file).unwrap();
 
-//     #[test]
-//     fn test_factorial() {
-//         run_file(String::from("factorial"));
-//     }
+            match Parser::parse(&mut src_file.src_to_iter()) {
+                Ok(_) => {},
+                Err(parse_error) => {
+                    let mut output = String::new();
+                    parse_error.build_message(&mut src_file, &mut output);
+                    println!("{}", output);
+                    println!("{}Compilation Failed!", TermColor::Error);
+                    failures.push(path);
+                },
+            }
+            tests += 1;
+        }
 
-//     #[test]
-//     fn test_op_dom_test() {
-//         run_file(String::from("op_dom_test"));
-//     }
+        if failures.is_empty() {
+            println!("\n\n{}Sub Test Results: {} passed; {} failed;\n", TermColor::Success, tests - failures.len(), failures.len());
+        } else {
+            println!("\n\n{}Sub Test Results: {} passed; {} failed;\n", TermColor::Error, tests - failures.len(), failures.len());
+            for failed in failures {
+                println!("{}Failed SubTest: {:?}", TermColor::Error, failed);
+            }
+        }
+        
 
-//     #[test]
-//     fn test_simple_reassignment() {
-//         run_file(String::from("simple_reassignment"));
-//     }
-
-//     #[test]
-//     fn test_001() {
-//         run_file(String::from("test001"));
-//     }
-
-//     #[test]
-//     fn test_001_a() {
-//         run_file(String::from("test001_a"));
-//     }
-
-//     #[test]
-//     fn test_002() {
-//         run_file(String::from("test002"));
-//     }
-//     #[test]
-//     fn test_003() {
-//         run_file(String::from("test003"));
-//     }
-//     #[test]
-//     fn test_004() {
-//         run_file(String::from("test004"));
-//     }
-//     #[test]
-//     fn test_004_a() {
-//         run_file(String::from("test004_a"));
-//     }
-//     #[test]
-//     fn test_005() {
-//         run_file(String::from("test005"));
-//     }
-//     #[test]
-//     fn test_006() {
-//         run_file(String::from("test006"));
-//     }
-//     #[test]
-//     fn test_007() {
-//         run_file(String::from("test007"));
-//     }
-//     #[test]
-//     fn test_008() {
-//         run_file(String::from("test008"));
-//     }
-//     #[test]
-//     fn test_009() {
-//         run_file(String::from("test009"));
-//     }
-//     #[test]
-//     fn test_010() {
-//         run_file(String::from("test010"));
-//     }
-//     #[test]
-//     fn test_011() {
-//         run_file(String::from("test011"));
-//     }
-//     #[test]
-//     fn test_012() {
-//         run_file(String::from("test012"));
-//     }
-//     #[test]
-//     fn test_013() {
-//         run_file(String::from("test013"));
-//     }
-//     #[test]
-//     fn test_014() {
-//         run_file(String::from("test014"));
-//     }
-//     #[test]
-//     fn test_015() {
-//         run_file(String::from("test015"));
-//     }
-//     #[test]
-//     fn test_016() {
-//         run_file(String::from("test016"));
-//     }
-//     #[test]
-//     fn test_016_a() {
-//         run_file(String::from("test016_a"));
-//     }
-//     #[test]
-//     fn test_017() {
-//         run_file(String::from("test017"));
-//     }
-//     #[test]
-//     fn test_018() {
-//         run_file(String::from("test018"));
-//     }
-//     #[test]
-//     fn test_019() {
-//         run_file(String::from("test019"));
-//     }
-//     #[test]
-//     fn test_020() {
-//         run_file(String::from("test020"));
-//     }
-//     #[test]
-//     fn test_021() {
-//         run_file(String::from("test021"));
-//     }
-//     #[test]
-//     fn test_022() {
-//         run_file(String::from("test022"));
-//     }
-//     #[test]
-//     fn test_023() {
-//         run_file(String::from("test023"));
-//     }
-//     #[test]
-//     fn test_024() {
-//         run_file(String::from("test024"));
-//     }
-//     #[test]
-//     fn test_024_a() {
-//         run_file(String::from("test024_a"));
-//     }
-//     #[test]
-//     fn test_024_b() {
-//         run_file(String::from("test024_b"));
-//     }
-//     #[test]
-//     fn test_025() {
-//         run_file(String::from("test025"));
-//     }
-//     #[test]
-//     fn test_025_a() {
-//         run_file(String::from("test025_a"));
-//     }
-//     #[test]
-//     fn test_026() {
-//         run_file(String::from("test026"));
-//     }
-//     #[test]
-//     fn test_027() {
-//         run_file(String::from("test027"));
-//     }
-//     #[test]
-//     fn test_028() {
-//         run_file(String::from("test028"));
-//     }
-//     #[test]
-//     fn test_029() {
-//         run_file(String::from("test029"));
-//     }
-//     #[test]
-//     fn test_030() {
-//         run_file(String::from("test030"));
-//     }
-//     #[test]
-//     fn test_031() {
-//         run_file(String::from("test031"));
-//     }
-// }
+        println!("{}\n", TermColor::Normal);
+    }
+}
 
 pub fn run(path_name: String) -> Result<(), Error> {
     // Take a file name provided by main, perform all passes on it.

@@ -7,5 +7,5 @@ var i;
 	return i
 };
 {
-	call foo
+	call foo( )
 }.

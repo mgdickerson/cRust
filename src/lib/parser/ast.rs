@@ -13,16 +13,18 @@ pub enum Expr {
     Assign {
         design: Box<Expr>,
         expr: Box<Expr>,
+        span: Span,
     },
     Comp {
         globals: Vec<Expr>,
         funcs: Vec<Expr>,   // This will include all FuncDecls, and the main function 
                             //denoted by the first {} set without preceeding function ident
+        main: Box<Expr>,
         span: Span,
     },
     Call {
         func_name: Box<Expr>,
-        param: Vec<Expr>,
+        args: Vec<Expr>,
         span: Span,
     },
     Design {
@@ -32,8 +34,8 @@ pub enum Expr {
     },
     Expr {
         l_expr: Box<Expr>,
-        r_expr: Box<Expr>,
-        math_op: Token,
+        r_expr: Option<Box<Expr>>,
+        math_op: Option<Token>,
         span: Span,
     },
     FuncBody {
@@ -64,7 +66,11 @@ pub enum Expr {
     Relation {
         l_expr: Box<Expr>,
         r_expr: Box<Expr>,
-        rel_op: Box<Token>,
+        rel_op: Token,
+        span: Span,
+    },
+    Return {
+        expr: Box<Expr>,
         span: Span,
     },
     Var {
@@ -83,7 +89,7 @@ pub enum Expr {
 }
 
 impl Default for Expr {
-    fn default() -> Self { Expr::Comp{ globals: Vec::default(), funcs: Vec::default(), span: Span::default() } }
+    fn default() -> Self { Expr::Comp{ globals: Vec::default(), funcs: Vec::default(), main: Box::new(Expr::dummy()), span: Span::default() } }
 }
 
 impl Dummy for Expr {
