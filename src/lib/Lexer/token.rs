@@ -50,6 +50,25 @@ impl Token {
 
     pub fn get_str_value(&self) -> Result<String, Error> {
         match self.peek_type() {
+            // Math Operations
+            TokenType::AddOp => Ok(String::from("+")),
+            TokenType::SubOp => Ok(String::from("-")),
+            TokenType::MulOp => Ok(String::from("*")),
+            TokenType::DivOp => Ok(String::from("/")),
+
+            // Relative Operations
+            TokenType::EqOp => Ok(String::from("==")),
+            TokenType::NeqOp => Ok(String::from("!=")),
+            TokenType::LessOp => Ok(String::from("<")),
+            TokenType::GreaterOp => Ok(String::from(">")),
+            TokenType::LeqOp => Ok(String::from("<=")),
+            TokenType::GeqOp => Ok(String::from(">=")),
+
+            // Pre-Defined Functions
+            TokenType::InputNum => Ok(String::from("InputNum")),
+            TokenType::OutputNum => Ok(String::from("OutputNum")),
+            TokenType::OutputNewLine => Ok(String::from("OutputNewLine")),
+
             TokenType::Error(s) | 
             TokenType::Ident(s) | 
             TokenType::Comment(s) => return Ok(s.clone()),

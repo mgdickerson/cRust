@@ -58,6 +58,7 @@ use petgraph::prelude::NodeIndex;
 pub mod tests {
     use std::fs;
     
+    use lib::run;
     use lib::Lexer::token::Token;
     use lib::parser::Parser;
     use lib::Utility::display;
@@ -73,7 +74,11 @@ pub mod tests {
         let mut tests = 0;
         let mut failures = Vec::new();
         for entry in paths {
+
             let path = entry.unwrap().path();
+            if path.as_path().to_str().unwrap().contains(".dot") {
+                continue;
+            }
             println!("\n{}Sub Test: {:?}", TermColor::Info, path);
             let file = fs::File::open(path.clone())
             .expect("Unable to find file. Perhaps directory was entered incorrectly?");
@@ -81,7 +86,7 @@ pub mod tests {
             let mut src_file = SourceFile::new(String::from(path.as_path().to_str().unwrap()), file).unwrap();
 
             match Parser::parse(&mut src_file.src_to_iter()) {
-                Ok(_) => {},
+                Ok(res) => println!("Result: {}", res),
                 Err(parse_error) => {
                     let mut output = String::new();
                     parse_error.build_message(&mut src_file, &mut output);
@@ -119,7 +124,10 @@ pub fn run(path_name: String) -> Result<(), Error> {
 
     // TODO : For now this will work to get me through parsing tests.
     match Parser::parse(&mut src_file.src_to_iter()) {
-        Ok(_) => Ok(()),
+        Ok(result) => {
+            println!("{}", result);
+            Ok(())
+        },
         Err(parse_error) => {
             let mut output = String::new();
             parse_error.build_message(&mut src_file, &mut output);

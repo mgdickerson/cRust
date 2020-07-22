@@ -45,20 +45,20 @@ impl<'pctx, 'lxr, 'lctx> Parser {
     // that has been parsed and can be walked.
     pub fn parse(
         iter: &'lxr mut Peekable<Chars<'lctx>>
-    ) -> Result<(), Error> {
+    ) -> Result<Expr, Error> {
         let mut parser = Parser::new(iter)?;
 
         match parser.build_ast() {
-            Ok(_) => println!("Parse OK!"),
+            Ok(result) => {
+                println!("Parse OK!");
+                return Ok(result)
+            },
             Err(err) => {
                 // Likely Multiple Errors, first print out collected errors.
                 parser.errors.push(err);
                 return Err(Error::ParsingError(parser.errors))
             }
         };
-
-        // TODO : Temp result to keep parser from complaining on compile.
-        Ok(())
     }
 
     fn set_lo(
