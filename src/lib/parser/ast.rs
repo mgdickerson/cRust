@@ -1,7 +1,7 @@
+use self::Expr::*;
+use lib::Lexer::token::{Token, TokenType};
 use lib::Utility::syntax_position::Span;
 use lib::Utility::Dummy;
-use lib::Lexer::token::{TokenType,Token};
-use self::Expr::*;
 use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug)]
@@ -18,8 +18,8 @@ pub enum Expr {
     },
     Comp {
         globals: Vec<Expr>,
-        funcs: Vec<Expr>,   // This will include all FuncDecls, and the main function 
-                            //denoted by the first {} set without preceeding function ident
+        funcs: Vec<Expr>, // This will include all FuncDecls, and the main function
+        //denoted by the first {} set without preceeding function ident
         main: Box<Expr>,
         span: Span,
     },
@@ -86,15 +86,27 @@ pub enum Expr {
     Error {
         consumed_tokens: Vec<Token>,
         span: Span,
-    }
+    },
 }
 
 impl Default for Expr {
-    fn default() -> Self { Expr::Comp{ globals: Vec::default(), funcs: Vec::default(), main: Box::new(Expr::dummy()), span: Span::default() } }
+    fn default() -> Self {
+        Expr::Comp {
+            globals: Vec::default(),
+            funcs: Vec::default(),
+            main: Box::new(Expr::dummy()),
+            span: Span::default(),
+        }
+    }
 }
 
 impl Dummy for Expr {
-    fn dummy() -> Self { Expr::Error{ consumed_tokens: Vec::default(), span: Span::default() }}
+    fn dummy() -> Self {
+        Expr::Error {
+            consumed_tokens: Vec::default(),
+            span: Span::default(),
+        }
+    }
 }
 
 impl Display for Expr {
@@ -104,11 +116,16 @@ impl Display for Expr {
 }
 
 impl Expr {
+    /// Pretty Printing function for inspecting the AST
     fn printer(&self, fmt: &mut Formatter, indent: usize) -> fmt::Result {
         let offset_str = std::iter::repeat("  ").take(indent).collect::<String>();
         let nxt_offset = std::iter::repeat("  ").take(indent + 1).collect::<String>();
         match self {
-            Array{ array_depth, idents, span } => {
+            Array {
+                array_depth,
+                idents,
+                span,
+            } => {
                 write!(fmt, "{}Array {{\n{}offsets: [", offset_str, nxt_offset);
                 for (count, tok) in array_depth.iter().enumerate() {
                     if count == 0 {
@@ -121,16 +138,25 @@ impl Expr {
                 for (count, ident) in idents.iter().enumerate() {
                     ident.printer(fmt, indent + 2);
                 }
-                write!(fmt, "{}],\n{}span: {:?},\n{}}}\n", nxt_offset, nxt_offset, span, offset_str)
-            },
-            Assign { design, expr, span} => {
+                write!(
+                    fmt,
+                    "{}],\n{}span: {:?},\n{}}}\n",
+                    nxt_offset, nxt_offset, span, offset_str
+                )
+            }
+            Assign { design, expr, span } => {
                 write!(fmt, "{}Assign {{\n{}lhs:\n", offset_str, nxt_offset);
                 design.printer(fmt, indent + 2);
                 write!(fmt, "{}rhs:\n", nxt_offset);
                 expr.printer(fmt, indent + 2);
                 write!(fmt, "{}span: {:?},\n{}}}\n", nxt_offset, span, offset_str)
-            },
-            Comp { globals, funcs, main, span } => {
+            }
+            Comp {
+                globals,
+                funcs,
+                main,
+                span,
+            } => {
                 write!(fmt, "{}Comp {{\n{}globals:\n", offset_str, nxt_offset);
                 for global in globals {
                     global.printer(fmt, indent + 2);
@@ -142,8 +168,12 @@ impl Expr {
                 write!(fmt, "{}main:\n", nxt_offset);
                 main.printer(fmt, indent + 2);
                 write!(fmt, "{}span: {:?}\n{}}}\n", nxt_offset, span, offset_str)
-            },
-            Call { func_name, args, span } => {
+            }
+            Call {
+                func_name,
+                args,
+                span,
+            } => {
                 write!(fmt, "{}FuncCall {{\n{}func_name:\n", offset_str, nxt_offset);
                 func_name.printer(fmt, indent + 2);
                 write!(fmt, "{}args:\n", nxt_offset);
@@ -151,7 +181,7 @@ impl Expr {
                     arg.printer(fmt, indent + 2);
                 }
                 write!(fmt, "{}span: {:?},\n{}}}\n", nxt_offset, span, offset_str)
-            },
+            }
             Design { ident, exprs, span } => {
                 write!(fmt, "{}Designator: {{\n{}ident:\n", offset_str, nxt_offset);
                 ident.printer(fmt, indent + 2);
@@ -160,25 +190,41 @@ impl Expr {
                     expr.printer(fmt, indent + 2);
                 }
                 write!(fmt, "{}span: {:?}\n{}}}\n", nxt_offset, span, offset_str)
-            },
-            Expr::Expr { l_expr, r_expr, math_op, span } => {
+            }
+            Expr::Expr {
+                l_expr,
+                r_expr,
+                math_op,
+                span,
+            } => {
                 write!(fmt, "{}Expr {{\n{}l_expr:\n", offset_str, nxt_offset);
                 l_expr.printer(fmt, indent + 2);
                 if let Some(r_expr) = r_expr {
-                    write!(fmt, "{}op: {}\n", nxt_offset, math_op.clone().unwrap().get_str_value().unwrap());
+                    write!(
+                        fmt,
+                        "{}op: {}\n",
+                        nxt_offset,
+                        math_op.clone().unwrap().get_str_value().unwrap()
+                    );
                     write!(fmt, "{}r_expr:\n", nxt_offset);
                     r_expr.printer(fmt, indent + 2);
                 }
                 write!(fmt, "{}span: {:?},\n{}}}\n", nxt_offset, span, offset_str)
-            },
-            FuncBody { stmts, span }  => {
+            }
+            FuncBody { stmts, span } => {
                 write!(fmt, "{}FuncBody {{\n{}stmts:\n", offset_str, nxt_offset);
                 for stmt in stmts {
                     stmt.printer(fmt, indent + 2);
                 }
                 write!(fmt, "{}span: {:?}\n{}}}\n", nxt_offset, span, offset_str)
-            },
-            FuncDecl { func_name, params, var_decl, func_body, span } => {
+            }
+            FuncDecl {
+                func_name,
+                params,
+                var_decl,
+                func_body,
+                span,
+            } => {
                 write!(fmt, "{}FuncDecl {{\n{}func_name:\n", offset_str, nxt_offset);
                 func_name.printer(fmt, indent + 2);
                 write!(fmt, "{}params:\n", nxt_offset);
@@ -192,11 +238,14 @@ impl Expr {
                 write!(fmt, "{}func_body:\n", nxt_offset);
                 func_body.printer(fmt, indent + 2);
                 write!(fmt, "{}span: {:?},\n{}}}\n", nxt_offset, span, offset_str)
-            },
-            Ident { val, span } => {
-                write!(fmt, "{}{}\n", offset_str, val.get_str_value().unwrap())
-            },
-            If { relation, if_body, else_body, span } => {
+            }
+            Ident { val, span } => write!(fmt, "{}{}\n", offset_str, val.get_str_value().unwrap()),
+            If {
+                relation,
+                if_body,
+                else_body,
+                span,
+            } => {
                 write!(fmt, "{}If {{\n{}relation:\n", offset_str, nxt_offset);
                 relation.printer(fmt, indent + 2);
                 write!(fmt, "{}body:\n", nxt_offset);
@@ -206,40 +255,57 @@ impl Expr {
                     el.printer(fmt, indent + 2);
                 }
                 write!(fmt, "{}span: {:?},{}}}\n", nxt_offset, span, offset_str)
-            },
-            Int { val, span } => {
-                write!(fmt, "{}{}\n", offset_str, val.get_i64_value().unwrap())
-            },
-            Relation { l_expr, r_expr, rel_op, span } => {
+            }
+            Int { val, span } => write!(fmt, "{}{}\n", offset_str, val.get_i64_value().unwrap()),
+            Relation {
+                l_expr,
+                r_expr,
+                rel_op,
+                span,
+            } => {
                 write!(fmt, "{}Relation {{\n{}l_expr:\n", offset_str, nxt_offset);
                 l_expr.printer(fmt, indent + 2);
-                write!(fmt, "{}rel_op: {}\n", nxt_offset, rel_op.get_str_value().unwrap());
+                write!(
+                    fmt,
+                    "{}rel_op: {}\n",
+                    nxt_offset,
+                    rel_op.get_str_value().unwrap()
+                );
                 write!(fmt, "{}r_expr:\n", nxt_offset);
                 r_expr.printer(fmt, indent + 2);
                 write!(fmt, "{}span: {:?},\n{}}}\n", nxt_offset, span, offset_str)
-            },
+            }
             Return { expr, span } => {
                 write!(fmt, "{}Return {{\n{}expr:\n", offset_str, nxt_offset);
                 expr.printer(fmt, indent + 2);
                 write!(fmt, "{}span: {:?},\n{}}}\n", offset_str, span, nxt_offset)
-            },
+            }
             Var { idents, span } => {
                 write!(fmt, "{}Variables {{\n{}idents:\n", offset_str, nxt_offset);
                 for ident in idents {
                     ident.printer(fmt, indent + 2);
                 }
                 write!(fmt, "{}span: {:?},\n{}}}\n", nxt_offset, span, offset_str)
-            },
-            While { relation, func_body, span } => {
+            }
+            While {
+                relation,
+                func_body,
+                span,
+            } => {
                 write!(fmt, "{}While {{\n{}relation:\n", offset_str, nxt_offset);
                 relation.printer(fmt, indent + 2);
                 write!(fmt, "{}body:\n", nxt_offset);
                 func_body.printer(fmt, indent + 2);
                 write!(fmt, "{}span: {:?},\n{}}}\n", nxt_offset, span, offset_str)
-            },
-            Error { consumed_tokens, span } => {
-                write!(fmt, "{}Error {{\n{}error: {:?}\n{}}}\n", offset_str, nxt_offset, self, offset_str)
-            },
+            }
+            Error {
+                consumed_tokens,
+                span,
+            } => write!(
+                fmt,
+                "{}Error {{\n{}error: {:?}\n{}}}\n",
+                offset_str, nxt_offset, self, offset_str
+            ),
         }
     }
 }

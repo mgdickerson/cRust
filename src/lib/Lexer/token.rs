@@ -1,10 +1,10 @@
-use std;
-use std::iter::Peekable;
-use std::str::Chars;
-use std::fmt::Write;
-use Lexer;
 use lib::Utility::error::Error;
 use lib::Utility::syntax_position::Span;
+use std;
+use std::fmt::Write;
+use std::iter::Peekable;
+use std::str::Chars;
+use Lexer;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
@@ -15,10 +15,7 @@ pub struct Token {
 impl Token {
     /// Standard Token builder.
     pub fn new(token_type: TokenType, span: Span) -> Self {
-        Token {
-            token_type,
-            span,
-        }
+        Token { token_type, span }
     }
 
     /// Returns token type without consuming Token.
@@ -38,13 +35,17 @@ impl Token {
     pub fn get_error_message(&self) -> String {
         match self.token_type {
             TokenType::Error(ref string) => string.to_string(),
-            _ => String::from("Error in non-error type.")
+            _ => String::from("Error in non-error type."),
         }
     }
 
     pub fn invalid_value(&self) -> String {
         let mut err_mssg = String::new();
-        write!(err_mssg, "Invalid value was requested for given token: {:?}", self);
+        write!(
+            err_mssg,
+            "Invalid value was requested for given token: {:?}",
+            self
+        );
         err_mssg
     }
 
@@ -69,9 +70,9 @@ impl Token {
             TokenType::OutputNum => Ok(String::from("OutputNum")),
             TokenType::OutputNewLine => Ok(String::from("OutputNewLine")),
 
-            TokenType::Error(s) | 
-            TokenType::Ident(s) | 
-            TokenType::Comment(s) => return Ok(s.clone()),
+            TokenType::Error(s) | TokenType::Ident(s) | TokenType::Comment(s) => {
+                return Ok(s.clone())
+            }
             _ => return Err(Error::InvalidValueRequest(self.clone())),
         }
     }

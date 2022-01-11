@@ -3,7 +3,7 @@ var x, y, z;
 array [ 4 ] a;
 array [ 4 ][ 4 ] b;
 var c;
-function foo( );
+function foo( x );
 var i, d;
 {
 	let i <- 0;

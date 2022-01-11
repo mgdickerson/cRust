@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub, AddAssign, SubAssign};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 const MAX_LEN: u32 = 0b0111_1111_1111_1111;
 
@@ -38,8 +38,8 @@ impl AddAssign<u32> for BytePos {
     }
 }
 
-/// Tracks where Tokens are within the source file to make for 
-/// easier debugging message. Following the Rust solution, 
+/// Tracks where Tokens are within the source file to make for
+/// easier debugging message. Following the Rust solution,
 /// only need a start position and length.
 #[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct Span {
@@ -57,7 +57,10 @@ impl Span {
 
         // Make sure length is not rediculous and base is manageable.
         if len <= MAX_LEN {
-            Span { base, len: len as u16 }
+            Span {
+                base,
+                len: len as u16,
+            }
         } else {
             // Unhandled len size, default to len of 0. Other Spans will still be handled
             // correctly, and this will simply not track entire length.
@@ -66,7 +69,7 @@ impl Span {
     }
 
     pub fn data(&self) -> (BytePos, BytePos) {
-        (BytePos(self.base),BytePos(self.len as u32))
+        (BytePos(self.base), BytePos(self.len as u32))
     }
 
     pub fn base(&self) -> BytePos {

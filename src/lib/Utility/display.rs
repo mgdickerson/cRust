@@ -1,7 +1,7 @@
-use std::fmt::{self, Display, Formatter, Debug, Write};
+use std::fmt::{self, Debug, Display, Formatter, Write};
 
-use lib::Utility::syntax_position::Span;
 use lib::Utility::source_file::SourceFile;
+use lib::Utility::syntax_position::Span;
 
 /// Enumeration for displaying colors within terminal (makes for pretty displays of messages).
 pub enum TermColor {
@@ -69,29 +69,31 @@ pub trait MessageBuilder {
             MessageType::Error => {
                 tc = TermColor::Error;
                 write!(
-                    output, 
-                    "{}[Error({})]: {}{}{}{}\n",  
-                    tc, 
-                    error_type, 
-                    TermColor::Normal, 
-                    TermColor::Bold, 
-                    error_message, 
-                    TermColor::Normal)?;
-            },
+                    output,
+                    "{}[Error({})]: {}{}{}{}\n",
+                    tc,
+                    error_type,
+                    TermColor::Normal,
+                    TermColor::Bold,
+                    error_message,
+                    TermColor::Normal
+                )?;
+            }
             MessageType::Warning => {
                 tc = TermColor::Warning;
                 write!(
-                    output, 
-                    "{}[Warning({})]: {}{}{}{}\n",  
-                    tc, 
-                    error_type, 
-                    TermColor::Normal, 
-                    TermColor::Bold, 
-                    error_message, 
-                    TermColor::Normal)?;
-            },
+                    output,
+                    "{}[Warning({})]: {}{}{}{}\n",
+                    tc,
+                    error_type,
+                    TermColor::Normal,
+                    TermColor::Bold,
+                    error_message,
+                    TermColor::Normal
+                )?;
+            }
         }
-        
+
         write!(
             output,
             "{}{:>width$}-> {}{}:{}:{}\n{}{:width$}|\n{:<width$}|{}{}{}{:width$}|{}{:blank$}{:^^marker$}\n{}{:width$}|\n",
@@ -122,7 +124,7 @@ pub trait MessageBuilder {
 
 pub fn get_digits(line_num: usize, current_size: usize) -> usize {
     if line_num != 0 {
-        return get_digits(line_num/10, current_size + 1)
+        return get_digits(line_num / 10, current_size + 1);
     } else {
         current_size
     }

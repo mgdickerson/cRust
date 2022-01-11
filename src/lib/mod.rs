@@ -1,38 +1,37 @@
 // Std Library Uses
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::env;
 use std::fs::{self, DirEntry};
 use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::collections::HashMap;
 // use std::io::prelude::*;
 // use std::io::{BufRead, BufReader, Result};
 // use std::fmt::Write;
 // use std::fs::OpenOptions;
 
-
 // Internal mods
 pub mod Lexer;
-pub mod parser;
 pub mod Utility;
+pub mod parser;
 
 // Internal Use
-use lib::Lexer::token::Token;
 use lib::parser::Parser;
+use lib::Lexer::token::Token;
 
 use self::Utility::display;
-use lib::Utility::source_file::SourceFile;
+use lib::Utility::display::{MessageBuilder, TermColor};
 use lib::Utility::error::Error;
-use lib::Utility::display::{TermColor, MessageBuilder};
+use lib::Utility::source_file::SourceFile;
 
 // Extern Libraries
 extern crate petgraph;
-use petgraph::graph;
-use petgraph::{Directed, Incoming, Outgoing};
 use petgraph::algo::dominators::simple_fast;
 use petgraph::algo::dominators::Dominators;
+use petgraph::graph;
 use petgraph::prelude::NodeIndex;
+use petgraph::{Directed, Incoming, Outgoing};
 
 // use lib::Optimizer::temp_value_manager::TempValManager;
 // use lib::RegisterAllocator::analyze_live_range;
@@ -40,7 +39,6 @@ use petgraph::prelude::NodeIndex;
 // use lib::IR::ir::{InstTy, ValTy, Value};
 // use lib::IR::ir_manager::IRGraphManager;
 // use lib::Graph::node::Node;
-
 
 // use lib::Lexer::token::TokenCollection;
 // use lib::Parser::AST::computation::Comp;
@@ -57,15 +55,14 @@ use petgraph::prelude::NodeIndex;
 #[cfg(test)]
 pub mod tests {
     use std::fs;
-    
+
+    use lib::parser::Parser;
     use lib::run;
     use lib::Lexer::token::Token;
-    use lib::parser::Parser;
     use lib::Utility::display;
-    use lib::Utility::source_file::SourceFile;
+    use lib::Utility::display::{MessageBuilder, TermColor};
     use lib::Utility::error::Error;
-    use lib::Utility::display::{TermColor, MessageBuilder};
-
+    use lib::Utility::source_file::SourceFile;
 
     #[test]
     fn test_parser() {
@@ -74,39 +71,50 @@ pub mod tests {
         let mut tests = 0;
         let mut failures = Vec::new();
         for entry in paths {
-
             let path = entry.unwrap().path();
             if path.as_path().to_str().unwrap().contains(".dot") {
                 continue;
             }
             println!("\n{}Sub Test: {:?}", TermColor::Info, path);
             let file = fs::File::open(path.clone())
-            .expect("Unable to find file. Perhaps directory was entered incorrectly?");
+                .expect("Unable to find file. Perhaps directory was entered incorrectly?");
 
-            let mut src_file = SourceFile::new(String::from(path.as_path().to_str().unwrap()), file).unwrap();
+            let mut src_file =
+                SourceFile::new(String::from(path.as_path().to_str().unwrap()), file).unwrap();
 
             match Parser::parse(&mut src_file.src_to_iter()) {
-                Ok(res) => println!("Result: {}", res),
+                Ok(res) =>
+                    /*println!("Result: {}", res)*/
+                    {}
                 Err(parse_error) => {
                     let mut output = String::new();
                     parse_error.build_message(&mut src_file, &mut output);
                     println!("{}", output);
                     println!("{}Compilation Failed!", TermColor::Error);
                     failures.push(path);
-                },
+                }
             }
             tests += 1;
         }
 
         if failures.is_empty() {
-            println!("\n\n{}Sub Test Results: {} passed; {} failed;\n", TermColor::Success, tests - failures.len(), failures.len());
+            println!(
+                "\n\n{}Sub Test Results: {} passed; {} failed;\n",
+                TermColor::Success,
+                tests - failures.len(),
+                failures.len()
+            );
         } else {
-            println!("\n\n{}Sub Test Results: {} passed; {} failed;\n", TermColor::Error, tests - failures.len(), failures.len());
+            println!(
+                "\n\n{}Sub Test Results: {} passed; {} failed;\n",
+                TermColor::Error,
+                tests - failures.len(),
+                failures.len()
+            );
             for failed in failures {
                 println!("{}Failed SubTest: {:?}", TermColor::Error, failed);
             }
         }
-        
 
         println!("{}\n", TermColor::Normal);
     }
@@ -127,14 +135,14 @@ pub fn run(path_name: String) -> Result<(), Error> {
         Ok(result) => {
             println!("{}", result);
             Ok(())
-        },
+        }
         Err(parse_error) => {
             let mut output = String::new();
             parse_error.build_message(&mut src_file, &mut output);
             println!("{}", output);
             println!("{}Compilation Failed!", TermColor::Error);
             Err(parse_error)
-        },
+        }
     }
 
     // print_graph(
@@ -184,7 +192,7 @@ pub fn run(path_name: String) -> Result<(), Error> {
 
 // fn parse(source: std::fs::File) {
 //     let tc = tokenize(source);
-//     
+//
 // }
 // fn parse(source: std::fs::File) -> IRGraphManager {
 //     // Gather all tokens
@@ -325,7 +333,6 @@ pub fn run(path_name: String) -> Result<(), Error> {
 //     );
 //     fs::write(file_name, output);
 // }
-
 
 // // pub fn run_file(file_name: String) {
 // //     let mut path = PathBuf::new();

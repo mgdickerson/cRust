@@ -5,10 +5,10 @@ pub mod token;
 
 use self::token::Token;
 use self::token::TokenType;
-use lib::Utility::error::{Error};
+use lib::Utility::error::Error;
 use lib::Utility::syntax_position::{BytePos, Span};
 
-pub struct Lexer<'lctx,'lxr> {
+pub struct Lexer<'lctx, 'lxr> {
     char_iter: &'lxr mut Peekable<Chars<'lctx>>,
     current_char: Option<char>,
     buffer: Vec<char>,
@@ -20,10 +20,8 @@ pub struct Lexer<'lctx,'lxr> {
     current_op: Option<TokenType>,
 }
 
-impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
-    fn new(
-        char_iter: &'lxr mut Peekable<Chars<'lctx>>
-    ) -> Self {
+impl<'lctx, 'lxr> Lexer<'lctx, 'lxr> {
+    fn new(char_iter: &'lxr mut Peekable<Chars<'lctx>>) -> Self {
         Lexer {
             char_iter,
             current_char: None,
@@ -37,9 +35,7 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
         }
     }
 
-    pub fn tokenize(
-        iter: &'lxr mut Peekable<Chars<'lctx>>
-    ) -> Result<Vec<Token>, Error> {
+    pub fn tokenize(iter: &'lxr mut Peekable<Chars<'lctx>>) -> Result<Vec<Token>, Error> {
         let mut lexer = Lexer::new(iter);
         lexer.collect_tokens();
 
@@ -57,15 +53,11 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
                 self.hi += 1;
                 Ok(())
             }
-            None => {
-                Err(Error::Advance)
-            }
+            None => Err(Error::Advance),
         }
     }
 
-    fn current_char(
-        &mut self,
-    ) -> Result<char, Error> {
+    fn current_char(&mut self) -> Result<char, Error> {
         if let Some(ch) = self.current_char {
             return Ok(ch);
         }
@@ -73,30 +65,23 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
         return Err(Error::CurrentChar);
     }
 
-    fn peek_char(
-        &mut self,
-    ) -> Result<char, Error> {
+    fn peek_char(&mut self) -> Result<char, Error> {
         if let Some(ch) = self.char_iter.peek() {
-            return Ok(*ch)
+            return Ok(*ch);
         }
 
-        return Err(
-            Error::Eof(
-                self.build_error_token(String::from("EoF with peeking character"))?
-            )
-        )
+        return Err(Error::Eof(
+            self.build_error_token(String::from("EoF with peeking character"))?,
+        ));
     }
 
-    fn take_while<F: Fn(char) -> bool>(
-        &mut self, 
-        pred: F
-    ) -> Result<String, Error> {
+    fn take_while<F: Fn(char) -> bool>(&mut self, pred: F) -> Result<String, Error> {
         let mut buffer = String::new();
-        
+
         // Grab current character
         let mut ch = self.current_char()?;
         buffer.push(ch);
-        
+
         // Work on peeking characters
         ch = self.peek_char()?;
         while pred(ch) {
@@ -109,21 +94,15 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
 
     /// Super simple token builder function, takes necessary information and outputs a Token.
     /// Mostly using this to make span building easier and in a single location.
-    fn build_token(
-        &mut self,
-        token_ty: TokenType,
-    ) -> Result<Token, Error> {
+    fn build_token(&mut self, token_ty: TokenType) -> Result<Token, Error> {
         // Build Span, String buf, and get current token type
         let span = Span::new(self.lo, self.hi);
-        self.lo = self.hi;  // TODO : Dont think this will be necessary if we add the start to each token.
+        self.lo = self.hi; // TODO : Dont think this will be necessary if we add the start to each token.
 
         Ok(Token::new(token_ty, span))
     }
 
-    fn build_error_token(
-        &mut self,
-        error_msg: String,
-    ) -> Result<Token, Error> {
+    fn build_error_token(&mut self, error_msg: String) -> Result<Token, Error> {
         // Build Span
         let span = Span::new(self.lo, self.hi);
         self.lo = self.hi;
@@ -131,108 +110,98 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
         Ok(Token::new(TokenType::Error(error_msg), span))
     }
 
-    fn collect_tokens(
-        &mut self
-    ) {
+    fn collect_tokens(&mut self) {
         while self.advance() == Ok(()) {
             if let Ok(ch) = self.current_char() {
-                let result =
-                    match ch {
-                        // Alpha characters
-                        'a'..='z' | 'A'..='Z' | '_' => self.ident(),
-                        
-                        // Numerics                
-                        '0'..='9' => self.number(),
+                let result = match ch {
+                    // Alpha characters
+                    'a'..='z' | 'A'..='Z' | '_' => self.ident(),
 
-                        // Non-Generating Tokens
-                        '\t' | '\r' | '\n' | ' ' => self.build_token(TokenType::None),
+                    // Numerics
+                    '0'..='9' => self.number(),
 
-                        // Braces and Brackets.
-                        '{' => self.build_token(TokenType::LBrace),
-                        '[' => self.build_token(TokenType::LBracket),
-                        '(' => self.build_token(TokenType::LParen),
-                        '}' => self.build_token(TokenType::RBrace),
-                        ']' => self.build_token(TokenType::RBracket),
-                        ')' => self.build_token(TokenType::RParen),
+                    // Non-Generating Tokens
+                    '\t' | '\r' | '\n' | ' ' => self.build_token(TokenType::None),
 
-                        // relOp
-                        '=' => self.equal(),
-                        '!' | '~' => self.not_equal(),
-                        '>' => self.greater_equal(),
-                        '<' => self.less_equal(),
+                    // Braces and Brackets.
+                    '{' => self.build_token(TokenType::LBrace),
+                    '[' => self.build_token(TokenType::LBracket),
+                    '(' => self.build_token(TokenType::LParen),
+                    '}' => self.build_token(TokenType::RBrace),
+                    ']' => self.build_token(TokenType::RBracket),
+                    ')' => self.build_token(TokenType::RParen),
 
-                        // mathOp
-                        '+' => self.build_token(TokenType::AddOp),
-                        '-' => self.build_token(TokenType::SubOp),
-                        '*' => self.build_token(TokenType::MulOp),
-                        '/' => self.div_or_comment(),
+                    // relOp
+                    '=' => self.equal(),
+                    '!' | '~' => self.not_equal(),
+                    '>' => self.greater_equal(),
+                    '<' => self.less_equal(),
 
-                        // Comment
-                        '#' => self.comment(),
+                    // mathOp
+                    '+' => self.build_token(TokenType::AddOp),
+                    '-' => self.build_token(TokenType::SubOp),
+                    '*' => self.build_token(TokenType::MulOp),
+                    '/' => self.div_or_comment(),
 
-                        // Splitters
-                        ',' => self.build_token(TokenType::Comma),
-                        ';' => self.build_token(TokenType::SemiTermination),
-                        '.' => self.build_token(TokenType::ComputationEnd),
+                    // Comment
+                    '#' => self.comment(),
 
-                        // For some reason I had '\'' as None?
+                    // Splitters
+                    ',' => self.build_token(TokenType::Comma),
+                    ';' => self.build_token(TokenType::SemiTermination),
+                    '.' => self.build_token(TokenType::ComputationEnd),
 
-                        // Undefined Character Error
-                        err => {
-                            match self.build_error_token(String::from("Undefined Character.")) {
-                                Ok(error_token) => Err(Error::UndefChar(error_token)),
-                                Err(build_err) => Err(build_err),
-                            }
-                        },
-                    };
+                    // For some reason I had '\'' as None?
+
+                    // Undefined Character Error
+                    err => match self.build_error_token(String::from("Undefined Character.")) {
+                        Ok(error_token) => Err(Error::UndefChar(error_token)),
+                        Err(build_err) => Err(build_err),
+                    },
+                };
 
                 match result {
                     Ok(token) => {
                         if token.peek_type() != TokenType::None {
                             self.token_collection.push(token);
                         }
-                    },
+                    }
                     Err(error) => self.errors.push(error),
                 }
             }
         }
     }
 
-    fn ident(
-        &mut self
-    ) -> Result<Token, Error> {
+    fn ident(&mut self) -> Result<Token, Error> {
         let ident = self.take_while(|ch| ch.is_alphanumeric() || ch == '_')?;
-        let token_ty = 
-            match ident.as_str() {
-                "var" => TokenType::Var,
-                "array" => TokenType::Array,
-                "function" | "procedure" => TokenType::FuncDecl,
-                "main" => TokenType::Computation,
-                "let" => TokenType::Assignment,
-                "call" => TokenType::FuncCall,
-                "if" => TokenType::If,
-                "then" => TokenType::Then,
-                "else" => TokenType::Else,
-                "fi" => TokenType::Fi,
-                "while" => TokenType::While,
-                "do" => TokenType::Do,
-                "od" => TokenType::Od,
-                "return" => TokenType::Return,
-                
-                // Pre-defined functions
-                "InputNum" => TokenType::InputNum,
-                "OutputNum" => TokenType::OutputNum,
-                "OutputNewLine" => TokenType::OutputNewLine,
+        let token_ty = match ident.as_str() {
+            "var" => TokenType::Var,
+            "array" => TokenType::Array,
+            "function" | "procedure" => TokenType::FuncDecl,
+            "main" => TokenType::Computation,
+            "let" => TokenType::Assignment,
+            "call" => TokenType::FuncCall,
+            "if" => TokenType::If,
+            "then" => TokenType::Then,
+            "else" => TokenType::Else,
+            "fi" => TokenType::Fi,
+            "while" => TokenType::While,
+            "do" => TokenType::Do,
+            "od" => TokenType::Od,
+            "return" => TokenType::Return,
 
-                _ => TokenType::Ident(ident),
-            };
+            // Pre-defined functions
+            "InputNum" => TokenType::InputNum,
+            "OutputNum" => TokenType::OutputNum,
+            "OutputNewLine" => TokenType::OutputNewLine,
+
+            _ => TokenType::Ident(ident),
+        };
 
         self.build_token(token_ty)
     }
 
-    fn number(
-        &mut self
-    ) -> Result<Token, Error> {
+    fn number(&mut self) -> Result<Token, Error> {
         let buffer = self.take_while(|ch| ch.is_alphanumeric())?;
 
         if let Ok(num) = buffer.parse() {
@@ -245,63 +214,49 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
         }
     }
 
-    fn equal(
-        &mut self
-    ) -> Result<Token, Error> {
+    fn equal(&mut self) -> Result<Token, Error> {
         let mut buffer = String::new();
         buffer.push(self.current_char()?);
         self.advance();
 
         match self.current_char() {
-            Ok('=') => {
-                self.build_token(TokenType::EqOp)
-            },
+            Ok('=') => self.build_token(TokenType::EqOp),
             Ok(invalid) => {
                 buffer.push(invalid);
                 match self.build_error_token(String::from("Undefined Operation.")) {
                     Ok(error_token) => Err(Error::UndefOp(error_token)),
                     Err(build_err) => Err(build_err),
                 }
-            },
-            Err(error) => {
-                Err(error)
-            },
+            }
+            Err(error) => Err(error),
         }
     }
 
-    fn not_equal(
-        &mut self
-    ) -> Result<Token, Error> {
+    fn not_equal(&mut self) -> Result<Token, Error> {
         let mut buffer = String::new();
         buffer.push(self.current_char()?);
         self.advance();
 
         match self.current_char() {
-            Ok('=') => {
-                self.build_token(TokenType::NeqOp)
-            },
+            Ok('=') => self.build_token(TokenType::NeqOp),
             Ok(invalid) => {
                 buffer.push(invalid);
                 match self.build_error_token(String::from("Undefined Operation.")) {
                     Ok(error_token) => Err(Error::UndefOp(error_token)),
                     Err(build_err) => Err(build_err),
                 }
-            },
-            Err(error) => {
-                Err(error)
-            },
+            }
+            Err(error) => Err(error),
         }
     }
 
-    fn greater_equal(
-        &mut self
-    ) -> Result<Token, Error> {
+    fn greater_equal(&mut self) -> Result<Token, Error> {
         if let Some(&ch) = self.char_iter.peek() {
             match ch {
                 '=' => {
                     self.advance();
                     self.build_token(TokenType::GeqOp)
-                },
+                }
                 _ => self.build_token(TokenType::GreaterOp),
             }
         } else {
@@ -312,19 +267,17 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
         }
     }
 
-    fn less_equal(
-        &mut self
-    ) -> Result<Token, Error> {
+    fn less_equal(&mut self) -> Result<Token, Error> {
         if let Some(&ch) = self.char_iter.peek() {
             match ch {
                 '=' => {
                     self.advance();
                     self.build_token(TokenType::LeqOp)
-                },
+                }
                 '-' => {
                     self.advance();
                     self.build_token(TokenType::Arrow)
-                },
+                }
                 _ => self.build_token(TokenType::LessOp),
             }
         } else {
@@ -335,25 +288,23 @@ impl<'lctx,'lxr> Lexer<'lctx,'lxr> {
         }
     }
 
-    fn div_or_comment(
-        &mut self
-    ) -> Result<Token, Error> {
+    fn div_or_comment(&mut self) -> Result<Token, Error> {
         if let Some(&ch) = self.char_iter.peek() {
             match ch {
                 '/' => self.comment(),
                 _ => self.build_token(TokenType::DivOp),
             }
         } else {
-            match self.build_error_token(String::from("EOF reached while parsing / or potential comment.")) {
+            match self.build_error_token(String::from(
+                "EOF reached while parsing / or potential comment.",
+            )) {
                 Ok(error_token) => Err(Error::Eof(error_token)),
                 Err(build_err) => Err(build_err),
             }
         }
     }
 
-    fn comment(
-        &mut self
-    ) -> Result<Token, Error> {
+    fn comment(&mut self) -> Result<Token, Error> {
         let buffer = self.take_while(|ch| ch != '\n' && ch != '\r')?;
         self.build_token(TokenType::Comment(buffer))
     }
